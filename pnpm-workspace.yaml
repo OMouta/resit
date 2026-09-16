@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+engineStrict: true
+saveExact: true
+disallowWorkspaceCycles: true
+
+allowBuilds:
+  electron: true
+  esbuild: true

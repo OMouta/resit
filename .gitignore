@@ -1,1 +1,11 @@
 /.plan/
+node_modules/
+out/
+dist/
+coverage/
+test-results/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example

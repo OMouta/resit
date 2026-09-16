@@ -1,0 +1,30 @@
+{
+  "name": "resit",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.2",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "scripts": {
+    "dev:desktop": "pnpm --filter @resit/desktop dev",
+    "dev:ui": "pnpm --filter @resit/ui-viewer dev",
+    "build:desktop": "pnpm --filter @resit/desktop build",
+    "build:ui": "pnpm --filter @resit/ui-viewer build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write package.json pnpm-workspace.yaml tsconfig*.json eslint.config.mjs vitest.config.ts README.md apps packages tests",
+    "format:check": "prettier --check package.json pnpm-workspace.yaml tsconfig*.json eslint.config.mjs vitest.config.ts README.md apps packages tests",
+    "test": "pnpm build:desktop && vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.5",
+    "eslint": "10.10.0",
+    "playwright": "1.63.0",
+    "prettier": "3.9.7",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "4.1.11"
+  }
+}
