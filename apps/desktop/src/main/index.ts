@@ -1,8 +1,11 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { app, BrowserWindow, ipcMain, session } from "electron";
-import { HEALTH_CHECK_CHANNEL } from "../shared/ipc";
-import { checkHealth } from "./health";
+import { app, BrowserWindow, nativeTheme, session } from "electron";
+import { EVENT_CHANNEL } from "../shared/ipc";
+import { registerHandlers } from "./handlers";
+import { setIpcContext } from "./ipc";
+import { setEventSink } from "./session";
+import { loadSettings } from "./settings";
 
 const rendererFile = join(import.meta.dirname, "../renderer/index.html");
 const rendererUrl = new URL(
@@ -14,11 +17,16 @@ const rendererUrl = new URL(
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow(): Promise<void> {
+  const settings = await loadSettings();
+  nativeTheme.themeSource = settings.theme;
   const window = new BrowserWindow({
     title: "resit",
-    width: 1200,
-    height: 800,
+    width: 1360,
+    height: 860,
+    minWidth: 720,
+    minHeight: 480,
     show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#000000" : "#ffffff",
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
       sandbox: true,
@@ -50,18 +58,11 @@ void app
       },
     );
 
-    ipcMain.handle(HEALTH_CHECK_CHANNEL, (event, ...args: unknown[]) => {
-      if (
-        !mainWindow ||
-        event.sender !== mainWindow.webContents ||
-        event.senderFrame !== mainWindow.webContents.mainFrame ||
-        event.senderFrame.url !== rendererUrl ||
-        args.length !== 0
-      ) {
-        throw new Error("Unauthorized health check");
-      }
-      return checkHealth();
+    setIpcContext({ window: () => mainWindow, rendererUrl });
+    setEventSink((event) => {
+      mainWindow?.webContents.send(EVENT_CHANNEL, event);
     });
+    registerHandlers(() => mainWindow);
 
     await createWindow();
     app.on("activate", () => {

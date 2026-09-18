@@ -65,15 +65,15 @@ describe("desktop process boundary", () => {
       require: typeof Reflect.get(window, "require"),
       process: typeof Reflect.get(window, "process"),
       ipcRenderer: typeof Reflect.get(window, "ipcRenderer"),
-      apiKeys: Object.keys(window.resit),
       invoke: typeof Reflect.get(window.resit, "invoke"),
+      send: typeof Reflect.get(window.resit, "send"),
     }));
     expect(exposed).toEqual({
       require: "undefined",
       process: "undefined",
       ipcRenderer: "undefined",
-      apiKeys: ["healthCheck"],
       invoke: "undefined",
+      send: "undefined",
     });
 
     const devtools = await page.context().newCDPSession(page);
@@ -128,7 +128,7 @@ describe("desktop process boundary", () => {
       },
       join(desktopDirectory, "out/preload/index.cjs"),
     );
-    expect(error).toContain("Unauthorized health check");
+    expect(error).toContain("Unauthorized request");
   });
 
   it("does not open child windows or allow renderer navigation", async () => {
