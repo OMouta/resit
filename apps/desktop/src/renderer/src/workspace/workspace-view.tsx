@@ -381,13 +381,21 @@ export function WorkspaceView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const closeAiPanel = useCallback(
+    () => dispatch({ type: "set-ai-open", open: false }),
+    [],
+  );
+  const setConversation = useCallback(
+    (conversationId: string | null) =>
+      dispatch({ type: "set-conversation", conversationId }),
+    [],
+  );
   const aiPanel = renderAiPanel?.({
     layout,
     resources,
     subjects,
-    onClose: () => dispatch({ type: "set-ai-open", open: false }),
-    setConversation: (conversationId) =>
-      dispatch({ type: "set-conversation", conversationId }),
+    onClose: closeAiPanel,
+    setConversation,
   });
 
   const panes = layout.panes.map((pane) => (

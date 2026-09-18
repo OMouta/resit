@@ -125,19 +125,29 @@ export function PdfView({
     if (active && viewerRef.current?.pdfDocument) viewerRef.current.update();
   }, [active]);
 
+  // The DOM selection moves when the student clicks into the chat box, so
+  // remember the last text selected in this PDF.
+  const selectionRef = useRef("");
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const container = containerRef.current;
+      const selection = window.getSelection();
+      if (!container || !selection || selection.rangeCount === 0) return;
+      if (!container.contains(selection.anchorNode)) return;
+      selectionRef.current = selection.isCollapsed
+        ? ""
+        : selection.toString().trim();
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", onSelectionChange);
+  }, []);
+
   useEffect(
     () =>
       registerView(resource.id, {
         context: () => {
-          const container = containerRef.current;
-          const selection = window.getSelection();
-          const text =
-            container &&
-            selection &&
-            selection.rangeCount > 0 &&
-            container.contains(selection.anchorNode)
-              ? selection.toString().trim()
-              : "";
+          const text = selectionRef.current;
           const viewer = viewerRef.current;
           return {
             ...(text ? { selection: text } : {}),

@@ -6,12 +6,16 @@ import {
   Onboarding,
 } from "@resit/ui/patterns/screens/onboarding";
 
+import type { ProviderState } from "../../shared/conversations";
 import type { AppState } from "../../shared/ipc";
 import type { SettingsPatch } from "../../shared/settings";
 import type { WorkspaceSnapshot } from "../../shared/workspace";
+import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
 import { useNotices } from "./lib/notices";
+import { ClaudeSettings } from "./settings/claude-settings";
 import { SettingsDialog } from "./settings/settings-dialog";
+import { flushAllViews } from "./views/view-registry";
 import { WorkspaceView } from "./workspace/workspace-view";
 
 export function App() {
@@ -21,6 +25,31 @@ export function App() {
   const [creating, setCreating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [workspaceKey, setWorkspaceKey] = useState(0);
+  const [provider, setProvider] = useState<ProviderState>({
+    status: "checking",
+  });
+
+  const checkProvider = useCallback((refresh: boolean) => {
+    if (refresh) setProvider({ status: "checking" });
+    api.getProviderStatus(refresh).then(setProvider, (error: unknown) =>
+      setProvider({
+        status: "failed",
+        message: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }, []);
+
+  useEffect(() => checkProvider(false), [checkProvider]);
+
+  // Save open notes before the window closes.
+  useEffect(
+    () =>
+      api.onEvent((event) => {
+        if (event.type === "before-close")
+          void flushAllViews().finally(() => void api.confirmClose());
+      }),
+    [],
+  );
 
   const apply = useCallback((next: AppState) => {
     setState(next);
@@ -87,11 +116,16 @@ export function App() {
       try {
         const settings = await api.updateSettings(patch);
         setState((current) => (current ? { ...current, settings } : current));
+        // The main process re-checks Claude Code when its settings change.
+        if (patch.claude) {
+          setProvider({ status: "checking" });
+          checkProvider(false);
+        }
       } catch (error) {
         notices.fail("The setting was not saved", error);
       }
     },
-    [notices],
+    [notices, checkProvider],
   );
 
   if (!state) return <div className="h-dvh bg-background" />;
@@ -140,6 +174,13 @@ export function App() {
         onCreateWorkspace={() => setCreating(true)}
         onOpenFolder={() => void openFolder()}
         onOpenSettings={() => setSettingsOpen(true)}
+        renderAiPanel={(context) => (
+          <ChatPanel
+            {...context}
+            provider={provider}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+        )}
       />
     );
 
@@ -151,7 +192,14 @@ export function App() {
         onOpenChange={setSettingsOpen}
         settings={state.settings}
         onChange={(patch) => void changeSettings(patch)}
-      />
+      >
+        <ClaudeSettings
+          provider={provider}
+          settings={state.settings}
+          onChange={(patch) => void changeSettings(patch)}
+          onRefresh={() => checkProvider(true)}
+        />
+      </SettingsDialog>
     </main>
   );
 }
