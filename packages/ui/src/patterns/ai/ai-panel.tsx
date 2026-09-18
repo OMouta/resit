@@ -41,7 +41,8 @@ export interface AiPanelProps {
   scope: ScopeChipListProps;
   turns: Turn[];
   status: PanelStatus;
-  composer: Omit<ComposerProps, "children">;
+  /** Children render above the field, for example what the message will carry. */
+  composer: ComposerProps;
   context?: ContextInspectorProps | undefined;
   /** Rendered above the transcript, for example a scope mismatch notice. */
   notice?: ReactNode;
@@ -57,6 +58,10 @@ export interface AiPanelProps {
   onCollapse?: () => void;
   onConnect?: () => void;
   emptyState?: ReactNode;
+  /** Extra header buttons, placed before New conversation. */
+  headerActions?: ReactNode;
+  /** Renders assistant text, for example as Markdown. */
+  renderText?: (text: string) => ReactNode;
   className?: string;
 }
 
@@ -82,6 +87,8 @@ export function AiPanel({
   onCollapse,
   onConnect,
   emptyState,
+  headerActions,
+  renderText,
   className,
 }: AiPanelProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -130,6 +137,7 @@ export function AiPanel({
             </PopoverContent>
           </Popover>
         ) : null}
+        {headerActions}
         {onNewConversation ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -204,6 +212,7 @@ export function AiPanel({
                 {...(onOpenCitation ? { onOpenCitation } : {})}
                 {...(onInsert ? { onInsert } : {})}
                 {...(onCopy ? { onCopy } : {})}
+                {...(renderText ? { renderText } : {})}
               >
                 {turn.edit ? (
                   <EditPreview

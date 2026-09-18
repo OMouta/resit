@@ -200,6 +200,8 @@ export interface AssistantMessageProps {
   onInsert?: (text: string) => void;
   onRegenerate?: () => void;
   onOpenCitation?: (citation: Citation) => void;
+  /** Renders the body text. Defaults to paragraphs with math. */
+  renderText?: (text: string) => ReactNode;
   className?: string;
 }
 
@@ -221,6 +223,7 @@ export function AssistantMessage({
   onInsert,
   onRegenerate,
   onOpenCitation,
+  renderText,
   className,
 }: AssistantMessageProps) {
   const { time } = useLocale();
@@ -240,7 +243,7 @@ export function AssistantMessage({
         {tools && tools.length > 0 ? <ToolActivity calls={tools} /> : null}
         {text ? (
           <div className="document max-w-none text-base [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
-            <MathText>{text}</MathText>
+            {renderText ? renderText(text) : <MathText>{text}</MathText>}
             {status === "streaming" ? (
               <span
                 className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-foreground align-middle"
