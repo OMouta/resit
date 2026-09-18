@@ -1,0 +1,141 @@
+/* Note editor content. Colours and sizes come from the shared tokens. */
+
+.note-content {
+  min-height: 50vh;
+  outline: none;
+  padding-bottom: 2rem;
+}
+
+.note-content > :first-child {
+  margin-top: 0;
+}
+
+.note-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--subtle-foreground);
+  pointer-events: none;
+}
+
+.note-content li > p {
+  margin: 0.15em 0;
+}
+
+.note-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.note-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.note-content ul[data-type="taskList"] li > label {
+  margin-top: 0.3em;
+  user-select: none;
+}
+
+.note-content ul[data-type="taskList"] li > label input {
+  width: 0.95em;
+  height: 0.95em;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.note-content ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+
+.note-content .tableWrapper {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.note-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.note-content th,
+.note-content td {
+  position: relative;
+  min-width: 4em;
+  border: 1px solid var(--border-strong);
+  padding: 0.35em 0.6em;
+  vertical-align: top;
+}
+
+.note-content th {
+  background: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.note-content :is(th, td) > p {
+  margin: 0;
+}
+
+.note-content .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  background: var(--selection);
+  content: "";
+  pointer-events: none;
+}
+
+.note-content img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.note-content .tiptap-mathematics-render--editable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.note-content .tiptap-mathematics-render--editable:hover {
+  background: var(--accent);
+}
+
+.note-content div[data-type="block-math"] {
+  margin: 0.75em 0;
+  overflow-x: auto;
+  padding: 0.25em 0.5em;
+}
+
+.note-content .ProseMirror-selectednode.tiptap-mathematics-render,
+.note-content .ProseMirror-selectednode [data-type="block-math"] {
+  background: var(--selection);
+}
+
+.note-content .inline-math-error,
+.note-content .block-math-error {
+  border: 1px dashed color-mix(in srgb, var(--destructive) 50%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--destructive);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0 0.25em;
+}
+
+/* PDF.js viewer inside a pane. */
+.pdf-container .pdfViewer {
+  padding: 16px 0;
+}
+
+.pdf-container .pdfViewer .page {
+  margin: 0 auto 16px;
+  box-shadow: var(--shadow-md);
+}
