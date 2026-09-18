@@ -174,7 +174,7 @@ function TreeRow({
       )}
       {children}
       {actions ? (
-        <span className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex group-focus-within/row:flex">
+        <span className="ml-auto hidden shrink-0 items-center gap-0.5 group-hover/row:flex group-focus-within/row:flex has-[[data-state=open]]:flex">
           {actions}
         </span>
       ) : null}
@@ -366,7 +366,7 @@ export function SubjectTree({
                   Archived
                 </span>
               ) : null}
-              <span className="shrink-0 text-2xs font-normal tabular-nums text-subtle-foreground group-hover/row:hidden">
+              <span className="shrink-0 text-2xs font-normal tabular-nums text-subtle-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
                 {count}
               </span>
             </TreeRow>
