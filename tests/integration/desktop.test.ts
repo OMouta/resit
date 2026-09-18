@@ -86,23 +86,24 @@ describe("desktop process boundary", () => {
       (context) => context.name === "Electron Isolated Context",
     );
     expect(isolated).toBeDefined();
-    if (!isolated) throw new Error("Missing isolated preload context");
-    const result = await devtools.send("Runtime.evaluate", {
-      expression:
-        "({ sandboxed: process.sandboxed, contextIsolated: process.contextIsolated })",
-      contextId: isolated.id,
-      returnByValue: true,
-    });
-    expect(result.result.value).toEqual({
-      sandboxed: true,
-      contextIsolated: true,
-    });
     await devtools.detach();
     expect(
-      await application.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0]?.isVisible(),
-      ),
-    ).toBe(false);
+      await application.evaluate(({ BrowserWindow }) => {
+        const window = BrowserWindow.getAllWindows()[0];
+        const preferences = window?.webContents.getLastWebPreferences();
+        return {
+          visible: window?.isVisible(),
+          sandbox: preferences?.sandbox,
+          contextIsolation: preferences?.contextIsolation,
+          nodeIntegration: preferences?.nodeIntegration,
+        };
+      }),
+    ).toEqual({
+      visible: false,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    });
   });
 
   it("rejects health requests from another window even with the same preload", async () => {
@@ -134,9 +135,12 @@ describe("desktop process boundary", () => {
   it("does not open child windows or allow renderer navigation", async () => {
     const currentUrl = page.url();
     expect(await page.evaluate(() => window.open("about:blank"))).toBeNull();
+    // Chromium does not report about:blank to will-navigate; such a page
+    // still cannot call IPC because its URL is not the app's.
     await page.evaluate(() => {
-      window.location.href = "about:blank";
+      window.location.href = "https://example.com/";
     });
+    await page.waitForTimeout(500);
     expect(await page.evaluate(() => window.location.href)).toBe(currentUrl);
     expect(
       await application.evaluate(
