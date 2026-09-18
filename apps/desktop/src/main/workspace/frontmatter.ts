@@ -1,5 +1,7 @@
 import { parse, stringify } from "yaml";
 
+import { sha256 } from "./files";
+
 const FRONTMATTER = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
 
 export type ParsedNote =
@@ -38,4 +40,13 @@ export function serializeNote(
   const yaml = stringify(data, { lineWidth: 0 }).trimEnd();
   const text = body.replace(/^\n+/, "");
   return `---\n${yaml}\n---\n\n${text.endsWith("\n") || text === "" ? text : `${text}\n`}`;
+}
+
+/**
+ * A note's revision covers its body only, so metadata changes such as a
+ * rename never look like a conflicting edit.
+ */
+export function noteRevision(text: string): string {
+  const parsed = parseNote(text);
+  return sha256(parsed.ok ? parsed.body : text);
 }

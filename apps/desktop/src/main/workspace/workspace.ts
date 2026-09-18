@@ -39,7 +39,7 @@ import {
   writeFileAtomic,
   writeJson,
 } from "./files";
-import { parseNote, serializeNote } from "./frontmatter";
+import { noteRevision, parseNote, serializeNote } from "./frontmatter";
 
 export const WORKSPACE_FORMAT_VERSION = 1;
 const SIDECAR_SUFFIX = ".resource.json";
@@ -323,7 +323,7 @@ async function readNoteEntry(path: string, subjectId: string) {
       id: adopted.id,
       kind: "note" as const,
       title: adopted.title,
-      revision: sha256(text),
+      revision: noteRevision(text),
       size: Buffer.byteLength(text),
       updatedAt: at,
     };
@@ -335,7 +335,7 @@ async function readNoteEntry(path: string, subjectId: string) {
       typeof data.title === "string" && data.title
         ? data.title
         : titleFromFilename(path),
-    revision: sha256(text),
+    revision: sha256(parsed.body),
     size: Buffer.byteLength(text),
     updatedAt:
       typeof data.updatedAt === "string"
@@ -552,7 +552,7 @@ export async function createNote(
     title: input.title,
     subjectId: input.subjectId,
     path: toPosix(relative(workspace.root, path)),
-    revision: sha256(text),
+    revision: noteRevision(text),
     size: Buffer.byteLength(text),
     updatedAt: at,
   };
@@ -571,7 +571,7 @@ export async function readNote(
   const text = await readFile(entry.absPath, "utf8");
   const parsed = parseNote(text);
   if (!parsed.ok) throw new WorkspaceError(parsed.message);
-  const revision = sha256(text);
+  const revision = sha256(parsed.body);
   entry.info = { ...entry.info, revision, size: Buffer.byteLength(text) };
   return { resource: entry.info, body: parsed.body, revision };
 }
@@ -598,13 +598,13 @@ export function saveNote(
     }
     const parsed = parseNote(current);
     if (!parsed.ok) throw new WorkspaceError(parsed.message);
-    const currentRevision = sha256(current);
+    const currentRevision = sha256(parsed.body);
     if (currentRevision !== input.expectedRevision)
       return { status: "conflict", currentRevision, currentBody: parsed.body };
     const at = now();
     const text = serializeNote({ ...parsed.data, updatedAt: at }, input.body);
     await writeFileAtomic(entry.absPath, text);
-    const revision = sha256(text);
+    const revision = noteRevision(text);
     entry.info = {
       ...entry.info,
       revision,
@@ -644,7 +644,7 @@ export function renameResource(
         ...entry.info,
         title: input.title,
         path: toPosix(relative(workspace.root, entry.absPath)),
-        revision: sha256(next),
+        revision: noteRevision(next),
         size: Buffer.byteLength(next),
         updatedAt: at,
       };
