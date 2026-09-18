@@ -90,7 +90,11 @@ describe("desktop process boundary", () => {
     expect(
       await application.evaluate(({ BrowserWindow }) => {
         const window = BrowserWindow.getAllWindows()[0];
-        const preferences = window?.webContents.getLastWebPreferences();
+        // Present at runtime, missing from Electron's type definitions.
+        const contents = window?.webContents as
+          | { getLastWebPreferences(): Electron.WebPreferences | null }
+          | undefined;
+        const preferences = contents?.getLastWebPreferences();
         return {
           visible: window?.isVisible(),
           sandbox: preferences?.sandbox,
