@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev:desktop
 ```
 
-The desktop opens the onboarding screen from the shared UI package. The browser viewer runs independently with `pnpm dev:ui`.
+The desktop app starts on a screen to create or open a workspace. The browser viewer runs on its own with `pnpm dev:ui`.
 
 | Command              | Purpose                                                                |
 | -------------------- | ---------------------------------------------------------------------- |
@@ -23,19 +23,44 @@ The desktop opens the onboarding screen from the shared UI package. The browser 
 | `pnpm lint`          | Run ESLint                                                             |
 | `pnpm format:check`  | Check formatting                                                       |
 | `pnpm format`        | Format source, configuration, tests, and this README                   |
-| `pnpm test`          | Build the desktop app and run its integration tests with Vitest        |
+| `pnpm test`          | Build the desktop app and run its tests with Vitest                    |
 
-Tests launch their own hidden Electron windows using an isolated temporary profile. They do not move the mouse, send global keyboard input, or open the normal app profile. Linux requires a display server, such as Xvfb in CI.
+Tests launch Electron with a temporary profile, never the normal one. The end-to-end tests show their window off screen and without focus, and they replace the native file pickers, so they never take the mouse or keyboard. Linux requires a display server, such as Xvfb in CI.
+
+## Using the app
+
+A workspace is a folder you pick. resit writes plain files into it:
+
+- `workspace.json` names the workspace.
+- `subjects/<subject>/` holds `subject.json`, notes as Markdown with the note's ID in YAML frontmatter, and imported PDFs and images. Each imported file gets a `.resource.json` file beside it with its ID and hash.
+- `conversations/<id>/` holds each chat as `conversation.json` and `events.jsonl`.
+- `.resit/` holds the trash, the saved tabs, and the Claude session IDs for this computer.
+
+Files added to a subject folder from outside resit show up in the sidebar, and edits made in another editor reload in open notes. If a note has unsaved changes when that happens, resit asks which version to keep.
+
+The AI panel needs Claude Code installed and signed in. Run `claude` once in a terminal to sign in. resit starts that executable through the Claude Agent SDK and uses its sign-in. Claude's own file and shell tools are turned off. It reads notes and PDFs only through resit's study tools, and only from the subjects in the conversation's scope plus any files you add to it.
+
+| Shortcut | Action                                                 |
+| -------- | ------------------------------------------------------ |
+| `Ctrl+K` | Find a file by title, or search the text of your files |
+| `Ctrl+J` | Show or hide the AI panel                              |
+| `Ctrl+N` | New note in the current subject                        |
+| `Ctrl+\` | Split the editor into two panes                        |
+| `Ctrl+W` | Close the tab                                          |
+
+On macOS, use Cmd in place of Ctrl.
 
 ## Repository layout
 
 - `apps/desktop`: Electron main process, sandboxed preload, React renderer, and background worker.
 - `apps/ui-viewer`: Vite/React browser viewer for the design system, with fixtures and reference notes.
 - `packages/ui`: `@resit/ui`, the shared design system: tokens, shadcn-based components, and study patterns.
+- `tests/workspace`: workspace files, conversations, and search, tested against temporary folders.
 - `tests/integration`: desktop startup and IPC boundary checks.
-- `tests/tools`: Playwright helpers for screenshots (`shot.mjs`) and page evaluation (`eval.mjs`) against the running viewer.
+- `tests/e2e`: the main desktop flows, driven through the real window.
+- `tests/tools`: Playwright helpers for screenshots (`shot.mjs`) and page evaluation (`eval.mjs`) against the running viewer, and `sample-pdf.mjs`, which writes a small text PDF.
 
-The renderer receives only `window.resit.healthCheck()`. Filesystem, process, and generic IPC APIs are not exposed through the preload.
+The preload exposes one method per operation on `window.resit`, such as `readNote` or `sendMessage`. The main process checks that each call comes from the app's own window and validates its arguments before running it. The renderer gets no filesystem, process, or generic IPC access.
 
 Examples, demo content, and sample data are written in English.
 
