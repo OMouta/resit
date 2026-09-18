@@ -290,10 +290,13 @@ function NoteEditor({
             setSource((current) => `${current.trimEnd()}\n\n${markdown}\n`);
             markEdited();
           } else {
+            // After the last top-level block, not inside a trailing list.
             editor
               .chain()
+              .insertContentAt(editor.state.doc.content.size, markdown, {
+                contentType: "markdown",
+              })
               .focus("end")
-              .insertContent(`\n\n${markdown}`, { contentType: "markdown" })
               .run();
           }
           return true;
