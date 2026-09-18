@@ -50,7 +50,6 @@ export interface WorkspaceViewProps {
     layout: Layout;
     resources: ReadonlyMap<string, ResourceInfo>;
     subjects: ReadonlyMap<string, SubjectInfo>;
-    onClose: () => void;
     setConversation: (conversationId: string | null) => void;
   }) => ReactNode;
 }
@@ -382,10 +381,6 @@ export function WorkspaceView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const closeAiPanel = useCallback(
-    () => dispatch({ type: "set-ai-open", open: false }),
-    [],
-  );
   const setConversation = useCallback(
     (conversationId: string | null) =>
       dispatch({ type: "set-conversation", conversationId }),
@@ -395,7 +390,6 @@ export function WorkspaceView({
     layout,
     resources,
     subjects,
-    onClose: closeAiPanel,
     setConversation,
   });
 

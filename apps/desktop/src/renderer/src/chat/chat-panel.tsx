@@ -66,7 +66,6 @@ export interface ChatPanelProps {
   model: string | undefined;
   /** An empty string goes back to Claude Code's default. */
   onModelChange: (model: string) => void;
-  onClose: () => void;
   setConversation: (conversationId: string | null) => void;
   onOpenSettings: () => void;
 }
@@ -163,7 +162,6 @@ export function ChatPanel({
   resources,
   subjects,
   provider,
-  onClose,
   setConversation,
   onOpenSettings,
   model,
@@ -606,7 +604,6 @@ export function ChatPanel({
           .catch((error: unknown) => notices.fail("Copy failed", error));
       }}
       onNewConversation={() => void createConversation(defaultScope())}
-      onCollapse={onClose}
       onConnect={onOpenSettings}
       renderText={renderMarkdown}
       emptyState={
