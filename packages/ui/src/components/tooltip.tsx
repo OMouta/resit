@@ -30,9 +30,16 @@ function TooltipTrigger({
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
+/**
+ * Tooltips flip below their trigger rather than enter the top 48px, where
+ * the desktop app's title bar has the system window buttons drawn over it.
+ */
+const TITLE_BAR_CLEARANCE = { top: 48 };
+
 function TooltipContent({
   className,
   sideOffset = 4,
+  collisionPadding = TITLE_BAR_CLEARANCE,
   children,
   ...props
 }: ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -41,6 +48,7 @@ function TooltipContent({
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         className={cn(
           "z-popover w-fit max-w-64 origin-(--radix-tooltip-content-transform-origin) rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 dark:bg-surface-raised dark:text-foreground dark:shadow-hairline",
           className,
