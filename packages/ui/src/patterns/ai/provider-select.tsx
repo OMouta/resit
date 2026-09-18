@@ -115,10 +115,19 @@ export function ProviderModelSelect({
               className={cn(usable ? "text-primary" : "text-muted-foreground")}
             />
             <span className="truncate">
-              {provider ? provider.name : "Choose a provider"}
-              {model ? (
-                <span className="text-muted-foreground"> · {model.name}</span>
-              ) : null}
+              {compact ? (
+                (model?.name ?? provider?.name ?? "Choose a model")
+              ) : (
+                <>
+                  {provider ? provider.name : "Choose a provider"}
+                  {model ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {model.name}
+                    </span>
+                  ) : null}
+                </>
+              )}
             </span>
             <ChevronDownIcon className="size-3.5 opacity-60" />
           </Button>
@@ -153,13 +162,21 @@ export function ProviderModelSelect({
                 <DropdownMenuItem
                   key={entry.id}
                   onSelect={() => onModelChange(entry.id)}
+                  className="items-start"
                 >
-                  <span className="flex size-4 items-center justify-center">
+                  <span className="flex size-4 shrink-0 items-center justify-center pt-0.5">
                     {entry.id === modelId ? (
                       <CheckIcon className="size-4" />
                     ) : null}
                   </span>
-                  {entry.name}
+                  <span className="flex min-w-0 flex-col">
+                    <span>{entry.name}</span>
+                    {entry.description ? (
+                      <span className="text-xs text-muted-foreground">
+                        {entry.description}
+                      </span>
+                    ) : null}
+                  </span>
                 </DropdownMenuItem>
               ))}
             </>

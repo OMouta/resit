@@ -25,7 +25,7 @@ function describe(provider: ProviderState): string {
   }
 }
 
-/** Claude Code connection: status, executable override, and model. */
+/** Claude Code connection: status and executable override. */
 export function ClaudeSettings({
   provider,
   settings,
@@ -38,12 +38,10 @@ export function ClaudeSettings({
   onRefresh: () => void;
 }) {
   const [path, setPath] = useState(settings.claude.executablePath ?? "");
-  const [model, setModel] = useState(settings.claude.model ?? "");
 
   useEffect(() => {
     setPath(settings.claude.executablePath ?? "");
-    setModel(settings.claude.model ?? "");
-  }, [settings.claude.executablePath, settings.claude.model]);
+  }, [settings.claude.executablePath]);
 
   const badge =
     provider.status === "ready" ||
@@ -89,24 +87,6 @@ export function ClaudeSettings({
               onChange({ claude: { executablePath: path.trim() } });
           }}
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="claude-model">Model</Label>
-        <Input
-          id="claude-model"
-          value={model}
-          placeholder="Claude Code's default"
-          className="font-mono text-xs"
-          onChange={(event) => setModel(event.target.value)}
-          onBlur={() => {
-            if (model.trim() !== (settings.claude.model ?? ""))
-              onChange({ claude: { model: model.trim() } });
-          }}
-        />
-        <p className="text-xs text-muted-foreground">
-          A model name or alias that your Claude Code accepts, such as sonnet.
-          Leave empty to use its default.
-        </p>
       </div>
     </SettingsSection>
   );

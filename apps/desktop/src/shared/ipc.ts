@@ -2,6 +2,7 @@ import type {
   ConversationDetail,
   ConversationMeta,
   ConversationScope,
+  ModelOption,
   ProviderState,
   TurnContext,
   TurnEvent,
@@ -102,6 +103,8 @@ export interface DesktopApi {
   openExternal(url: string): Promise<void>;
 
   getProviderStatus(refresh: boolean): Promise<ProviderState>;
+  /** Models the installed Claude Code offers. Empty when it is not ready. */
+  getModels(): Promise<ModelOption[]>;
   listConversations(): Promise<ConversationMeta[]>;
   createConversation(scope: ConversationScope): Promise<ConversationMeta>;
   readConversation(id: string): Promise<ConversationDetail>;
@@ -144,6 +147,7 @@ export const CHANNELS = {
   search: "resit:search",
   openExternal: "resit:open-external",
   getProviderStatus: "resit:provider-status",
+  getModels: "resit:provider-models",
   listConversations: "resit:conversation-list",
   createConversation: "resit:conversation-create",
   readConversation: "resit:conversation-read",

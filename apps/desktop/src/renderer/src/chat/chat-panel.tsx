@@ -38,6 +38,7 @@ import type {
   ConversationDetail,
   ConversationMeta,
   ConversationScope,
+  ModelOption,
   ProviderState,
   ToolSummary,
   TurnContext,
@@ -61,6 +62,10 @@ export interface ChatPanelProps {
   resources: ReadonlyMap<string, ResourceInfo>;
   subjects: ReadonlyMap<string, SubjectInfo>;
   provider: ProviderState;
+  /** Model chosen in settings; Claude Code's default when unset. */
+  model: string | undefined;
+  /** An empty string goes back to Claude Code's default. */
+  onModelChange: (model: string) => void;
   onClose: () => void;
   setConversation: (conversationId: string | null) => void;
   onOpenSettings: () => void;
@@ -161,6 +166,8 @@ export function ChatPanel({
   onClose,
   setConversation,
   onOpenSettings,
+  model,
+  onModelChange,
 }: ChatPanelProps) {
   const notices = useNotices();
   const { relative } = useLocale();
@@ -171,6 +178,24 @@ export function ChatPanel({
   const [preview, setPreview] = useState<TurnContext>({});
   const [skipSelection, setSkipSelection] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  const [models, setModels] = useState<ModelOption[]>([]);
+
+  useEffect(() => {
+    if (provider.status !== "ready") return;
+    let cancelled = false;
+    api.getModels().then(
+      (list) => {
+        if (!cancelled) setModels(list);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [provider.status]);
+  const selectedModel =
+    models.find((entry) => entry.id === model) ??
+    models.find((entry) => entry.isDefault);
   const currentId = current?.meta.id ?? null;
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
@@ -468,12 +493,22 @@ export function ChatPanel({
             name: "Claude Code",
             status: providerBadge(provider),
             ...("version" in provider ? { version: provider.version } : {}),
-            models: [],
+            models: models.map((entry) => ({
+              id: entry.id,
+              name: entry.name,
+              description: entry.isDefault
+                ? `${entry.description} · Claude Code's default`
+                : entry.description,
+            })),
           },
         ],
         providerId: "claude-code",
+        ...(selectedModel ? { modelId: selectedModel.id } : {}),
         onProviderChange: () => undefined,
-        onModelChange: () => undefined,
+        onModelChange: (id) => {
+          const chosen = models.find((entry) => entry.id === id);
+          onModelChange(chosen?.isDefault ? "" : id);
+        },
         onConnect: onOpenSettings,
       }}
       scope={{

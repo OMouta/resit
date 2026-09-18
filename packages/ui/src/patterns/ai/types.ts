@@ -8,7 +8,7 @@ export interface ProviderOption {
   name: string;
   status: ProviderStatus;
   version?: string;
-  models: { id: string; name: string }[];
+  models: { id: string; name: string; description?: string }[];
 }
 
 export type ScopeItem =

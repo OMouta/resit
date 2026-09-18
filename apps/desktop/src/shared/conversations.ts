@@ -69,6 +69,17 @@ export interface ConversationDetail {
   messages: ChatMessage[];
 }
 
+/** A model the installed Claude Code offers. */
+export interface ModelOption {
+  /** Value passed to Claude Code, such as "sonnet" or "opus[1m]". */
+  id: string;
+  /** The model itself, such as "Sonnet 5". */
+  name: string;
+  description: string;
+  /** Claude Code uses this model when none is chosen. */
+  isDefault: boolean;
+}
+
 export type ProviderState =
   | { status: "checking" }
   | { status: "not-installed"; message: string }

@@ -25,7 +25,7 @@ import {
   reopenLastWorkspace,
   saveLayout,
 } from "./session";
-import { claudeStatus } from "./providers/claude";
+import { claudeModels, claudeStatus } from "./providers/claude";
 import { updateSettings } from "./settings";
 import { searchWorkspace } from "./workspace/search";
 import {
@@ -90,7 +90,8 @@ export function registerHandlers(
     async (patch) => {
       const settings = await updateSettings(patch);
       nativeTheme.themeSource = settings.theme;
-      if (patch.claude) void claudeStatus(true);
+      if (patch.claude && "executablePath" in patch.claude)
+        void claudeStatus(true);
       return settings;
     },
   );
@@ -260,6 +261,8 @@ export function registerHandlers(
       await shell.openExternal(parsed.href);
     },
   );
+
+  handle(CHANNELS.getModels, z.tuple([]), () => claudeModels());
 
   handle(CHANNELS.getProviderStatus, z.tuple([z.boolean()]), (refresh) =>
     claudeStatus(refresh),

@@ -117,7 +117,7 @@ export function App() {
         const settings = await api.updateSettings(patch);
         setState((current) => (current ? { ...current, settings } : current));
         // The main process re-checks Claude Code when its settings change.
-        if (patch.claude) {
+        if (patch.claude && "executablePath" in patch.claude) {
           setProvider({ status: "checking" });
           checkProvider(false);
         }
@@ -178,6 +178,10 @@ export function App() {
           <ChatPanel
             {...context}
             provider={provider}
+            model={state.settings.claude.model}
+            onModelChange={(model) =>
+              void changeSettings({ claude: { model } })
+            }
             onOpenSettings={() => setSettingsOpen(true)}
           />
         )}
