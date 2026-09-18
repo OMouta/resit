@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
+// Terminals opened by Electron-based editors can inherit this variable. It
+// makes the Electron binary run as plain Node, so the app cannot start.
+delete process.env.ELECTRON_RUN_AS_NODE;
+
 export default defineConfig({
   main: {},
   preload: {
