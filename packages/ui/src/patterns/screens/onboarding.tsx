@@ -170,7 +170,8 @@ export interface CreateWorkspaceStepProps {
     folder: string;
     subject: { name: string; color: SubjectColor };
   }) => void;
-  onChooseFolder?: () => void;
+  /** Opens a folder picker. A returned path fills the folder field. */
+  onChooseFolder?: () => Promise<string | null> | void;
   defaultFolder?: string;
   className?: string;
 }
@@ -237,7 +238,14 @@ export function CreateWorkspaceStep({
                 placeholder="D:/Study/ISEP 2026-27"
                 className="font-mono text-xs"
               />
-              <Button type="button" variant="outline" onClick={onChooseFolder}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  const chosen = await onChooseFolder?.();
+                  if (chosen) setFolder(chosen);
+                }}
+              >
                 <FolderOpenIcon /> Choose…
               </Button>
             </div>

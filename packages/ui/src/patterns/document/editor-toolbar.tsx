@@ -147,6 +147,8 @@ export interface EditorToolbarProps {
   /** Block types active at the cursor (for example the list the cursor is in). */
   activeBlocks?: readonly EditorBlock[];
   onBlock: (block: EditorBlock) => void;
+  /** Block tools to offer. Defaults to all of them. */
+  blocks?: readonly EditorBlock[];
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -167,6 +169,7 @@ export function EditorToolbar({
   onToggleMark,
   activeBlocks = [],
   onBlock,
+  blocks,
   canUndo,
   canRedo,
   onUndo,
@@ -178,7 +181,10 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   const inlineMarks = compact ? MARKS.slice(0, 2) : MARKS;
   const overflowMarks = compact ? MARKS.slice(2) : [];
-  const inlineBlocks = compact ? [] : BLOCKS;
+  const available = blocks
+    ? BLOCKS.filter((block) => blocks.includes(block.value))
+    : BLOCKS;
+  const inlineBlocks = compact ? [] : available;
 
   return (
     <div
@@ -304,7 +310,7 @@ export function EditorToolbar({
               </DropdownMenuCheckboxItem>
             ))}
             <DropdownMenuSeparator />
-            {BLOCKS.map((block) => (
+            {available.map((block) => (
               <DropdownMenuItem
                 key={block.value}
                 onSelect={() => onBlock(block.value)}

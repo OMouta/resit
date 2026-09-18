@@ -110,10 +110,11 @@ export interface PdfToolbarProps {
   onToggleSearch?: () => void;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
-  tool: AnnotationTool;
-  onToolChange: (tool: AnnotationTool) => void;
-  color: AnnotationColor;
-  onColorChange: (color: AnnotationColor) => void;
+  /** Annotation tools are shown only when all four are given. */
+  tool?: AnnotationTool;
+  onToolChange?: (tool: AnnotationTool) => void;
+  color?: AnnotationColor;
+  onColorChange?: (color: AnnotationColor) => void;
   /** Collapses zoom, rotate, and colour into an overflow menu. */
   compact?: boolean;
   disabled?: boolean;
@@ -151,7 +152,11 @@ export function PdfToolbar({
   className,
 }: PdfToolbarProps) {
   const zoomNumber = typeof zoom === "number" ? zoom : 1;
-  const colors = annotationColorClasses[color];
+  const annotation =
+    tool && onToolChange && color && onColorChange
+      ? { tool, onToolChange, color, onColorChange }
+      : null;
+  const colors = annotationColorClasses[color ?? "yellow"];
   return (
     <div
       role="toolbar"
@@ -243,77 +248,85 @@ export function PdfToolbar({
           <SearchIcon />
         </ToolbarButton>
       ) : null}
-      <ToggleGroup
-        type="single"
-        value={tool}
-        onValueChange={(value) =>
-          value && onToolChange(value as AnnotationTool)
-        }
-        aria-label="Annotation tool"
-        disabled={disabled}
-        className="ml-auto"
-      >
-        {tools.map(({ id, label, icon: Icon, key }) => (
-          <Tooltip key={id}>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem
-                value={id}
-                aria-label={label}
-                className="px-0 [&_svg]:size-4"
-              >
-                <Icon />
-              </ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent>
-              {label} · {key}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </ToggleGroup>
-      {!compact ? (
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`Annotation colour: ${colors.label}`}
-                  disabled={disabled}
-                  className="ml-1 flex size-8 items-center justify-center rounded-control hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none disabled:opacity-50"
+      {annotation ? (
+        <ToggleGroup
+          type="single"
+          value={annotation.tool}
+          onValueChange={(value) =>
+            value && annotation.onToolChange(value as AnnotationTool)
+          }
+          aria-label="Annotation tool"
+          disabled={disabled}
+          className="ml-auto"
+        >
+          {tools.map(({ id, label, icon: Icon, key }) => (
+            <Tooltip key={id}>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem
+                  value={id}
+                  aria-label={label}
+                  className="px-0 [&_svg]:size-4"
                 >
-                  <span
-                    className={cn(
-                      "size-4 rounded-full shadow-hairline",
-                      colors.swatch,
-                    )}
-                  />
-                </button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>Colour: {colors.label}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={color}
-              onValueChange={(value) => onColorChange(value as AnnotationColor)}
-            >
-              {(Object.keys(annotationColorClasses) as AnnotationColor[]).map(
-                (key) => (
-                  <DropdownMenuRadioItem key={key} value={key}>
+                  <Icon />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>
+                {label} · {key}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </ToggleGroup>
+      ) : (
+        <div className="ml-auto" />
+      )}
+      {!compact ? (
+        annotation ? (
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Annotation colour: ${colors.label}`}
+                    disabled={disabled}
+                    className="ml-1 flex size-8 items-center justify-center rounded-control hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none disabled:opacity-50"
+                  >
                     <span
                       className={cn(
-                        "size-3 rounded-full",
-                        annotationColorClasses[key].swatch,
+                        "size-4 rounded-full shadow-hairline",
+                        colors.swatch,
                       )}
                     />
-                    {annotationColorClasses[key].label}
-                  </DropdownMenuRadioItem>
-                ),
-              )}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Colour: {colors.label}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={annotation.color}
+                onValueChange={(value) =>
+                  annotation.onColorChange(value as AnnotationColor)
+                }
+              >
+                {(Object.keys(annotationColorClasses) as AnnotationColor[]).map(
+                  (key) => (
+                    <DropdownMenuRadioItem key={key} value={key}>
+                      <span
+                        className={cn(
+                          "size-3 rounded-full",
+                          annotationColorClasses[key].swatch,
+                        )}
+                      />
+                      {annotationColorClasses[key].label}
+                    </DropdownMenuRadioItem>
+                  ),
+                )}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -344,26 +357,32 @@ export function PdfToolbar({
                 <RotateCwIcon /> Rotate
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={color}
-              onValueChange={(value) => onColorChange(value as AnnotationColor)}
-            >
-              {(Object.keys(annotationColorClasses) as AnnotationColor[]).map(
-                (key) => (
-                  <DropdownMenuRadioItem key={key} value={key}>
-                    <span
-                      className={cn(
-                        "size-3 rounded-full",
-                        annotationColorClasses[key].swatch,
-                      )}
-                    />
-                    {annotationColorClasses[key].label}
-                  </DropdownMenuRadioItem>
-                ),
-              )}
-            </DropdownMenuRadioGroup>
+            {annotation ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={annotation.color}
+                  onValueChange={(value) =>
+                    annotation.onColorChange(value as AnnotationColor)
+                  }
+                >
+                  {(
+                    Object.keys(annotationColorClasses) as AnnotationColor[]
+                  ).map((key) => (
+                    <DropdownMenuRadioItem key={key} value={key}>
+                      <span
+                        className={cn(
+                          "size-3 rounded-full",
+                          annotationColorClasses[key].swatch,
+                        )}
+                      />
+                      {annotationColorClasses[key].label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

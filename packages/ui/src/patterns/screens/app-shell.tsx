@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { isMac, shortcutLabel } from "@resit/ui/lib/keys";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface AppShellProps {
@@ -112,7 +113,9 @@ export function AppShell({
           >
             <SearchIcon />
             <span className="hidden @md:inline">Search</span>
-            <Kbd className="hidden @md:inline-flex">⌘K</Kbd>
+            <Kbd className="hidden @md:inline-flex">
+              {shortcutLabel("mod+K").join(isMac() ? "" : "+")}
+            </Kbd>
           </Button>
         ) : null}
         {toolbarEnd}

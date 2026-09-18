@@ -42,7 +42,8 @@ export interface SidebarProject {
 export interface WorkspaceSidebarProps {
   switcher: WorkspaceSwitcherProps;
   tree: SubjectTreeProps;
-  projects: SidebarProject[];
+  /** Omit to hide the Projects section. */
+  projects?: SidebarProject[];
   activeProjectId?: string | undefined;
   onOpenProject: (id: string) => void;
   activeDestination?: SidebarDestination | undefined;
@@ -52,6 +53,8 @@ export interface WorkspaceSidebarProps {
   onAddProject?: () => void;
   /** Section open/closed state. */
   sections: { subjects: boolean; projects: boolean };
+  /** Destinations to list below the sections. Defaults to all of them. */
+  destinations?: readonly SidebarDestination[];
   onSectionToggle: (
     section: "subjects" | "projects",
     expanded: boolean,
@@ -60,7 +63,7 @@ export interface WorkspaceSidebarProps {
   className?: string;
 }
 
-const destinations: {
+const allDestinations: {
   id: SidebarDestination;
   label: string;
   icon: typeof LibraryIcon;
@@ -87,6 +90,7 @@ export function WorkspaceSidebar({
   onAddProject,
   sections,
   onSectionToggle,
+  destinations,
   footer,
   className,
 }: WorkspaceSidebarProps) {
@@ -122,53 +126,57 @@ export function WorkspaceSidebar({
         >
           <SubjectTree {...tree} />
         </SidebarSection>
-        <SidebarSection
-          title="Projects"
-          count={projects.length}
-          expanded={sections.projects}
-          onToggle={(expanded) => onSectionToggle("projects", expanded)}
-          action={
-            onAddProject ? (
-              <Button
-                variant="subtle"
-                size="icon-sm"
-                aria-label="Add project"
-                onClick={onAddProject}
-              >
-                <PlusIcon />
-              </Button>
-            ) : undefined
-          }
-        >
-          <div className="flex flex-col gap-px px-1">
-            {projects.length === 0 ? (
-              <p className="flex h-row items-center pl-6 text-xs text-subtle-foreground">
-                No projects yet
-              </p>
-            ) : null}
-            {projects.map((project) => (
-              <ProjectRow
-                key={project.id}
-                name={project.name}
-                subjects={project.subjects}
-                resourceCount={project.resourceCount}
-                active={project.id === activeProjectId}
-                onClick={() => onOpenProject(project.id)}
+        {projects ? (
+          <SidebarSection
+            title="Projects"
+            count={projects.length}
+            expanded={sections.projects}
+            onToggle={(expanded) => onSectionToggle("projects", expanded)}
+            action={
+              onAddProject ? (
+                <Button
+                  variant="subtle"
+                  size="icon-sm"
+                  aria-label="Add project"
+                  onClick={onAddProject}
+                >
+                  <PlusIcon />
+                </Button>
+              ) : undefined
+            }
+          >
+            <div className="flex flex-col gap-px px-1">
+              {projects.length === 0 ? (
+                <p className="flex h-row items-center pl-6 text-xs text-subtle-foreground">
+                  No projects yet
+                </p>
+              ) : null}
+              {projects.map((project) => (
+                <ProjectRow
+                  key={project.id}
+                  name={project.name}
+                  subjects={project.subjects}
+                  resourceCount={project.resourceCount}
+                  active={project.id === activeProjectId}
+                  onClick={() => onOpenProject(project.id)}
+                />
+              ))}
+            </div>
+          </SidebarSection>
+        ) : null}
+        <div className="mt-3 flex flex-col gap-px px-1">
+          {allDestinations
+            .filter(({ id }) => !destinations || destinations.includes(id))
+            .map(({ id, label, icon: Icon }) => (
+              <SidebarNavItem
+                key={id}
+                icon={<Icon />}
+                label={label}
+                active={activeDestination === id}
+                onClick={() => onNavigate(id)}
+                {...(counts?.[id] !== undefined ? { count: counts[id] } : {})}
               />
             ))}
-          </div>
-        </SidebarSection>
-        <div className="mt-3 flex flex-col gap-px px-1">
-          {destinations.map(({ id, label, icon: Icon }) => (
-            <SidebarNavItem
-              key={id}
-              icon={<Icon />}
-              label={label}
-              active={activeDestination === id}
-              onClick={() => onNavigate(id)}
-              {...(counts?.[id] !== undefined ? { count: counts[id] } : {})}
-            />
-          ))}
         </div>
       </div>
       {footer ? <div className="border-t px-2 py-2">{footer}</div> : null}
