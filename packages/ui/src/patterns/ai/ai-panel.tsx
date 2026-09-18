@@ -117,7 +117,7 @@ export function AiPanel({
         className,
       )}
     >
-      <header className="flex h-toolbar shrink-0 items-center gap-1 border-b pr-2 pl-4">
+      <header className="flex h-tab shrink-0 items-center gap-1 border-b pr-2 pl-4">
         <h2
           className="min-w-0 flex-1 truncate text-sm font-medium"
           title={title}
@@ -177,7 +177,7 @@ export function AiPanel({
           </Tooltip>
         ) : null}
       </header>
-      <div className="shrink-0 border-b px-4 py-2.5">
+      <div className="flex min-h-toolbar shrink-0 items-center border-b px-4 py-2">
         <ScopeChipList {...scope} />
       </div>
       {notice ? <div className="shrink-0 px-4 pt-4">{notice}</div> : null}
