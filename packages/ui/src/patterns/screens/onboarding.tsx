@@ -210,9 +210,6 @@ export function CreateWorkspaceStep({
         }}
       >
         <header className="flex flex-col gap-2">
-          <p className="text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-            Step 1 of 2
-          </p>
           <h1 className="text-2xl font-semibold tracking-[-0.02em]">
             Create a workspace
           </h1>
