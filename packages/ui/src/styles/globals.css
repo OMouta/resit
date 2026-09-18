@@ -146,10 +146,10 @@
   --row-height: 2rem;
   --control-height: 2rem;
   --control-height-lg: 2.5rem;
-  --sidebar-width: 16rem;
-  --ai-panel-width: 24rem;
-  --toolbar-height: 2.75rem;
-  --tab-height: 2.5rem;
+  --sidebar-width: 17rem;
+  --ai-panel-width: 26rem;
+  --toolbar-height: 3rem;
+  --tab-height: 2.75rem;
 }
 
 .dark {

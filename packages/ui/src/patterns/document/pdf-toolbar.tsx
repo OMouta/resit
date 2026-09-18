@@ -162,7 +162,7 @@ export function PdfToolbar({
       role="toolbar"
       aria-label="PDF tools"
       className={cn(
-        "flex h-toolbar min-w-0 items-center gap-1 border-b bg-background px-2 @container",
+        "flex h-toolbar min-w-0 items-center gap-1 border-b bg-background px-3 @container",
         className,
       )}
     >

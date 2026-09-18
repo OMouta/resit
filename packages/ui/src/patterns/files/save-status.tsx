@@ -61,6 +61,8 @@ export interface SaveStatusProps {
   /** One line of detail, shown in the tooltip and the full-width line. */
   detail?: string | undefined;
   onAction?: (state: SaveState) => void;
+  /** Icon only, with the label in the tooltip, for narrow toolbars. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -69,9 +71,11 @@ export function SaveStatus({
   state,
   detail,
   onAction,
+  compact = false,
   className,
 }: SaveStatusProps) {
   const { label, icon: Icon, className: tone, action } = meta[state];
+  const tip = compact ? [label, detail].filter(Boolean).join(". ") : detail;
   const content = (
     <span
       data-slot="save-status"
@@ -94,7 +98,7 @@ export function SaveStatus({
           aria-hidden
         />
       )}
-      {label}
+      {compact ? <span className="sr-only">{label}</span> : label}
       {action && onAction ? (
         <Button
           size="sm"
@@ -107,11 +111,11 @@ export function SaveStatus({
       ) : null}
     </span>
   );
-  if (!detail) return content;
+  if (!tip) return content;
   return (
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent>{detail}</TooltipContent>
+      <TooltipContent>{tip}</TooltipContent>
     </Tooltip>
   );
 }

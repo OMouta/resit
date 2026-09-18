@@ -30,7 +30,7 @@ export function SidebarSection({
       data-slot="sidebar-section"
       className={cn("flex flex-col", className)}
     >
-      <div className="group/section flex h-row items-center gap-1 pr-1">
+      <div className="group/section flex h-row items-center gap-1 px-2">
         <button
           type="button"
           aria-expanded={expanded}

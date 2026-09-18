@@ -93,7 +93,9 @@ export function PageControls({
           onFocus={(event) => event.currentTarget.select()}
           className="w-10 px-1 text-center"
         />
-        <span className="text-muted-foreground">/ {pageCount}</span>
+        <span className="whitespace-nowrap text-muted-foreground">
+          / {pageCount}
+        </span>
       </span>
       <ToolbarButton
         label="Next page"

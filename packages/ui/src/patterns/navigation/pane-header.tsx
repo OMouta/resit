@@ -81,7 +81,7 @@ export function PaneHeader({
       <div
         role="toolbar"
         aria-label="Pane"
-        className="flex shrink-0 items-center gap-0.5 border-l px-1"
+        className="flex shrink-0 items-center gap-1 border-l px-2"
       >
         {onSplitHorizontal ? (
           <PaneAction label="Split right" onClick={onSplitHorizontal}>

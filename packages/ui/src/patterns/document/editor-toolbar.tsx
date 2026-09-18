@@ -157,6 +157,8 @@ export interface EditorToolbarProps {
   disabled?: boolean;
   /** Narrow layout: secondary tools move into the "More" menu. */
   compact?: boolean;
+  /** Narrowest layout: every text mark moves into the "More" menu too. */
+  minimal?: boolean;
   /** Right slot, for example a save status. */
   end?: ReactNode;
   className?: string;
@@ -176,11 +178,12 @@ export function EditorToolbar({
   onRedo,
   disabled = false,
   compact = false,
+  minimal = false,
   end,
   className,
 }: EditorToolbarProps) {
-  const inlineMarks = compact ? MARKS.slice(0, 2) : MARKS;
-  const overflowMarks = compact ? MARKS.slice(2) : [];
+  const inlineMarks = minimal ? [] : compact ? MARKS.slice(0, 2) : MARKS;
+  const overflowMarks = minimal ? MARKS : compact ? MARKS.slice(2) : [];
   const available = blocks
     ? BLOCKS.filter((block) => blocks.includes(block.value))
     : BLOCKS;
@@ -192,7 +195,7 @@ export function EditorToolbar({
       aria-label="Formatting"
       aria-disabled={disabled || undefined}
       className={cn(
-        "flex h-toolbar min-w-0 items-center gap-0.5 border-b bg-background px-2",
+        "flex h-toolbar min-w-0 items-center gap-1 border-b bg-background px-3",
         className,
       )}
     >

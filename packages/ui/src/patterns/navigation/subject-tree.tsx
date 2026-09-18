@@ -283,7 +283,7 @@ export function SubjectTree({
       aria-label="Subjects"
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      className={cn("flex flex-col gap-px px-1", className)}
+      className={cn("flex flex-col gap-px px-2", className)}
     >
       {subjects.map((subject) => {
         const expanded = expandedIds.has(subject.id);

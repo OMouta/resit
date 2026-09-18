@@ -48,7 +48,10 @@ export function DocumentHeader({
   return (
     <header
       data-slot="document-header"
-      className={cn("flex flex-col gap-2 px-6 pt-6 pb-3 @container", className)}
+      className={cn(
+        "flex flex-col gap-3 px-8 pt-10 pb-4 @container",
+        className,
+      )}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
         {subject ? (

@@ -272,8 +272,8 @@ export function DocumentTabs({
                 if (event.button === 1) onClose(tab.id);
               }}
               className={cn(
-                "group/tab relative flex h-full max-w-56 shrink-0 cursor-default items-center gap-1.5 border-r px-2.5 text-sm outline-none select-none",
-                tab.pinned ? "w-9 justify-center px-0" : "min-w-28",
+                "group/tab relative flex h-full max-w-60 shrink-0 cursor-default items-center gap-2 border-r px-3.5 text-sm outline-none select-none",
+                tab.pinned ? "w-10 justify-center px-0" : "min-w-32",
                 active
                   ? "bg-background text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-background"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -361,50 +361,52 @@ export function DocumentTabs({
           <span aria-hidden className="my-1 w-0.5 shrink-0 bg-ring" />
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 border-l px-1">
-        {hidden.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={`${hidden.length} more tabs`}
-                className="flex h-6 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <ChevronDownIcon className="size-3.5" />
-                {hidden.length}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-72">
-              {tabs
-                .filter((tab) => hidden.includes(tab.id))
-                .map((tab) => (
-                  <DropdownMenuItem
-                    key={tab.id}
-                    onSelect={() => onActivate(tab.id)}
-                  >
-                    <span className="truncate">{tab.title}</span>
-                    {tab.subject?.name ? (
-                      <span className="ml-auto text-xs text-subtle-foreground">
-                        {tab.subject.name}
-                      </span>
-                    ) : null}
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-        {onNewTab ? (
-          <button
-            type="button"
-            aria-label="New tab"
-            onClick={onNewTab}
-            className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <PlusIcon className="size-4" />
-          </button>
-        ) : null}
-        {end}
-      </div>
+      {hidden.length > 0 || onNewTab || end ? (
+        <div className="flex shrink-0 items-center gap-0.5 border-l px-1.5">
+          {hidden.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${hidden.length} more tabs`}
+                  className="flex h-6 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <ChevronDownIcon className="size-3.5" />
+                  {hidden.length}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-w-72">
+                {tabs
+                  .filter((tab) => hidden.includes(tab.id))
+                  .map((tab) => (
+                    <DropdownMenuItem
+                      key={tab.id}
+                      onSelect={() => onActivate(tab.id)}
+                    >
+                      <span className="truncate">{tab.title}</span>
+                      {tab.subject?.name ? (
+                        <span className="ml-auto text-xs text-subtle-foreground">
+                          {tab.subject.name}
+                        </span>
+                      ) : null}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          {onNewTab ? (
+            <button
+              type="button"
+              aria-label="New tab"
+              onClick={onNewTab}
+              className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <PlusIcon className="size-4" />
+            </button>
+          ) : null}
+          {end}
+        </div>
+      ) : null}
     </div>
   );
 }

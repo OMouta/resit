@@ -1,4 +1,5 @@
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import { FileCodeIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
@@ -14,6 +15,7 @@ import {
   type EditorMark,
   type TextStyle,
 } from "@resit/ui/patterns/document/editor-toolbar";
+import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
 import {
   SaveStatus,
   type SaveState,
@@ -91,7 +93,7 @@ export function NoteView(props: NoteViewProps) {
     );
   if (!document)
     return (
-      <div className="mx-auto flex w-full max-w-measure flex-col gap-3 px-6 py-10">
+      <div className="mx-auto flex w-full max-w-measure flex-col gap-3 px-8 py-10">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
@@ -124,6 +126,7 @@ function NoteEditor({
   const [prompt, setPrompt] = useState<PromptRequest | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useWidth(rootRef);
+  const narrow = width > 0 && width < 560;
 
   const revision = useRef(initial.revision);
   const edits = useRef(0);
@@ -460,28 +463,46 @@ function NoteEditor({
         onRedo={() => editor.chain().focus().redo().run()}
         disabled={mode === "source"}
         compact={width > 0 && width < 860}
+        minimal={narrow}
         end={
           <>
             <SaveStatus
               state={saveState}
               detail={saveError}
+              compact={narrow}
               {...(saveState === "error"
                 ? { onAction: () => void save() }
                 : {})}
             />
-            <Tabs
-              value={mode}
-              onValueChange={(value) => switchMode(value as "rich" | "source")}
-            >
-              <TabsList aria-label="Editing mode">
-                <TabsTrigger value="rich" className="text-xs">
-                  Rich
-                </TabsTrigger>
-                <TabsTrigger value="source" className="text-xs">
-                  Markdown
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {narrow ? (
+              <ToolbarButton
+                label={
+                  mode === "source" ? "Edit as rich text" : "Edit as Markdown"
+                }
+                active={mode === "source"}
+                onClick={() =>
+                  switchMode(mode === "source" ? "rich" : "source")
+                }
+              >
+                <FileCodeIcon />
+              </ToolbarButton>
+            ) : (
+              <Tabs
+                value={mode}
+                onValueChange={(value) =>
+                  switchMode(value as "rich" | "source")
+                }
+              >
+                <TabsList aria-label="Editing mode">
+                  <TabsTrigger value="rich" className="text-xs">
+                    Rich
+                  </TabsTrigger>
+                  <TabsTrigger value="source" className="text-xs">
+                    Markdown
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </>
         }
       />
@@ -517,7 +538,7 @@ function NoteEditor({
         </InlineMessage>
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto flex w-full max-w-[calc(var(--document-measure)+3rem)] flex-col pb-24">
+        <div className="mx-auto flex w-full max-w-[calc(var(--document-measure)+4rem)] flex-col pb-24">
           <DocumentHeader
             title={resource.title}
             {...(subject
@@ -526,7 +547,7 @@ function NoteEditor({
             path={resource.path}
             onRename={(title) => void onRename(title)}
           />
-          <div className="px-6">
+          <div className="px-8">
             {mode === "rich" ? (
               <EditorContent editor={editor} />
             ) : (

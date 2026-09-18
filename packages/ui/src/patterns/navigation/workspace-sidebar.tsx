@@ -102,10 +102,10 @@ export function WorkspaceSidebar({
         className,
       )}
     >
-      <div className="px-2 pt-2">
+      <div className="px-3 pt-3">
         <WorkspaceSwitcher {...switcher} />
       </div>
-      <div className="scrollbar-thin mt-2 min-h-0 flex-1 overflow-y-auto pb-4">
+      <div className="scrollbar-thin mt-3 min-h-0 flex-1 overflow-y-auto pb-4">
         <SidebarSection
           title="Subjects"
           count={tree.subjects.filter((subject) => !subject.archived).length}
@@ -145,7 +145,7 @@ export function WorkspaceSidebar({
               ) : undefined
             }
           >
-            <div className="flex flex-col gap-px px-1">
+            <div className="flex flex-col gap-px px-2">
               {projects.length === 0 ? (
                 <p className="flex h-row items-center pl-6 text-xs text-subtle-foreground">
                   No projects yet
@@ -164,7 +164,7 @@ export function WorkspaceSidebar({
             </div>
           </SidebarSection>
         ) : null}
-        <div className="mt-3 flex flex-col gap-px px-1">
+        <div className="mt-3 flex flex-col gap-px px-2">
           {allDestinations
             .filter(({ id }) => !destinations || destinations.includes(id))
             .map(({ id, label, icon: Icon }) => (
@@ -179,7 +179,7 @@ export function WorkspaceSidebar({
             ))}
         </div>
       </div>
-      {footer ? <div className="border-t px-2 py-2">{footer}</div> : null}
+      {footer ? <div className="border-t px-3 py-3">{footer}</div> : null}
       <FolderKanbanIcon className="hidden" aria-hidden />
     </div>
   );
