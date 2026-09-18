@@ -2,13 +2,11 @@ import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
-import { Kbd } from "@resit/ui/components/kbd";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
-import { shortcutLabel } from "@resit/ui/lib/keys";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface ComposerProps {
@@ -22,6 +20,8 @@ export interface ComposerProps {
   placeholder?: string;
   /** Scope summary or attachment chips rendered above the field. */
   children?: ReactNode;
+  /** Controls at the start of the bottom row, such as a model picker. */
+  start?: ReactNode;
   defaultValue?: string;
   className?: string;
 }
@@ -35,6 +35,7 @@ export function Composer({
   disabledReason,
   placeholder = "Ask about what you are studying…",
   children,
+  start,
   defaultValue = "",
   className,
 }: ComposerProps) {
@@ -60,7 +61,7 @@ export function Composer({
     <div
       data-slot="composer"
       className={cn(
-        "flex flex-col gap-2 rounded-panel border border-control-border bg-control p-2 shadow-control transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20",
+        "flex flex-col gap-2 rounded-panel border border-control-border bg-control p-2.5 shadow-control transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20",
         disabled && "opacity-80",
         className,
       )}
@@ -76,7 +77,8 @@ export function Composer({
         rows={1}
         className="field-sizing-content max-h-48 min-h-9 w-full resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:text-subtle-foreground disabled:cursor-not-allowed"
       />
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
+        {start}
         {onAttach ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -93,12 +95,7 @@ export function Composer({
             <TooltipContent>Attach</TooltipContent>
           </Tooltip>
         ) : null}
-        <span className="ml-auto hidden items-center gap-1 text-2xs text-subtle-foreground sm:flex">
-          {shortcutLabel("Shift+Enter").map((key) => (
-            <Kbd key={key}>{key}</Kbd>
-          ))}
-          new line
-        </span>
+        <span className="ml-auto" />
         {busy ? (
           <Button
             variant="secondary"

@@ -74,6 +74,8 @@ export interface ProviderModelSelectProps {
   /** Install or sign-in action for providers that are not ready. */
   onConnect?: (providerId: string) => void;
   disabled?: boolean;
+  /** A quiet trigger without status badge, for the composer. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -89,6 +91,7 @@ export function ProviderModelSelect({
   onModelChange,
   onConnect,
   disabled = false,
+  compact = false,
   className,
 }: ProviderModelSelectProps) {
   const provider = providers.find((entry) => entry.id === providerId);
@@ -99,10 +102,13 @@ export function ProviderModelSelect({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
+            variant={compact ? "subtle" : "outline"}
             size="sm"
             disabled={disabled}
-            className="max-w-full gap-1.5"
+            className={cn(
+              "max-w-full gap-1.5",
+              compact && "h-8 rounded-control px-2 text-xs",
+            )}
             aria-label="Provider and model"
           >
             <SparklesIcon
@@ -160,7 +166,7 @@ export function ProviderModelSelect({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      {provider && !usable ? (
+      {provider && !usable && !compact ? (
         <>
           <ProviderStatusBadge status={provider.status} />
           {onConnect && provider.status !== "checking" ? (

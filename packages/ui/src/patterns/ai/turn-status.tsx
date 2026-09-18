@@ -35,7 +35,7 @@ export function TurnStatusBar({
   onConnect,
   className,
 }: TurnStatusBarProps) {
-  const base = "flex h-9 items-center gap-2 px-3 text-xs";
+  const base = "flex h-10 items-center gap-2 px-4 text-xs";
   switch (status.kind) {
     case "idle":
       return (

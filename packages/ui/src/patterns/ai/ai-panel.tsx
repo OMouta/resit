@@ -65,7 +65,10 @@ export interface AiPanelProps {
   className?: string;
 }
 
-/** The collapsible AI panel: header, scope, transcript, status bar, composer. */
+/**
+ * The collapsible AI panel: conversation title, scope, transcript, status
+ * bar, and the composer with the provider and model picker.
+ */
 export function AiPanel({
   title = "Conversation",
   provider,
@@ -114,8 +117,13 @@ export function AiPanel({
         className,
       )}
     >
-      <header className="flex h-toolbar shrink-0 items-center gap-1 border-b px-2">
-        <ProviderModelSelect {...provider} className="min-w-0 flex-1" />
+      <header className="flex h-toolbar shrink-0 items-center gap-1 border-b pr-2 pl-4">
+        <h2
+          className="min-w-0 flex-1 truncate text-sm font-medium"
+          title={title}
+        >
+          {title}
+        </h2>
         {context ? (
           <Popover>
             <Tooltip>
@@ -169,12 +177,12 @@ export function AiPanel({
           </Tooltip>
         ) : null}
       </header>
-      <div className="shrink-0 border-b px-3 py-2">
+      <div className="shrink-0 border-b px-4 py-2.5">
         <ScopeChipList {...scope} />
       </div>
-      {notice ? <div className="shrink-0 px-3 pt-3">{notice}</div> : null}
+      {notice ? <div className="shrink-0 px-4 pt-4">{notice}</div> : null}
       <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-        <div className="flex flex-col gap-5 px-3 py-4">
+        <div className="flex flex-col gap-6 px-4 py-5">
           {turns.length === 0
             ? (emptyState ?? (
                 <div className="flex flex-col items-center gap-1 py-12 text-center">
@@ -233,8 +241,11 @@ export function AiPanel({
         {...(onRetry ? { onRetry } : {})}
         {...(onConnect ? { onConnect } : {})}
       />
-      <div className="shrink-0 px-3 pb-3">
-        <Composer {...composer} />
+      <div className="shrink-0 px-4 pb-4">
+        <Composer
+          {...composer}
+          start={<ProviderModelSelect {...provider} compact />}
+        />
       </div>
     </section>
   );

@@ -460,7 +460,7 @@ export function ChatPanel({
 
   return (
     <AiPanel
-      title="Study assistant"
+      title={current?.meta.title ?? "New conversation"}
       provider={{
         providers: [
           {
