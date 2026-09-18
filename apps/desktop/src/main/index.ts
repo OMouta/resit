@@ -18,8 +18,12 @@ const rendererUrl = new URL(
 let mainWindow: BrowserWindow | null = null;
 let closeConfirmed = false;
 
-/** Height of the app's title bar in CSS pixels; matches --toolbar-height. */
-const TITLE_BAR_HEIGHT = 48;
+/**
+ * Height of the window buttons drawn over the title bar. The bar is 48px
+ * (--toolbar-height) including its 1px bottom border, which must stay
+ * visible under the buttons.
+ */
+const TITLE_BAR_BUTTONS_HEIGHT = 47;
 
 /**
  * The app draws its own title bar. Windows and Linux keep the system
@@ -30,7 +34,7 @@ function titleBarOverlay(): Electron.TitleBarOverlayOptions {
   return {
     color: dark ? "#000000" : "#f7f7f5",
     symbolColor: dark ? "#ededed" : "#37352f",
-    height: TITLE_BAR_HEIGHT,
+    height: TITLE_BAR_BUTTONS_HEIGHT,
   };
 }
 
