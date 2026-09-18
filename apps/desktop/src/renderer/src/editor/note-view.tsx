@@ -462,9 +462,9 @@ function NoteEditor({
             <SaveStatus
               state={saveState}
               detail={saveError}
-              onAction={(state) => {
-                if (state === "error") void save();
-              }}
+              {...(saveState === "error"
+                ? { onAction: () => void save() }
+                : {})}
             />
             <Tabs
               value={mode}
