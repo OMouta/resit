@@ -13,6 +13,8 @@ export interface ViewHandle {
   insertMarkdown?(markdown: string): boolean;
   /** Writes pending edits to disk. */
   flush?(): Promise<void>;
+  /** Scrolls a PDF to a one-based page. */
+  goToPage?(page: number): void;
 }
 
 const handles = new Map<string, ViewHandle>();
@@ -36,4 +38,19 @@ export async function flushAllViews(): Promise<void> {
   await Promise.allSettled(
     [...handles.values()].map((handle) => handle.flush?.()),
   );
+}
+
+const pendingPages = new Map<string, number>();
+
+/** Shows a page now, or once the view for that resource has mounted. */
+export function showPage(resourceId: string, page: number): void {
+  const handle = handles.get(resourceId);
+  if (handle?.goToPage) handle.goToPage(page);
+  else pendingPages.set(resourceId, page);
+}
+
+export function takePendingPage(resourceId: string): number | undefined {
+  const page = pendingPages.get(resourceId);
+  pendingPages.delete(resourceId);
+  return page;
 }

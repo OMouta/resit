@@ -23,7 +23,7 @@ import type {
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api } from "../lib/api";
 import { useNotices } from "../lib/notices";
-import { flushAllViews, viewFor } from "../views/view-registry";
+import { flushAllViews, showPage, viewFor } from "../views/view-registry";
 import {
   ConfirmDialog,
   SubjectDialog,
@@ -122,10 +122,11 @@ export function WorkspaceView({
     focusedResource?.subjectId ?? snapshot.subjects[0]?.id ?? null;
 
   const openResource = useCallback(
-    (resourceId: string) => {
+    (resourceId: string, page?: number) => {
       const resource = resources.get(resourceId);
       if (!resource) return;
       dispatch({ type: "open", resourceId, title: resource.title });
+      if (page && resource.kind === "pdf") showPage(resourceId, page);
     },
     [resources],
   );

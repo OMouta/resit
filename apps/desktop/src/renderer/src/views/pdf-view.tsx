@@ -27,7 +27,7 @@ import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
 import type { ResourceInfo } from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import { useWidth } from "../lib/use-width";
-import { registerView } from "./view-registry";
+import { registerView, takePendingPage } from "./view-registry";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -59,6 +59,7 @@ export function PdfView({
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useWidth(rootRef);
   const compact = width > 0 && width < 640;
+  const pendingPage = useRef(takePendingPage(resource.id));
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
@@ -83,6 +84,10 @@ export function PdfView({
 
     eventBus.on("pagesinit", () => {
       viewer.currentScaleValue = scaleValue(zoomRef.current);
+      if (pendingPage.current) {
+        viewer.currentPageNumber = pendingPage.current;
+        pendingPage.current = undefined;
+      }
     });
     eventBus.on("pagechanging", (event: { pageNumber: number }) =>
       setPage(event.pageNumber),
@@ -155,6 +160,12 @@ export function PdfView({
               ? { page: viewer.currentPageNumber, pageCount: viewer.pagesCount }
               : {}),
           };
+        },
+        goToPage: (page) => {
+          const viewer = viewerRef.current;
+          if (viewer?.pdfDocument && viewer.pagesCount > 0)
+            viewer.currentPageNumber = Math.min(page, viewer.pagesCount);
+          else pendingPage.current = page;
         },
       }),
     [resource.id],
