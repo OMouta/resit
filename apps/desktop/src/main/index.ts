@@ -18,6 +18,22 @@ const rendererUrl = new URL(
 let mainWindow: BrowserWindow | null = null;
 let closeConfirmed = false;
 
+/** Height of the app's title bar in CSS pixels; matches --toolbar-height. */
+const TITLE_BAR_HEIGHT = 48;
+
+/**
+ * The app draws its own title bar. Windows and Linux keep the system
+ * window buttons, drawn over the bar in the bar's colours.
+ */
+function titleBarOverlay(): Electron.TitleBarOverlayOptions {
+  const dark = nativeTheme.shouldUseDarkColors;
+  return {
+    color: dark ? "#000000" : "#f7f7f5",
+    symbolColor: dark ? "#ededed" : "#37352f",
+    height: TITLE_BAR_HEIGHT,
+  };
+}
+
 async function createWindow(): Promise<void> {
   const settings = await loadSettings();
   nativeTheme.themeSource = settings.theme;
@@ -29,6 +45,10 @@ async function createWindow(): Promise<void> {
     minHeight: 480,
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#000000" : "#ffffff",
+    titleBarStyle: "hidden",
+    ...(process.platform === "darwin"
+      ? { titleBarOverlay: true, trafficLightPosition: { x: 18, y: 18 } }
+      : { titleBarOverlay: titleBarOverlay() }),
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
       sandbox: true,
@@ -78,6 +98,10 @@ void app
     setIpcContext({ window: () => mainWindow, rendererUrl });
     setEventSink((event) => {
       mainWindow?.webContents.send(EVENT_CHANNEL, event);
+    });
+    nativeTheme.on("updated", () => {
+      if (process.platform !== "darwin")
+        mainWindow?.setTitleBarOverlay(titleBarOverlay());
     });
     registerHandlers(
       () => mainWindow,

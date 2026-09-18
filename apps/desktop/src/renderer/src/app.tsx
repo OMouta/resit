@@ -186,6 +186,15 @@ export function App() {
 
   return (
     <main aria-label="resit" className="flex h-dvh flex-col">
+      {snapshot && !creating ? null : (
+        <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
+          <div aria-hidden className="titlebar-inset-start shrink-0" />
+          <span className="flex-1 text-center text-sm font-medium text-muted-foreground">
+            resit
+          </span>
+          <div aria-hidden className="titlebar-inset-end shrink-0" />
+        </header>
+      )}
       {screen}
       <SettingsDialog
         open={settingsOpen}

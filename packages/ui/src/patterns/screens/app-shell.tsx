@@ -38,8 +38,9 @@ export interface AppShellProps {
 }
 
 /**
- * Window layout: toolbar, sidebar, document area, AI panel. Below 1100px the
- * AI panel overlays the document area; below 800px the sidebar does too.
+ * Window layout: title bar, sidebar, document area, AI panel. Below 1100px
+ * the AI panel overlays the document area; below 800px the sidebar does too.
+ * The title bar drags the window in the desktop app.
  */
 export function AppShell({
   sidebar,
@@ -66,7 +67,8 @@ export function AppShell({
         className,
       )}
     >
-      <header className="flex h-toolbar shrink-0 items-center gap-1 border-b bg-sidebar px-2">
+      <header className="app-titlebar flex h-toolbar shrink-0 items-center gap-1.5 border-b bg-sidebar px-3">
+        <div aria-hidden className="titlebar-inset-start shrink-0" />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -81,39 +83,40 @@ export function AppShell({
           </TooltipTrigger>
           <TooltipContent>Sidebar</TooltipContent>
         </Tooltip>
-        <div className="hidden items-center @md:flex">
-          <Button
-            variant="subtle"
-            size="icon"
-            aria-label="Back"
-            disabled={!canGoBack}
-            onClick={onBack}
-          >
-            <ArrowLeftIcon />
-          </Button>
-          <Button
-            variant="subtle"
-            size="icon"
-            aria-label="Forward"
-            disabled={!canGoForward}
-            onClick={onForward}
-          >
-            <ArrowRightIcon />
-          </Button>
-        </div>
-        <div className="mx-2 min-w-0 flex-1 truncate text-center text-sm font-medium text-muted-foreground">
+        {onBack || onForward ? (
+          <div className="hidden items-center gap-0.5 @md:flex">
+            <Button
+              variant="subtle"
+              size="icon"
+              aria-label="Back"
+              disabled={!canGoBack}
+              onClick={onBack}
+            >
+              <ArrowLeftIcon />
+            </Button>
+            <Button
+              variant="subtle"
+              size="icon"
+              aria-label="Forward"
+              disabled={!canGoForward}
+              onClick={onForward}
+            >
+              <ArrowRightIcon />
+            </Button>
+          </div>
+        ) : null}
+        <div className="mx-3 min-w-0 flex-1 truncate text-center text-sm font-medium text-muted-foreground">
           {title}
         </div>
         {onSearch ? (
           <Button
             variant="outline"
-            size="sm"
             onClick={onSearch}
-            className="gap-2 text-muted-foreground"
+            className="gap-2 pr-1.5 pl-2.5 font-normal text-muted-foreground"
           >
             <SearchIcon />
             <span className="hidden @md:inline">Search</span>
-            <Kbd className="hidden @md:inline-flex">
+            <Kbd className="ml-2 hidden @md:inline-flex">
               {shortcutLabel("mod+K").join(isMac() ? "" : "+")}
             </Kbd>
           </Button>
@@ -135,6 +138,7 @@ export function AppShell({
             <TooltipContent>AI panel</TooltipContent>
           </Tooltip>
         ) : null}
+        <div aria-hidden className="titlebar-inset-end shrink-0" />
       </header>
       <div className="relative flex min-h-0 flex-1">
         {sidebarOpen ? (
