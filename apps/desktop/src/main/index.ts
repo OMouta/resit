@@ -76,9 +76,14 @@ async function createWindow(): Promise<void> {
     mainWindow = null;
     closeConfirmed = false;
   });
-  window.once("ready-to-show", () => {
-    if (!app.commandLine.hasSwitch("hidden")) window.show();
-  });
+  // With titleBarOverlay, Windows never sends ready-to-show for the first
+  // window, so the finished page load also shows it.
+  const show = () => {
+    if (!app.commandLine.hasSwitch("hidden") && !window.isVisible())
+      window.show();
+  };
+  window.once("ready-to-show", show);
+  window.webContents.once("did-finish-load", show);
   await window.loadURL(rendererUrl);
 }
 
