@@ -2,9 +2,18 @@ import { extname } from "node:path";
 import { dialog, nativeTheme, shell, type BrowserWindow } from "electron";
 import { z } from "zod";
 
+import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
 import { settingsPatchSchema } from "../shared/settings";
 import { subjectColorSchema } from "../shared/workspace";
+import { startTurn, stopTurn } from "./agent/turns";
+import {
+  createConversation,
+  deleteConversation,
+  listConversations,
+  readConversation,
+  updateConversation,
+} from "./conversations/store";
 import { checkHealth } from "./health";
 import { handle, id, title } from "./ipc";
 import {
@@ -12,10 +21,13 @@ import {
   appState,
   closeCurrentWorkspace,
   currentWorkspace,
+  emitEvent,
   reopenLastWorkspace,
   saveLayout,
 } from "./session";
+import { claudeStatus } from "./providers/claude";
 import { updateSettings } from "./settings";
+import { searchWorkspace } from "./workspace/search";
 import {
   createNote,
   createSubject,
@@ -58,7 +70,10 @@ const NEVER_LAUNCH = new Set([
   ".appimage",
 ]);
 
-export function registerHandlers(window: () => BrowserWindow | null): void {
+export function registerHandlers(
+  window: () => BrowserWindow | null,
+  onConfirmClose: () => void,
+): void {
   let firstLoad = true;
 
   handle(HEALTH_CHECK_CHANNEL, z.tuple([]), () => checkHealth());
@@ -75,6 +90,7 @@ export function registerHandlers(window: () => BrowserWindow | null): void {
     async (patch) => {
       const settings = await updateSettings(patch);
       nativeTheme.themeSource = settings.theme;
+      if (patch.claude) void claudeStatus(true);
       return settings;
     },
   );
@@ -221,4 +237,75 @@ export function registerHandlers(window: () => BrowserWindow | null): void {
     const error = await shell.openPath(file);
     if (error) throw new Error(error);
   });
+
+  handle(CHANNELS.search, z.tuple([z.string().max(200)]), (query) =>
+    searchWorkspace(currentWorkspace(), query, {
+      allow: () => true,
+      limit: 30,
+    }),
+  );
+
+  handle(
+    CHANNELS.openExternal,
+    z.tuple([z.string().max(4096)]),
+    async (url) => {
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        throw new Error("That link is not a valid address.");
+      }
+      if (!["http:", "https:", "mailto:"].includes(parsed.protocol))
+        throw new Error("Only web and email links open outside resit.");
+      await shell.openExternal(parsed.href);
+    },
+  );
+
+  handle(CHANNELS.getProviderStatus, z.tuple([z.boolean()]), (refresh) =>
+    claudeStatus(refresh),
+  );
+
+  handle(CHANNELS.listConversations, z.tuple([]), () =>
+    listConversations(currentWorkspace()),
+  );
+
+  handle(CHANNELS.createConversation, z.tuple([scopeSchema]), (scope) =>
+    createConversation(currentWorkspace(), scope),
+  );
+
+  handle(CHANNELS.readConversation, z.tuple([id]), (conversationId) =>
+    readConversation(currentWorkspace(), conversationId),
+  );
+
+  handle(
+    CHANNELS.updateConversation,
+    z.tuple([
+      z.object({ id, title: title.optional(), scope: scopeSchema.optional() }),
+    ]),
+    ({ id: conversationId, ...patch }) =>
+      updateConversation(currentWorkspace(), conversationId, patch),
+  );
+
+  handle(CHANNELS.deleteConversation, z.tuple([id]), async (conversationId) => {
+    await stopTurn(conversationId);
+    await deleteConversation(currentWorkspace(), conversationId);
+  });
+
+  handle(
+    CHANNELS.sendMessage,
+    z.tuple([
+      z.object({
+        conversationId: id,
+        text: z.string().trim().min(1).max(20_000),
+        context: turnContextSchema,
+      }),
+    ]),
+    (input) => startTurn(currentWorkspace(), emitEvent, input),
+  );
+
+  handle(CHANNELS.stopTurn, z.tuple([id]), (conversationId) =>
+    stopTurn(conversationId),
+  );
+
+  handle(CHANNELS.confirmClose, z.tuple([]), () => onConfirmClose());
 }

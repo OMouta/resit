@@ -2,6 +2,7 @@ import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 
 import type { AppState, DesktopEvent } from "../shared/ipc";
+import { abortAllTurns } from "./agent/turns";
 import {
   forgetLastWorkspace,
   loadSettings,
@@ -23,6 +24,10 @@ let emit: (event: DesktopEvent) => void = () => undefined;
 
 export function setEventSink(sink: (event: DesktopEvent) => void): void {
   emit = sink;
+}
+
+export function emitEvent(event: DesktopEvent): void {
+  emit(event);
 }
 
 export function currentWorkspace(): OpenWorkspace {
@@ -101,6 +106,7 @@ export async function activateWorkspace(
   workspace: OpenWorkspace,
 ): Promise<void> {
   stopWatching();
+  abortAllTurns();
   current = workspace;
   await rememberWorkspace({
     id: workspace.file.id,
@@ -112,6 +118,7 @@ export async function activateWorkspace(
 
 export async function closeCurrentWorkspace(): Promise<void> {
   stopWatching();
+  abortAllTurns();
   current = null;
   await forgetLastWorkspace();
 }

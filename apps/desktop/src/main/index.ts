@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, nativeTheme, session } from "electron";
 import { EVENT_CHANNEL } from "../shared/ipc";
+import { abortAllTurns } from "./agent/turns";
 import { registerHandlers } from "./handlers";
 import { setIpcContext } from "./ipc";
 import { setEventSink } from "./session";
@@ -15,6 +16,7 @@ const rendererUrl = new URL(
 ).href;
 
 let mainWindow: BrowserWindow | null = null;
+let closeConfirmed = false;
 
 async function createWindow(): Promise<void> {
   const settings = await loadSettings();
@@ -39,8 +41,20 @@ async function createWindow(): Promise<void> {
   window.removeMenu();
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
+  // Give the renderer a moment to save open notes before the window goes.
+  window.on("close", (event) => {
+    if (closeConfirmed) return;
+    event.preventDefault();
+    window.webContents.send(EVENT_CHANNEL, { type: "before-close" });
+    setTimeout(() => {
+      if (window.isDestroyed()) return;
+      closeConfirmed = true;
+      window.close();
+    }, 3000);
+  });
   window.on("closed", () => {
     mainWindow = null;
+    closeConfirmed = false;
   });
   window.once("ready-to-show", () => {
     if (!app.commandLine.hasSwitch("hidden")) window.show();
@@ -51,10 +65,13 @@ async function createWindow(): Promise<void> {
 void app
   .whenReady()
   .then(async () => {
-    session.defaultSession.setPermissionCheckHandler(() => false);
+    // Only writing to the clipboard (the Copy buttons) is allowed.
+    session.defaultSession.setPermissionCheckHandler(
+      (_contents, permission) => permission === "clipboard-sanitized-write",
+    );
     session.defaultSession.setPermissionRequestHandler(
-      (_contents, _permission, callback) => {
-        callback(false);
+      (_contents, permission, callback) => {
+        callback(permission === "clipboard-sanitized-write");
       },
     );
 
@@ -62,7 +79,13 @@ void app
     setEventSink((event) => {
       mainWindow?.webContents.send(EVENT_CHANNEL, event);
     });
-    registerHandlers(() => mainWindow);
+    registerHandlers(
+      () => mainWindow,
+      () => {
+        closeConfirmed = true;
+        mainWindow?.close();
+      },
+    );
 
     await createWindow();
     app.on("activate", () => {
@@ -75,6 +98,8 @@ void app
     console.error("Unable to start resit", error);
     app.exit(1);
   });
+
+app.on("before-quit", abortAllTurns);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
