@@ -53,19 +53,20 @@ export function WorkspaceSwitcher({
       <DropdownMenuTrigger
         data-slot="workspace-switcher"
         className={cn(
-          "flex h-control-lg w-full min-w-0 items-center gap-2 rounded-control px-2 text-left text-sm outline-none transition-colors duration-(--duration-fast) hover:bg-accent focus-visible:shadow-focus data-[state=open]:bg-accent",
+          "flex h-control-lg w-full min-w-0 items-center gap-2.5 rounded-control px-2 text-left text-sm outline-none transition-colors duration-(--duration-fast) hover:bg-accent focus-visible:shadow-focus data-[state=open]:bg-accent",
           className,
         )}
         title={workspace.path}
       >
-        <span className="flex min-w-0 flex-1 flex-col leading-tight">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate font-medium">{workspace.name}</span>
-            {readOnly ? <Badge variant="muted">Read-only</Badge> : null}
-          </span>
-          <span className="truncate text-2xs text-subtle-foreground">
-            {workspace.path}
-          </span>
+        <span
+          aria-hidden
+          className="flex size-6 shrink-0 items-center justify-center rounded-md bg-foreground/[0.07] text-xs font-semibold text-foreground/80"
+        >
+          {Array.from(workspace.name.trim())[0]?.toUpperCase()}
+        </span>
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate font-semibold">{workspace.name}</span>
+          {readOnly ? <Badge variant="muted">Read-only</Badge> : null}
         </span>
         <ChevronsUpDownIcon
           aria-hidden

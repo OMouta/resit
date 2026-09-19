@@ -102,10 +102,10 @@ export function WorkspaceSidebar({
         className,
       )}
     >
-      <div className="px-3 pt-3">
+      <div className="px-2 pt-2.5">
         <WorkspaceSwitcher {...switcher} />
       </div>
-      <div className="scrollbar-thin mt-3 min-h-0 flex-1 overflow-y-auto pb-4">
+      <div className="scrollbar-thin mt-4 min-h-0 flex-1 overflow-y-auto pb-4">
         <SidebarSection
           title="Subjects"
           count={tree.subjects.filter((subject) => !subject.archived).length}
