@@ -49,7 +49,7 @@ export function DocumentHeader({
     <header
       data-slot="document-header"
       className={cn(
-        "flex flex-col gap-3 px-8 pt-10 pb-4 @container",
+        "flex flex-col gap-4 px-8 pt-12 pb-5 @container",
         className,
       )}
     >
@@ -108,12 +108,12 @@ export function DocumentHeader({
                 setEditing(false);
               }
             }}
-            className="w-full min-w-0 rounded-md bg-transparent text-2xl font-semibold tracking-[-0.02em] outline-none focus-visible:shadow-focus"
+            className="w-full min-w-0 rounded-md bg-transparent text-3xl font-bold tracking-[-0.025em] outline-none focus-visible:shadow-focus @md:text-[2.5rem] @md:leading-[1.2]"
           />
         ) : (
           <h1
             className={cn(
-              "min-w-0 text-2xl font-semibold tracking-[-0.02em] text-balance @md:text-3xl",
+              "min-w-0 text-3xl font-bold tracking-[-0.025em] text-balance @md:text-[2.5rem] @md:leading-[1.2]",
               onRename &&
                 !readOnly &&
                 "-mx-1 cursor-text rounded-md px-1 hover:bg-accent",
