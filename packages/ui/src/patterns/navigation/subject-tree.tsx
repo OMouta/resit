@@ -142,8 +142,8 @@ function TreeRow({
       className={cn(
         "group/row relative flex h-row w-full cursor-default items-center gap-1.5 rounded-md pr-1 text-sm outline-none select-none",
         "hover:bg-accent focus-visible:shadow-focus",
-        selected && "bg-accent",
-        active && "font-medium text-foreground",
+        selected && "group-focus-within/tree:bg-accent",
+        active && "bg-accent font-medium text-foreground",
         !active && "text-foreground/85",
         dragging && "opacity-40",
         dropTarget && "bg-selection ring-1 ring-ring/50 ring-inset",
@@ -283,7 +283,7 @@ export function SubjectTree({
       aria-label="Subjects"
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      className={cn("flex flex-col gap-px px-2", className)}
+      className={cn("group/tree flex flex-col gap-px px-2", className)}
     >
       {subjects.map((subject) => {
         const expanded = expandedIds.has(subject.id);
