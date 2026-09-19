@@ -13,7 +13,7 @@ import { SettingsSection } from "./settings-dialog";
 function describe(provider: ProviderState): string {
   switch (provider.status) {
     case "checking":
-      return "Checking the installed Claude Code…";
+      return "Checking Claude Code…";
     case "ready":
       return `Claude Code ${provider.version} at ${provider.path}`;
     case "not-authenticated":
@@ -53,7 +53,7 @@ export function ClaudeSettings({
   return (
     <SettingsSection
       title="Claude Code"
-      description="resit uses your installed Claude Code and its sign-in. Nothing is sent until you ask a question."
+      description="Use your Claude Code account for AI chat."
     >
       <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1">

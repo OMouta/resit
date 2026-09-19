@@ -227,8 +227,8 @@ export function ScopeMismatchNotice({
       )}
     >
       <p>
-        <span className="font-medium">{title}</span> ({subjectName}) is outside
-        this conversation’s scope. The conversation stays where it is.
+        <span className="font-medium">{title}</span> is not included in this
+        conversation.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={onAddToScope}>

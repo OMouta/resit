@@ -470,8 +470,7 @@ export function ChatPanel({
     }
     notices.notify({
       tone: "info",
-      title: "Open a note to insert into",
-      detail: "The reply is added at the end of the note in the focused pane.",
+      title: "Open a note to add this reply",
     });
   };
 
@@ -523,8 +522,7 @@ export function ChatPanel({
               resourceIds: scope.resourceIds.filter((id) => id !== item.id),
             });
         },
-        emptyLabel:
-          "No subjects in scope. Claude cannot read any of your files until you add one.",
+        emptyLabel: "Add a subject or file so Claude can read it.",
       }}
       turns={turns}
       status={status}
@@ -565,7 +563,7 @@ export function ChatPanel({
             : "Connect Claude Code in Settings to ask questions",
         placeholder: focused
           ? `Ask about ${focused.title}…`
-          : "Ask about what you are studying…",
+          : "Ask about your notes or PDFs…",
         children:
           composerItems.length > 0 ? (
             <ul
@@ -608,11 +606,11 @@ export function ChatPanel({
       renderText={renderMarkdown}
       emptyState={
         <div className="flex flex-col items-center gap-2 px-2 py-10 text-center">
-          <p className="text-sm font-medium">Ask about what you are studying</p>
+          <p className="text-sm font-medium">Ask about your notes or PDFs</p>
           <p className="max-w-64 text-xs text-muted-foreground">
-            Claude can read the notes and PDFs in this conversation’s scope.
-            Your messages, the open file’s name, your selection, and anything
-            Claude reads are sent to Anthropic through Claude Code.
+            Claude can read the subjects and files listed above. Your messages,
+            the open file's name, selected text, and content Claude reads are
+            sent to Anthropic.
           </p>
         </div>
       }

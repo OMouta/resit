@@ -112,7 +112,7 @@ export function AttachmentView({ resource }: { resource: ResourceInfo }) {
     <div className="flex h-full items-center justify-center bg-canvas">
       <EmptyState
         title={resource.title}
-        description={`${formatBytes(resource.size, number)} · added ${relative(resource.updatedAt)}. resit does not read this file type, so it is not searchable and the AI cannot see its contents.`}
+        description={`${formatBytes(resource.size, number)} · added ${relative(resource.updatedAt)}. Search and AI cannot read this file type.`}
         actions={
           <Button
             variant="secondary"

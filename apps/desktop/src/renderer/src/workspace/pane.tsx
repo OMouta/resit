@@ -147,7 +147,7 @@ export function WorkspacePane({
                   className="h-full"
                   icon={<FileQuestionIcon />}
                   title={`${tab.title} is no longer in the workspace`}
-                  description="It was moved to the trash or deleted outside resit. Close this tab to continue."
+                  description="It was moved to the trash or deleted outside resit."
                 />
               )}
             </div>

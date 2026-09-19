@@ -127,7 +127,6 @@ export function TurnStatusBar({
             {status.providerName
               ? `${status.providerName} is not connected`
               : "No AI provider connected"}
-            . Notes and PDFs work as usual.
           </span>
           {onConnect ? (
             <Button size="sm" variant="secondary" onClick={onConnect}>
