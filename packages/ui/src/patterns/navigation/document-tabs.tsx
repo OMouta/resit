@@ -272,7 +272,7 @@ export function DocumentTabs({
                 if (event.button === 1) onClose(tab.id);
               }}
               className={cn(
-                "group/tab relative flex h-full max-w-60 shrink-0 cursor-default items-center gap-2 rounded-control px-3 text-sm outline-none select-none transition-colors duration-(--duration-fast)",
+                "group/tab relative flex h-full max-w-60 shrink-0 cursor-pointer items-center gap-2 rounded-control px-3 text-sm outline-none select-none transition-colors duration-(--duration-fast)",
                 tab.pinned ? "w-9 justify-center px-0" : "min-w-32",
                 active
                   ? "bg-background text-foreground shadow-sm dark:bg-surface-raised"

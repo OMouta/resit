@@ -140,7 +140,7 @@ function TreeRow({
         }
       }}
       className={cn(
-        "group/row relative flex h-row w-full cursor-default items-center gap-1.5 rounded-md pr-1 text-sm outline-none select-none",
+        "group/row relative flex h-row w-full cursor-pointer items-center gap-1.5 rounded-md pr-1 text-sm outline-none select-none",
         "hover:bg-accent focus-visible:shadow-focus",
         selected && "group-focus-within/tree:bg-accent",
         active && "bg-accent font-medium text-foreground",
