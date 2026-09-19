@@ -195,7 +195,7 @@ export function EditorToolbar({
       aria-label="Formatting"
       aria-disabled={disabled || undefined}
       className={cn(
-        "flex h-toolbar min-w-0 items-center gap-1 border-b bg-background px-3",
+        "flex h-toolbar min-w-0 items-center gap-1 bg-background px-3",
         className,
       )}
     >
