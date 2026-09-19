@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Button } from "@resit/ui/components/button";
 import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
+import { ResitMark } from "@resit/ui/components/resit-mark";
 import {
   SUBJECT_COLORS,
   subjectColorClasses,
@@ -90,9 +91,7 @@ export function Onboarding({
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 py-12 @2xl:py-20">
         <header className="flex flex-col gap-3">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-linear-to-b from-primary-top to-primary-bottom text-2xl font-semibold text-white shadow-primary">
-            r
-          </span>
+          <ResitMark className="size-12" />
           <h1 className="text-3xl font-semibold tracking-[-0.02em]">
             Your study workspace is a folder.
           </h1>

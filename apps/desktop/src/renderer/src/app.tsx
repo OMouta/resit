@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type SetStateAction } from "react";
 
+import { ResitLogo } from "@resit/ui/components/resit-mark";
 import { applyAppearance } from "@resit/ui/lib/theme";
 import {
   CreateWorkspaceStep,
@@ -193,9 +194,7 @@ export function App() {
       {snapshot && !creating ? null : (
         <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
           <div aria-hidden className="titlebar-inset-start shrink-0" />
-          <span className="flex-1 text-center text-sm font-medium text-muted-foreground">
-            resit
-          </span>
+          <ResitLogo className="ml-1.5 flex-1 text-sm" />
           <div aria-hidden className="titlebar-inset-end shrink-0" />
         </header>
       )}
