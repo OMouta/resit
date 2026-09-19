@@ -93,25 +93,23 @@ export function Onboarding({
         <header className="flex flex-col gap-3">
           <ResitMark className="size-12" />
           <h1 className="text-3xl font-semibold tracking-[-0.02em]">
-            Your study workspace is a folder.
+            Open your study workspace
           </h1>
           <p className="max-w-xl text-base text-muted-foreground">
-            Notes, PDFs, exercises, and your learning history stay in a folder
-            you own. AI is optional and connects to tools you already have
-            installed.
+            Keep your notes and PDFs in a folder on your computer.
           </p>
         </header>
         <div className="grid gap-3 @lg:grid-cols-3">
           <Choice
             icon={FolderPlusIcon}
             title="Create workspace"
-            description="Pick a folder and a name. Add your first subject next."
+            description="Choose a folder and add your first subject."
             onClick={onCreate}
           />
           <Choice
             icon={FolderOpenIcon}
             title="Open folder"
-            description="Open a workspace you already have on this computer or a synced drive."
+            description="Open an existing workspace."
             onClick={onOpenFolder}
           />
           <Choice
@@ -120,9 +118,7 @@ export function Onboarding({
             description="Restore a workspace exported from another computer."
             onClick={onOpenArchive}
             disabled={!archiveAvailable}
-            {...(!archiveAvailable
-              ? { note: "Not available yet in this version." }
-              : {})}
+            {...(!archiveAvailable ? { note: "Not available yet." } : {})}
           />
         </div>
         {recent.length > 0 ? (
@@ -154,8 +150,8 @@ export function Onboarding({
           </section>
         ) : null}
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <SparklesIcon className="size-3.5" /> Connect Claude Code or Codex
-          later from Settings. Everything works without them.
+          <SparklesIcon className="size-3.5" /> For AI chat, connect Claude Code
+          in Settings.
         </p>
       </div>
     </div>
@@ -246,8 +242,7 @@ export function CreateWorkspaceStep({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              An empty folder or one you back up already. resit writes plain
-              Markdown, PDFs, and JSON.
+              Your notes and imported files will be saved here.
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
