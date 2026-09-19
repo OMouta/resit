@@ -14,13 +14,18 @@
 /*
   resit tokens.
 
-  Light theme: Notion warm neutrals (paper white, ink #37352F, gray text
-  #787774) with the Notion colour palette for subjects and status.
-  Dark theme: Vercel black surfaces, hairline borders, high-contrast text.
-  Structure, radii, shadows, and motion follow Apple desktop UI: quiet
-  borders, soft layered shadows, short ease-out transitions.
+  Both themes follow Notion: warm paper neutrals with #37352F ink in
+  light, soft greys (#191919 page, #202020 sidebar) in dark, and the
+  Notion palette for subjects and status. The brand colour is resit
+  jade, used for the primary action, focus, links, and selection; the
+  mark's dot is highlighter yellow. Radii, shadows, and motion stay
+  Apple-like: quiet borders, soft layered shadows, short ease-out.
 */
 :root {
+  --brand: #13795b;
+  --brand-soft: #e5f2ec;
+  --brand-dot: #ffcf3f;
+
   --background: #ffffff;
   --foreground: #37352f;
   --surface: #ffffff;
@@ -31,7 +36,7 @@
   --card-foreground: #37352f;
   --popover: #ffffff;
   --popover-foreground: #37352f;
-  --primary: #2383e2;
+  --primary: var(--brand);
   --primary-foreground: #ffffff;
   --secondary: #f1f1ef;
   --secondary-foreground: #37352f;
@@ -40,8 +45,8 @@
   --subtle-foreground: #9b9a97;
   --accent: rgba(55, 53, 47, 0.06);
   --accent-foreground: #37352f;
-  --selection: rgba(35, 131, 226, 0.14);
-  --selection-strong: rgba(35, 131, 226, 0.28);
+  --selection: rgba(19, 121, 91, 0.12);
+  --selection-strong: rgba(19, 121, 91, 0.22);
   --destructive: #e03e3e;
   --destructive-foreground: #ffffff;
   --success: #448361;
@@ -51,31 +56,32 @@
   --warning-foreground: #ffffff;
   --warning-soft: #faebdd;
   --danger-soft: #fdebec;
-  --info-soft: #e7f3f8;
-  --border: #e9e9e7;
-  --border-strong: #d3d1cb;
+  --info-soft: var(--brand-soft);
+  --border: #ebebea;
+  --border-strong: #dcdbd7;
   --input: #dfdeda;
-  --ring: #2383e2;
-  --link: #2383e2;
-  --highlight: #fef3c7;
+  --ring: var(--brand);
+  --link: var(--brand);
+  --highlight: #fdf0b5;
 
   --control-bg: #ffffff;
   --control-bg-hover: #f7f7f5;
   --control-bg-active: #f1f1ef;
-  --control-border: rgba(55, 53, 47, 0.16);
-  --control-shadow: 0 1px 2px rgba(15, 15, 15, 0.06);
+  --control-border: rgba(55, 53, 47, 0.14);
+  --control-shadow: 0 1px 2px rgba(15, 15, 15, 0.05);
   --control-shadow-active: inset 0 1px 2px rgba(15, 15, 15, 0.08);
   --input-shadow: inset 0 1px 2px rgba(15, 15, 15, 0.04);
-  --primary-top: #3b93ea;
-  --primary-bottom: #1f7bd9;
-  --primary-border: #1b6cc2;
+  --primary-top: #1a8565;
+  --primary-bottom: #117153;
+  --primary-border: #0e6348;
   --primary-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 2px rgba(15, 15, 15, 0.16);
-  --segment-track: rgba(55, 53, 47, 0.07);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 2px rgba(15, 15, 15, 0.14);
+  --segment-track: rgba(55, 53, 47, 0.06);
   --segment-thumb-shadow:
-    0 1px 3px rgba(15, 15, 15, 0.14), 0 0 0 0.5px rgba(15, 15, 15, 0.05);
-  --canvas: #f4f3f0;
-  --canvas-dot: rgba(55, 53, 47, 0.16);
+    0 1px 3px rgba(15, 15, 15, 0.12), 0 0 0 0.5px rgba(15, 15, 15, 0.05);
+  --canvas: #f7f7f5;
+  --canvas-dot: rgba(55, 53, 47, 0.14);
+  --scrollbar: rgba(55, 53, 47, 0.2);
 
   --subject-gray: #787774;
   --subject-gray-soft: #f1f1ef;
@@ -153,85 +159,92 @@
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --surface: #0a0a0a;
-  --surface-raised: #111111;
-  --sidebar: #000000;
-  --sidebar-foreground: #ededed;
-  --card: #0a0a0a;
-  --card-foreground: #ededed;
-  --popover: #111111;
-  --popover-foreground: #ededed;
-  --primary: #0072f5;
-  --primary-foreground: #ffffff;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #ededed;
-  --muted: #171717;
-  --muted-foreground: #a1a1a1;
-  --subtle-foreground: #7a7a7a;
-  --accent: rgba(255, 255, 255, 0.07);
-  --accent-foreground: #ededed;
-  --selection: rgba(0, 114, 245, 0.28);
-  --selection-strong: rgba(0, 114, 245, 0.45);
-  --destructive: #ff6166;
-  --destructive-foreground: #0a0a0a;
-  --success: #46a758;
-  --success-foreground: #0a0a0a;
-  --success-soft: #0f2416;
-  --warning: #ff990a;
-  --warning-foreground: #0a0a0a;
-  --warning-soft: #2c1d05;
-  --danger-soft: #2f1315;
-  --info-soft: #0c1f36;
-  --border: #1f1f1f;
-  --border-strong: #333333;
-  --input: #2e2e2e;
-  --ring: #0072f5;
-  --link: #52a8ff;
-  --highlight: #3d2f0c;
+  --brand: #1c8062;
+  --brand-soft: #1b2e27;
+  --brand-dot: #ffcf3f;
 
-  --control-bg: #0a0a0a;
-  --control-bg-hover: #1a1a1a;
-  --control-bg-active: #222222;
-  --control-border: #333333;
-  --control-shadow: none;
+  --background: #191919;
+  --foreground: #e3e2e0;
+  --surface: #191919;
+  --surface-raised: #252525;
+  --sidebar: #202020;
+  --sidebar-foreground: #e3e2e0;
+  --card: #202020;
+  --card-foreground: #e3e2e0;
+  --popover: #252525;
+  --popover-foreground: #e3e2e0;
+  --primary: var(--brand);
+  --primary-foreground: #ffffff;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #e3e2e0;
+  --muted: #262626;
+  --muted-foreground: #9b9a97;
+  --subtle-foreground: #7d7c78;
+  --accent: rgba(255, 255, 255, 0.055);
+  --accent-foreground: #e3e2e0;
+  --selection: rgba(76, 199, 154, 0.16);
+  --selection-strong: rgba(76, 199, 154, 0.28);
+  --destructive: #eb5d5a;
+  --destructive-foreground: #ffffff;
+  --success: #529e72;
+  --success-foreground: #ffffff;
+  --success-soft: #1f2d25;
+  --warning: #d9894a;
+  --warning-foreground: #191919;
+  --warning-soft: #33261b;
+  --danger-soft: #362120;
+  --info-soft: var(--brand-soft);
+  --border: #2e2e2e;
+  --border-strong: #3d3d3d;
+  --input: #3a3a3a;
+  --ring: #4cc79a;
+  --link: #4cc79a;
+  --highlight: #4a3c14;
+
+  --control-bg: #252525;
+  --control-bg-hover: #2c2c2c;
+  --control-bg-active: #323232;
+  --control-border: #383838;
+  --control-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   --control-shadow-active: none;
   --input-shadow: none;
-  --primary-top: #1a82ff;
-  --primary-bottom: #0066e0;
-  --primary-border: #0a5bc7;
-  --primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --segment-track: #171717;
-  --segment-thumb-shadow: 0 0 0 1px #333333;
-  --canvas: #000000;
-  --canvas-dot: #262626;
+  --primary-top: #218c6c;
+  --primary-bottom: #1a765a;
+  --primary-border: #16684f;
+  --primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --segment-track: rgba(255, 255, 255, 0.06);
+  --segment-thumb-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --canvas: #191919;
+  --canvas-dot: #2e2e2e;
+  --scrollbar: rgba(255, 255, 255, 0.16);
 
   --subject-gray: #9b9b9b;
-  --subject-gray-soft: #252525;
+  --subject-gray-soft: #2f2f2f;
   --subject-brown: #ba856f;
-  --subject-brown-soft: #2e2724;
+  --subject-brown-soft: #3a2c26;
   --subject-orange: #c77d48;
-  --subject-orange-soft: #36291f;
-  --subject-yellow: #ca9a3f;
-  --subject-yellow-soft: #372e20;
+  --subject-orange-soft: #3d2b1e;
+  --subject-yellow: #ca9849;
+  --subject-yellow-soft: #3b3122;
   --subject-green: #529e72;
-  --subject-green-soft: #242b26;
+  --subject-green-soft: #22332a;
   --subject-blue: #5e87c9;
-  --subject-blue-soft: #1f282d;
+  --subject-blue-soft: #1c2f3b;
   --subject-purple: #9d68d3;
-  --subject-purple-soft: #2a2430;
+  --subject-purple-soft: #33283d;
   --subject-pink: #d15796;
-  --subject-pink-soft: #2e2328;
+  --subject-pink-soft: #3a2530;
   --subject-red: #df5452;
-  --subject-red-soft: #332523;
+  --subject-red-soft: #3c2524;
 
-  --shadow-hairline: 0 0 0 1px rgba(255, 255, 255, 0.1);
-  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-hairline: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --shadow-md:
-    0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
   --shadow-lg:
-    0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12);
+    0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -257,6 +270,9 @@
   --text-3xl: var(--text-3xl);
   --text-3xl--line-height: 2.5rem;
 
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-dot: var(--brand-dot);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
@@ -365,6 +381,8 @@
 @layer base {
   * {
     @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
   }
 
   html {

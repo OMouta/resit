@@ -31,7 +31,7 @@ export const references: ReferenceImage[] = [];
 /** Directions given in words. Kept beside the images so notes and pictures stay together. */
 export const directionNotes = {
   summary:
-    "Combine Apple desktop UI structure, the Notion colour palette, and the Vercel dark theme. No approved reference pictures have been supplied yet; the written direction below is the current input, and the picture set stays an open input dependency.",
+    "Combine Apple desktop UI structure with Notion's colours in both themes, under resit's own brand: jade for the primary action and the r. mark. No approved reference pictures have been supplied yet; the written direction below is the current input, and the picture set stays an open input dependency.",
   sources: [
     {
       name: "Apple desktop UI (macOS system apps: Notes, Finder, Settings)",
@@ -50,27 +50,27 @@ export const directionNotes = {
       ],
     },
     {
-      name: "Notion (light theme, page and sidebar colours, tag palette)",
+      name: "Notion (page and sidebar colours in both themes, tag palette)",
       informs: ["colour", "editor", "navigation"],
       adopt: [
         "Paper white pages with #37352F ink and #787774 secondary text.",
         "Sidebar surface #F7F7F5 with hover fills at 6–8% ink alpha.",
+        "Dark theme on soft greys, not black: #191919 pages, #202020 sidebar, #252525 popovers, #E3E2E0 text.",
         "The nine-colour tag palette (gray, brown, orange, yellow, green, blue, purple, pink, red) as the subject palette, always paired with a text label.",
-        "Blue #2383E2 for links, selection, and the primary action.",
+        "Large bold page titles; the open page highlighted in the sidebar tree; tabs as rounded pills.",
         "Block-level content rhythm: generous vertical spacing, 44rem measure for reading.",
       ],
       avoid: [
+        "Notion blue and the Notion logo. resit jade (#13795B) is the primary action, focus, link, and selection colour.",
         "Database-style tables and property rows as a general layout pattern.",
         "Emoji page icons as the primary identity for subjects.",
         "Very light gray text for anything the student must read.",
       ],
     },
     {
-      name: "Vercel dashboard (dark theme, Geist typography)",
-      informs: ["colour", "typography", "chat"],
+      name: "Vercel dashboard (Geist typography)",
+      informs: ["typography", "chat"],
       adopt: [
-        "True black #000 sidebar and #0A0A0A surfaces with #1F1F1F–#333 hairlines; no elevated grey cards.",
-        "High-contrast #EDEDED text with #A1A1A1 secondary text.",
         "Geist Sans for interface text and Geist Mono for code, paths, and tool output.",
         "Status colours kept saturated but small: dots, badges, and thin progress bars.",
         "Dark popovers are a lighter surface with a hairline, not a shadow.",

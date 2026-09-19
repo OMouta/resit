@@ -171,7 +171,7 @@ export const page: ExamplePage = {
   slug: "colors",
   title: "Colours",
   description:
-    "Light theme uses Notion's paper white and warm ink; dark theme uses Vercel's black surfaces with hairlines. Switch the theme control to compare. Values are read live from the stylesheet.",
+    "Both themes follow Notion: paper white and warm ink in light, soft greys in dark. Primary actions, focus, and links use resit jade. Switch the theme control to compare. Values are read live from the stylesheet.",
   source: "packages/ui/src/styles/globals.css",
   keywords: ["theme", "palette", "tokens", "dark"],
   examples: [

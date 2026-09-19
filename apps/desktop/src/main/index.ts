@@ -32,8 +32,8 @@ const TITLE_BAR_BUTTONS_HEIGHT = 47;
 function titleBarOverlay(): Electron.TitleBarOverlayOptions {
   const dark = nativeTheme.shouldUseDarkColors;
   return {
-    color: dark ? "#000000" : "#f7f7f5",
-    symbolColor: dark ? "#ededed" : "#37352f",
+    color: dark ? "#202020" : "#f7f7f5",
+    symbolColor: dark ? "#e3e2e0" : "#37352f",
     height: TITLE_BAR_BUTTONS_HEIGHT,
   };
 }
@@ -48,7 +48,7 @@ async function createWindow(): Promise<void> {
     minWidth: 720,
     minHeight: 480,
     show: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#000000" : "#ffffff",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#191919" : "#ffffff",
     titleBarStyle: "hidden",
     ...(process.platform === "darwin"
       ? { titleBarOverlay: true, trafficLightPosition: { x: 18, y: 18 } }
