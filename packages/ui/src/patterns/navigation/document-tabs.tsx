@@ -249,7 +249,7 @@ export function DocumentTabs({
         ref={stripRef}
         role="tablist"
         aria-label="Open documents"
-        className="scrollbar-none relative flex min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none]"
+        className="scrollbar-none relative flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto px-1.5 py-1.5 [scrollbar-width:none]"
       >
         {tabs.map((tab, index) => {
           const Icon = icons[tab.kind];
@@ -272,25 +272,19 @@ export function DocumentTabs({
                 if (event.button === 1) onClose(tab.id);
               }}
               className={cn(
-                "group/tab relative flex h-full max-w-60 shrink-0 cursor-default items-center gap-2 border-r px-3.5 text-sm outline-none select-none",
-                tab.pinned ? "w-10 justify-center px-0" : "min-w-32",
+                "group/tab relative flex h-full max-w-60 shrink-0 cursor-default items-center gap-2 rounded-control px-3 text-sm outline-none select-none transition-colors duration-(--duration-fast)",
+                tab.pinned ? "w-9 justify-center px-0" : "min-w-32",
                 active
-                  ? "bg-background text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-background"
+                  ? "bg-background text-foreground shadow-sm dark:bg-surface-raised"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 tab.preview && "italic",
                 drag?.id === tab.id && "opacity-40",
                 insertBefore &&
-                  "before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:bg-ring",
+                  "before:absolute before:inset-y-1 before:-left-[3px] before:w-0.5 before:rounded-full before:bg-ring",
                 "focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]",
               )}
               title={tab.title}
             >
-              {active ? (
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-0.5 bg-primary"
-                />
-              ) : null}
               {tab.missing ? (
                 <AlertTriangleIcon className="size-4 shrink-0 text-warning" />
               ) : tab.pinned ? (
