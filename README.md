@@ -57,3 +57,7 @@ Back up the whole workspace folder to keep your notes, imported files, and conve
 | `Ctrl+W` | Close the current tab                |
 
 On macOS, use Cmd instead of Ctrl.
+
+## License
+
+[MIT](LICENSE). Copyright 2026 Tiago Mouta.
