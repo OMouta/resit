@@ -10,6 +10,8 @@ import {
   type SetStateAction,
 } from "react";
 
+import { subjectColorClasses } from "@resit/ui/lib/subject-color";
+import { cn } from "@resit/ui/lib/utils";
 import { SplitLayout } from "@resit/ui/patterns/navigation/split-handle";
 import { AppShell } from "@resit/ui/patterns/screens/app-shell";
 
@@ -412,9 +414,15 @@ export function WorkspaceView({
       <AppShell
         className="min-h-0 flex-1"
         title={
-          focusedResource
-            ? `${focusedResource.title} — ${snapshot.workspace.name}`
-            : snapshot.workspace.name
+          <Breadcrumb
+            workspace={snapshot.workspace.name}
+            subject={
+              focusedResource
+                ? subjects.get(focusedResource.subjectId)
+                : undefined
+            }
+            title={focusedResource?.title}
+          />
         }
         sidebarOpen={layout.sidebarOpen}
         onToggleSidebar={() => dispatch({ type: "toggle-sidebar" })}
@@ -486,5 +494,46 @@ export function WorkspaceView({
       />
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </>
+  );
+}
+
+/** Title bar location: subject and document, or the workspace when nothing is open. */
+function Breadcrumb({
+  workspace,
+  subject,
+  title,
+}: {
+  workspace: string;
+  subject: SubjectInfo | undefined;
+  title: string | undefined;
+}) {
+  if (!title)
+    return (
+      <span className="truncate font-medium text-foreground">{workspace}</span>
+    );
+  return (
+    <nav
+      aria-label="Current document"
+      className="flex min-w-0 items-center gap-1.5"
+    >
+      {subject ? (
+        <>
+          <span
+            aria-hidden
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              subjectColorClasses[subject.color].dot,
+            )}
+          />
+          <span className="max-w-48 shrink truncate">{subject.name}</span>
+          <span aria-hidden className="text-subtle-foreground">
+            /
+          </span>
+        </>
+      ) : null}
+      <span className="min-w-0 truncate font-medium text-foreground">
+        {title}
+      </span>
+    </nav>
   );
 }

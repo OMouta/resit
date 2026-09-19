@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
 import { Kbd } from "@resit/ui/components/kbd";
+import { ResitMark } from "@resit/ui/components/resit-mark";
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +31,7 @@ export interface AppShellProps {
   onForward?: () => void;
   canGoBack?: boolean;
   canGoForward?: boolean;
-  /** Centre of the toolbar: usually the workspace or document title. */
+  /** Left of the toolbar, after the sidebar button: usually a breadcrumb. */
   title?: ReactNode;
   toolbarEnd?: ReactNode;
   children: ReactNode;
@@ -69,6 +70,7 @@ export function AppShell({
     >
       <header className="app-titlebar flex h-toolbar shrink-0 items-center gap-1.5 border-b bg-sidebar px-3">
         <div aria-hidden className="titlebar-inset-start shrink-0" />
+        <ResitMark className="mx-1.5 size-5" />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -105,7 +107,7 @@ export function AppShell({
             </Button>
           </div>
         ) : null}
-        <div className="mx-3 min-w-0 flex-1 truncate text-center text-sm font-medium text-muted-foreground">
+        <div className="mr-3 ml-1 flex min-w-0 flex-1 items-center text-sm text-muted-foreground">
           {title}
         </div>
         {onSearch ? (
