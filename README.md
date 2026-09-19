@@ -1,3 +1,5 @@
+<img src="assets/logo.svg" alt="" width="64" height="64" />
+
 # resit
 
 A local desktop study workspace built with Electron, React, and TypeScript.
