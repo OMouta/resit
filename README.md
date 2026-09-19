@@ -1,10 +1,20 @@
-<img src="assets/logo.svg" alt="" width="64" height="64" />
+<p align="center">
+  <img src="assets/logo.svg" alt="resit logo" width="96" height="96" />
+</p>
 
-# resit
+<h1 align="center">resit</h1>
 
-resit is a desktop app for studying with your notes and PDFs. Organise them by subject, take notes beside a textbook, and ask Claude about what you're reading.
+<p align="center">Your notes, PDFs, and study conversations in one desktop app.</p>
 
-Your workspace is a folder on your computer. Notes are saved as Markdown, alongside your imported files and conversations. You can use notes, PDFs, and search without AI.
+<p align="center">
+  <a href="#start-a-workspace">Get started</a> ·
+  <a href="#ask-claude">Ask Claude</a> ·
+  <a href="#shortcuts">Shortcuts</a>
+</p>
+
+Organise your materials by subject, take notes beside a textbook, and ask Claude about what you're reading. Notes save as Markdown in a folder you choose, alongside your imported files and conversations.
+
+Notes, PDFs, and search work without AI.
 
 ## Start a workspace
 
