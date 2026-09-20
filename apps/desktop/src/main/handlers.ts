@@ -58,6 +58,7 @@ import {
 import { claudeModels, claudeStatus } from "./providers/claude";
 import { codexModels, codexStatus } from "./providers/codex";
 import { loadSettings, updateSettings } from "./settings";
+import { workspaceLinks } from "./workspace/links";
 import { searchWorkspace } from "./workspace/search";
 import { listTrash, restoreFromTrash } from "./workspace/trash";
 import {
@@ -465,6 +466,10 @@ export function registerHandlers(
       allow: () => true,
       limit: 30,
     }),
+  );
+
+  handle(CHANNELS.listLinks, z.tuple([]), () =>
+    workspaceLinks(currentWorkspace()),
   );
 
   handle(

@@ -89,6 +89,13 @@ export type DesktopEvent =
     }
   | TurnEvent;
 
+/** One note's links to another note or document, and how many there are. */
+export interface ResourceLink {
+  from: string;
+  to: string;
+  count: number;
+}
+
 export interface SearchResult {
   resourceId: string;
   title: string;
@@ -205,6 +212,8 @@ export interface DesktopApi {
   readResourceBytes(id: string): Promise<Uint8Array>;
   openResourceExternally(id: string): Promise<void>;
   search(query: string): Promise<SearchResult[]>;
+  /** Links between notes and documents, for the graph. */
+  listLinks(): Promise<ResourceLink[]>;
   /** Opens an http, https, or mailto link in the system browser. */
   openExternal(url: string): Promise<void>;
 
@@ -299,6 +308,7 @@ export const CHANNELS = {
   readResourceBytes: "resit:resource-bytes",
   openResourceExternally: "resit:resource-open-external",
   search: "resit:search",
+  listLinks: "resit:links",
   openExternal: "resit:open-external",
   getMoodleStatus: "resit:moodle-status",
   connectMoodle: "resit:moodle-connect",

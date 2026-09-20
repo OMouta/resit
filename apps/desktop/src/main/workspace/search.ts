@@ -51,7 +51,8 @@ function match(text: string, terms: string[]): string | null {
 
 const noteCache = new Map<string, { revision: string; text: string }>();
 
-async function noteText(
+/** A note's text, kept until the note's revision changes. */
+export async function noteText(
   workspace: OpenWorkspace,
   resource: ResourceInfo,
 ): Promise<string> {
