@@ -10,6 +10,8 @@ import {
   XIcon,
 } from "lucide-react";
 
+import type { ReactNode } from "react";
+
 import { Button } from "@resit/ui/components/button";
 import {
   Tooltip,
@@ -159,6 +161,8 @@ export interface ScopeChipListProps {
   onRemove?: (item: ScopeItem) => void;
   onOpen?: (item: ScopeItem) => void;
   onShowAll?: () => void;
+  /** Control that adds to the scope, rendered after the chips. */
+  add?: ReactNode;
   emptyLabel?: string;
   className?: string;
 }
@@ -170,6 +174,7 @@ export function ScopeChipList({
   onRemove,
   onOpen,
   onShowAll,
+  add,
   emptyLabel = "No scope. The conversation sees nothing until you add a subject, project, or resource.",
   className,
 }: ScopeChipListProps) {
@@ -177,9 +182,12 @@ export function ScopeChipList({
   const hidden = items.length - visible.length;
   if (items.length === 0) {
     return (
-      <p className={cn("text-xs text-muted-foreground", className)}>
-        {emptyLabel}
-      </p>
+      <div className={cn("flex items-center gap-2", className)}>
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+          {emptyLabel}
+        </p>
+        {add}
+      </div>
     );
   }
   return (
@@ -203,6 +211,7 @@ export function ScopeChipList({
           </Button>
         </li>
       ) : null}
+      {add ? <li>{add}</li> : null}
     </ul>
   );
 }

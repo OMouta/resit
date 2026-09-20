@@ -1,5 +1,7 @@
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
+import { Button } from "@resit/ui/components/button";
 import {
   ApprovalCard,
   type ApprovalStatus,
@@ -109,6 +111,16 @@ function ScopeExample({ ctx }: { ctx: ExampleContext }) {
       }}
       onOpen={(item) => ctx.log("onOpen", item.id)}
       onShowAll={() => ctx.log("onShowAll")}
+      add={
+        <Button
+          variant="subtle"
+          size="icon-sm"
+          aria-label="Add a subject or file to this conversation"
+          onClick={() => ctx.log("onAdd")}
+        >
+          <PlusIcon />
+        </Button>
+      }
     />
   );
 }

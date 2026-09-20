@@ -1,4 +1,10 @@
-import { CheckIcon, HistoryIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  CheckIcon,
+  FileTextIcon,
+  HistoryIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
@@ -13,6 +19,19 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@resit/ui/components/dropdown-menu";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@resit/ui/components/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@resit/ui/components/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -199,6 +218,7 @@ export function ChatPanel({
   const [pinned, setPinned] = useState<AskRequest | null>(null);
   const [skipSelection, setSkipSelection] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  const [scopeOpen, setScopeOpen] = useState(false);
   const [models, setModels] = useState<Record<ProviderId, ModelOption[]>>({
     claude: [],
     codex: [],
@@ -532,6 +552,15 @@ export function ChatPanel({
   const unscopedSubjects = [...subjects.values()].filter(
     (subject) => !subject.archived && !scope.subjectIds.includes(subject.id),
   );
+  // Files already covered by a subject in scope do not need adding.
+  const unscopedResources = [...resources.values()]
+    .filter(
+      (resource) =>
+        !scope.subjectIds.includes(resource.subjectId) &&
+        !scope.resourceIds.includes(resource.id),
+    )
+    .slice(0, 100);
+
   /** Moves this conversation to another provider, and new ones with it. */
   const switchProvider = async (next: ProviderId) => {
     if (next === providerId) return;
@@ -595,6 +624,81 @@ export function ChatPanel({
             });
         },
         emptyLabel: `Add a subject or file so ${PROVIDER_NAMES[providerId]} can read it.`,
+        add: (
+          <Popover open={scopeOpen} onOpenChange={setScopeOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="subtle"
+                    size="icon-sm"
+                    aria-label="Add a subject or file to this conversation"
+                  >
+                    <PlusIcon />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Add to this conversation</TooltipContent>
+            </Tooltip>
+            <PopoverContent align="start" className="w-80 p-0">
+              <Command>
+                <CommandInput placeholder="Add a subject or file…" />
+                <CommandList>
+                  <CommandEmpty>Nothing left to add.</CommandEmpty>
+                  {unscopedSubjects.length > 0 ? (
+                    <CommandGroup heading="Subjects">
+                      {unscopedSubjects.map((subject) => (
+                        <CommandItem
+                          key={subject.id}
+                          value={`subject ${subject.name}`}
+                          onSelect={() => {
+                            setScopeOpen(false);
+                            void updateScope({
+                              ...scope,
+                              subjectIds: [...scope.subjectIds, subject.id],
+                            });
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "size-2 rounded-full",
+                              subjectColorClasses[subject.color].dot,
+                            )}
+                          />
+                          {subject.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : null}
+                  {unscopedResources.length > 0 ? (
+                    <CommandGroup heading="Files">
+                      {unscopedResources.map((resource) => (
+                        <CommandItem
+                          key={resource.id}
+                          value={`file ${resource.title}`}
+                          onSelect={() => {
+                            setScopeOpen(false);
+                            void updateScope({
+                              ...scope,
+                              resourceIds: [...scope.resourceIds, resource.id],
+                            });
+                          }}
+                        >
+                          <FileTextIcon className="text-subtle-foreground" />
+                          <span className="truncate">{resource.title}</span>
+                          <span className="ml-auto shrink-0 text-2xs text-subtle-foreground">
+                            {subjects.get(resource.subjectId)?.name ?? ""}
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : null}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        ),
       }}
       turns={turns}
       status={status}
