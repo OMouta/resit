@@ -30,6 +30,13 @@ export type ScopeItem =
       description: string;
     }
   | { kind: "selection"; id: string; label: string; text: string }
+  | {
+      kind: "annotation";
+      id: string;
+      label: string;
+      page: number;
+      text: string;
+    }
   | { kind: "block"; id: string; label: string };
 
 export type ToolCallStatus = "running" | "done" | "failed";

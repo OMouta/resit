@@ -32,6 +32,15 @@ export const turnContextSchema = z.object({
     })
     .optional(),
   selection: z.string().max(20_000).optional(),
+  /** A saved highlight the student attached to this message. */
+  annotation: z
+    .object({
+      id: z.string().min(1).max(200),
+      page: z.number().int().positive(),
+      text: z.string().max(20_000),
+      comment: z.string().max(4000).optional(),
+    })
+    .optional(),
 });
 export type TurnContext = z.infer<typeof turnContextSchema>;
 

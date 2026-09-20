@@ -47,8 +47,12 @@ import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import { insertIntoNote } from "../lib/citations";
 import { useNotices } from "../lib/notices";
-import { flushAllViews, viewFor } from "../views/view-registry";
-
+import {
+  flushAllViews,
+  onAskRequest,
+  viewFor,
+  type AskRequest,
+} from "../views/view-registry";
 import { activeTab, type Layout } from "../workspace/layout";
 import { ChatMarkdown } from "./markdown";
 
@@ -113,7 +117,15 @@ function contextItems(context: TurnContext): ScopeItem[] {
         page: context.focused.page,
       });
   }
-  if (context.selection)
+  if (context.annotation)
+    items.push({
+      kind: "annotation",
+      id: context.annotation.id,
+      label: `Highlight · p. ${context.annotation.page}`,
+      page: context.annotation.page,
+      text: context.annotation.text,
+    });
+  else if (context.selection)
     items.push({
       kind: "selection",
       id: "selection",
@@ -176,6 +188,7 @@ export function ChatPanel({
   const [streaming, setStreaming] = useState<Streaming | null>(null);
   const [sending, setSending] = useState(false);
   const [preview, setPreview] = useState<TurnContext>({});
+  const [pinned, setPinned] = useState<AskRequest | null>(null);
   const [skipSelection, setSkipSelection] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -317,6 +330,28 @@ export function ChatPanel({
     });
   }, [focused]);
 
+  // "Ask about this" from a PDF highlight attaches it to the next message.
+  useEffect(
+    () =>
+      onAskRequest((request) => {
+        setPinned(request);
+        setSkipSelection(null);
+        // The composer owns its field; put the cursor in it for the question.
+        window.setTimeout(() => {
+          window.document
+            .querySelector<HTMLTextAreaElement>(
+              '[data-slot="composer"] textarea',
+            )
+            ?.focus();
+        }, 0);
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (pinned && focused?.id !== pinned.resourceId) setPinned(null);
+  }, [pinned, focused]);
+
   useEffect(() => {
     refreshPreview();
     let timer: number | undefined;
@@ -377,6 +412,7 @@ export function ChatPanel({
           text,
           context,
         });
+        setPinned(null);
       } catch (error) {
         notices.fail("The message was not sent", error);
       } finally {
@@ -388,6 +424,16 @@ export function ChatPanel({
 
   const outgoingContext = (): TurnContext => {
     const context = { ...preview };
+    // A pinned highlight is the question's subject, so it replaces whatever
+    // happens to be selected and fixes the page it sits on.
+    if (pinned && context.focused?.resourceId === pinned.resourceId) {
+      delete context.selection;
+      return {
+        ...context,
+        focused: { ...context.focused, page: pinned.annotation.page },
+        annotation: pinned.annotation,
+      };
+    }
     if (context.selection && context.selection === skipSelection)
       delete context.selection;
     return context;

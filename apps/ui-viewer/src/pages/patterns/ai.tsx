@@ -86,6 +86,13 @@ function ScopeExample({ ctx }: { ctx: ExampleContext }) {
               label: "Selection",
               text: "choose δ accordingly",
             },
+            {
+              kind: "annotation",
+              id: "ann_1",
+              label: "Highlight · p. 7",
+              page: 7,
+              text: "Prove the following limits using the definition.",
+            },
             { kind: "block", id: "blk_1", label: "Exercise 2 (b)" },
           ]
         : scope;

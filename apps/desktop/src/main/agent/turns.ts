@@ -103,7 +103,13 @@ function composeContext(
         ? `Open file: "${focused.title}" (${focused.kind}, id ${focused.resourceId}${where}).`
         : `Open file: "${focused.title}", which is outside this conversation's scope, so its contents are not available.`,
     );
-    if (inScope && context.selection)
+    if (inScope && context.annotation) {
+      const { id, page, text, comment } = context.annotation;
+      lines.push(
+        `The student is asking about one of their own highlights in that file (page ${page}, highlight id ${id}). It covers:\n"""\n${text}\n"""`,
+      );
+      if (comment) lines.push(`Their note on that highlight: "${comment}"`);
+    } else if (inScope && context.selection)
       lines.push(`Selected text:\n"""\n${context.selection}\n"""`);
   }
   return `<study-context>\n${lines.join("\n")}\n</study-context>`;

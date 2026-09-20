@@ -2,6 +2,7 @@ import {
   BoxIcon,
   FileTextIcon,
   FolderKanbanIcon,
+  HighlighterIcon,
   ImageIcon,
   PaperclipIcon,
   SquareDashedIcon,
@@ -35,6 +36,8 @@ function iconFor(item: ScopeItem) {
       return SquareDashedIcon;
     case "selection":
       return TextQuoteIcon;
+    case "annotation":
+      return HighlighterIcon;
     case "block":
       return BoxIcon;
     default:
@@ -56,6 +59,8 @@ function describe(item: ScopeItem): string {
       return `Region on page ${item.page}: ${item.description}`;
     case "selection":
       return `Selection: “${item.text}”`;
+    case "annotation":
+      return `Highlight on page ${item.page}: “${item.text}”`;
     case "block":
       return `Block: ${item.label}`;
   }

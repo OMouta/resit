@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { ConversationScope } from "../../shared/conversations";
 import type { ResourceInfo } from "../../shared/workspace";
+import { listAnnotations } from "../workspace/annotations";
 import { pdfPages } from "../workspace/pdf-text";
 import { searchWorkspace } from "../workspace/search";
 import { readNote, type OpenWorkspace } from "../workspace/workspace";
@@ -12,11 +13,13 @@ export const STUDY_TOOLS = [
   "study_list_resources",
   "study_read_note",
   "study_read_pdf_page",
+  "study_get_pdf_annotations",
   "study_search",
 ] as const;
 
 const MAX_NOTE_CHARS = 60_000;
 const MAX_PAGE_CHARS = 20_000;
+const MAX_ANNOTATION_CHARS = 2000;
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -54,6 +57,8 @@ export function describeToolCall(
       return `Read ${title("noteId")}`;
     case "study_read_pdf_page":
       return `Read ${title("documentId")}, page ${String(input.page ?? "?")}`;
+    case "study_get_pdf_annotations":
+      return `Read the highlights in ${title("documentId")}`;
     case "study_search":
       return `Searched for “${String(input.query ?? "")}”`;
     default:
@@ -174,6 +179,37 @@ export function createStudyServer(
             text: text
               ? text.slice(0, MAX_PAGE_CHARS)
               : "(No extractable text on this page. It may be a scan or a diagram.)",
+          });
+        },
+      ),
+      tool(
+        "study_get_pdf_annotations",
+        "List the highlights the student made in a PDF, with their page, quoted text, and any comment they wrote.",
+        { documentId: z.string().describe("The PDF's ID") },
+        async ({ documentId }) => {
+          const info = resource(documentId);
+          if ("content" in info) return info;
+          if (info.kind !== "pdf")
+            return failure("UNSUPPORTED", "That file is not a PDF.");
+          const annotations = await listAnnotations(workspace, documentId);
+          return ok({
+            ...describe(info),
+            highlights: annotations.map((annotation) => ({
+              id: annotation.id,
+              type: annotation.type,
+              color: annotation.color,
+              pages: annotation.segments.map(
+                (segment) => segment.pageIndex + 1,
+              ),
+              text: annotation.segments
+                .map((segment) => segment.text)
+                .join(" ")
+                .slice(0, MAX_ANNOTATION_CHARS),
+              ...(annotation.comment ? { comment: annotation.comment } : {}),
+              ...(annotation.documentRevision === info.revision
+                ? {}
+                : { note: "Made on an earlier revision of this PDF." }),
+            })),
           });
         },
       ),
