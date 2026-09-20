@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  moodleFileRefSchema,
+  moodleLinkSchema,
+  type MoodleLink,
+} from "./moodle";
+
 export const SUBJECT_COLOR_VALUES = [
   "gray",
   "brown",
@@ -38,6 +44,8 @@ export const subjectFileSchema = z.looseObject({
   color: subjectColorSchema.catch("gray"),
   sortOrder: z.number().catch(0),
   archived: z.boolean().catch(false),
+  /** Set when the subject follows a Moodle course. */
+  moodle: moodleLinkSchema.optional().catch(undefined),
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -55,6 +63,8 @@ export const sidecarFileSchema = z.looseObject({
   originalFilename: z.string(),
   contentHash: z.string(),
   revision: z.string(),
+  /** Set when the file was downloaded from Moodle. */
+  moodle: moodleFileRefSchema.optional().catch(undefined),
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -68,6 +78,8 @@ export interface SubjectInfo {
   color: SubjectColorValue;
   sortOrder: number;
   archived: boolean;
+  /** The Moodle course this subject follows, if any. */
+  moodle?: MoodleLink;
 }
 
 export interface ResourceInfo {

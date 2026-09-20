@@ -8,9 +8,11 @@ import {
   rename,
   rm,
   stat,
+  writeFile,
 } from "node:fs/promises";
 import { basename, dirname, join, relative } from "node:path";
 
+import type { MoodleFileRef, MoodleLink } from "../../shared/moodle";
 import {
   sidecarFileSchema,
   subjectFileSchema,
@@ -201,6 +203,7 @@ export async function scanWorkspace(workspace: OpenWorkspace): Promise<void> {
         color: subject.color,
         sortOrder: subject.sortOrder,
         archived: subject.archived,
+        ...(subject.moodle ? { moodle: subject.moodle } : {}),
       },
     });
     await scanSubjectFiles(workspace, subject.id, dir, dir, resources, issues);
@@ -421,7 +424,11 @@ async function readSubjectFile(entry: SubjectEntry): Promise<SubjectFile> {
 
 export async function createSubject(
   workspace: OpenWorkspace,
-  input: { name: string; color: SubjectColorValue },
+  input: {
+    name: string;
+    color: SubjectColorValue;
+    moodle?: MoodleLink | undefined;
+  },
 ): Promise<SubjectInfo> {
   const subjectsDir = join(workspace.root, "subjects");
   await mkdir(subjectsDir, { recursive: true });
@@ -438,6 +445,7 @@ export async function createSubject(
     color: input.color,
     sortOrder,
     archived: false,
+    ...(input.moodle ? { moodle: input.moodle } : {}),
     createdAt: at,
     updatedAt: at,
   };
@@ -448,6 +456,7 @@ export async function createSubject(
     color: file.color,
     sortOrder,
     archived: false,
+    ...(input.moodle ? { moodle: input.moodle } : {}),
   };
   workspace.subjects.set(file.id, { dir, info });
   return info;
@@ -477,6 +486,45 @@ export async function updateSubject(
       sortOrder: file.sortOrder,
     };
   });
+}
+
+/** Points a subject at a Moodle course, or with `null` stops following one. */
+export function linkSubject(
+  workspace: OpenWorkspace,
+  input: { subjectId: string; link: MoodleLink | null },
+): Promise<SubjectInfo> {
+  const entry = subjectEntry(workspace, input.subjectId);
+  return withLock(workspace, input.subjectId, async () => {
+    const file = await readSubjectFile(entry);
+    if (input.link) file.moodle = input.link;
+    else delete file.moodle;
+    file.updatedAt = now();
+    await writeJson(join(entry.dir, "subject.json"), file);
+    const { moodle: _previous, ...info } = entry.info;
+    entry.info = { ...info, ...(input.link ? { moodle: input.link } : {}) };
+    return entry.info;
+  });
+}
+
+/** Every binary in a subject that has a sidecar, with the sidecar's contents. */
+export async function subjectSidecars(
+  workspace: OpenWorkspace,
+  subjectId: string,
+): Promise<{ resource: ResourceInfo; sidecar: SidecarFile }[]> {
+  subjectEntry(workspace, subjectId);
+  const found = [];
+  for (const entry of workspace.resources.values()) {
+    if (entry.info.subjectId !== subjectId || !entry.sidecarPath) continue;
+    try {
+      found.push({
+        resource: entry.info,
+        sidecar: sidecarFileSchema.parse(await readJson(entry.sidecarPath)),
+      });
+    } catch {
+      // A sidecar resit cannot read is reported by the workspace scan.
+    }
+  }
+  return found;
 }
 
 /** Moves files into `.resit/trash` with a record of where they came from. */
@@ -680,14 +728,86 @@ export function deleteResource(
   });
 }
 
+/**
+ * Adds a binary and its sidecar to a subject. `write` fills a temporary file
+ * beside the target, so a failed write never leaves a half-written resource.
+ */
+async function addBinary(
+  workspace: OpenWorkspace,
+  input: {
+    subjectId: string;
+    /** Folder inside the subject's documents or images area. */
+    folder?: string | undefined;
+    filename: string;
+    title: string;
+    moodle?: MoodleFileRef | undefined;
+  },
+  write: (temporaryPath: string) => Promise<void>,
+): Promise<ResourceInfo> {
+  const subject = subjectEntry(workspace, input.subjectId);
+  const { name, extension } = splitExtension(input.filename);
+  const kind = binaryKind(input.filename);
+  const directory = join(
+    subject.dir,
+    kind === "image" ? "images" : "documents",
+    ...(input.folder ? [input.folder] : []),
+  );
+  await mkdir(directory, { recursive: true });
+  const target = await uniquePath(
+    directory,
+    slugify(name),
+    extension.toLowerCase(),
+  );
+  const temporary = join(
+    directory,
+    `.${basename(target)}.${randomUUID().slice(0, 8)}.tmp`,
+  );
+  try {
+    await write(temporary);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
+  const hash = await hashFile(target);
+  const at = now();
+  const sidecar: SidecarFile = {
+    id: randomUUID(),
+    type: kind,
+    title: input.title,
+    subjectId: input.subjectId,
+    originalFilename: input.filename,
+    contentHash: hash,
+    revision: hash,
+    ...(input.moodle ? { moodle: input.moodle } : {}),
+    createdAt: at,
+    updatedAt: at,
+  };
+  const sidecarPath = `${target}${SIDECAR_SUFFIX}`;
+  await writeJson(sidecarPath, sidecar);
+  const info: ResourceInfo = {
+    id: sidecar.id,
+    kind,
+    title: sidecar.title,
+    subjectId: input.subjectId,
+    path: toPosix(relative(workspace.root, target)),
+    ...(input.folder ? { folder: input.folder } : {}),
+    revision: hash,
+    size: (await stat(target)).size,
+    updatedAt: at,
+  };
+  workspace.resources.set(info.id, { info, absPath: target, sidecarPath });
+  return info;
+}
+
 /** Copies an external file into a subject. The original is never modified. */
 export async function importFile(
   workspace: OpenWorkspace,
   input: { subjectId: string; sourcePath: string },
 ): Promise<ResourceInfo> {
-  const subject = subjectEntry(workspace, input.subjectId);
+  subjectEntry(workspace, input.subjectId);
   const filename = basename(input.sourcePath);
-  const { name, extension } = splitExtension(filename);
+  const { extension } = splitExtension(filename);
 
   if (extension.toLowerCase() === ".md") {
     const text = await readFile(input.sourcePath, "utf8");
@@ -701,51 +821,66 @@ export async function importFile(
     return createNote(workspace, { subjectId: input.subjectId, title, body });
   }
 
-  const kind = binaryKind(filename);
-  const target = await uniquePath(
-    join(subject.dir, kind === "image" ? "images" : "documents"),
-    slugify(name),
-    extension.toLowerCase(),
+  return addBinary(
+    workspace,
+    {
+      subjectId: input.subjectId,
+      filename,
+      title: titleFromFilename(filename),
+    },
+    (temporary) => copyFile(input.sourcePath, temporary),
   );
-  await mkdir(dirname(target), { recursive: true });
-  const temporary = join(
-    dirname(target),
-    `.${basename(target)}.${randomUUID().slice(0, 8)}.tmp`,
+}
+
+/** Stores a file downloaded from Moodle, recording where it came from. */
+export function importDownload(
+  workspace: OpenWorkspace,
+  input: {
+    subjectId: string;
+    folder?: string | undefined;
+    filename: string;
+    title: string;
+    bytes: Uint8Array;
+    moodle: MoodleFileRef;
+  },
+): Promise<ResourceInfo> {
+  return addBinary(workspace, input, (temporary) =>
+    writeFile(temporary, input.bytes, { flag: "wx" }),
   );
-  try {
-    await copyFile(input.sourcePath, temporary);
-    await rename(temporary, target);
-  } catch (error) {
-    await rm(temporary, { force: true });
-    throw error;
-  }
-  const hash = await hashFile(target);
-  const at = now();
-  const sidecar: SidecarFile = {
-    id: randomUUID(),
-    type: kind,
-    title: titleFromFilename(filename),
-    subjectId: input.subjectId,
-    originalFilename: filename,
-    contentHash: hash,
-    revision: hash,
-    createdAt: at,
-    updatedAt: at,
-  };
-  const sidecarPath = `${target}${SIDECAR_SUFFIX}`;
-  await writeJson(sidecarPath, sidecar);
-  const info: ResourceInfo = {
-    id: sidecar.id,
-    kind,
-    title: sidecar.title,
-    subjectId: input.subjectId,
-    path: toPosix(relative(workspace.root, target)),
-    revision: hash,
-    size: (await stat(target)).size,
-    updatedAt: at,
-  };
-  workspace.resources.set(info.id, { info, absPath: target, sidecarPath });
-  return info;
+}
+
+/**
+ * Replaces a file's contents with a newer copy from Moodle. The resource keeps
+ * its ID, so open tabs and links still point at it.
+ */
+export function replaceDownload(
+  workspace: OpenWorkspace,
+  input: { resourceId: string; bytes: Uint8Array; moodle: MoodleFileRef },
+): Promise<ResourceInfo> {
+  return withLock(workspace, input.resourceId, async () => {
+    const entry = resourceEntry(workspace, input.resourceId);
+    if (!entry.sidecarPath)
+      throw new WorkspaceError("That file has no resit record to update.");
+    await assertInsideWorkspace(workspace.root, entry.absPath);
+    await writeFileAtomic(entry.absPath, input.bytes);
+    const hash = await hashFile(entry.absPath);
+    const at = now();
+    const sidecar = sidecarFileSchema.parse(await readJson(entry.sidecarPath));
+    await writeJson(entry.sidecarPath, {
+      ...sidecar,
+      contentHash: hash,
+      revision: hash,
+      moodle: input.moodle,
+      updatedAt: at,
+    });
+    entry.info = {
+      ...entry.info,
+      revision: hash,
+      size: input.bytes.byteLength,
+      updatedAt: at,
+    };
+    return entry.info;
+  });
 }
 
 export async function readResourceBytes(

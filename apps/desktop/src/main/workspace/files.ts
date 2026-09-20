@@ -104,6 +104,9 @@ export async function assertInsideWorkspace(
     throw new Error("The file is outside the workspace folder.");
 }
 
+/** Device names Windows refuses to use as a filename, with or without a suffix. */
+const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
 /** Lowercase, hyphenated, filesystem-safe name. Keeps accented letters. */
 export function slugify(value: string): string {
   const slug = value
@@ -115,7 +118,8 @@ export function slugify(value: string): string {
     .replace(/-+/g, "-")
     .replace(/^[-.]+|[-.]+$/g, "")
     .slice(0, 80);
-  return slug || "untitled";
+  if (!slug) return "untitled";
+  return RESERVED.test(slug) ? `${slug}-file` : slug;
 }
 
 /** First free path of the form `name.ext`, `name-2.ext`, `name-3.ext`, ... */
