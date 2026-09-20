@@ -271,67 +271,106 @@ export function MoodleDialog({
 
             <ScrollArea className="-mx-2 max-h-[50vh] px-2">
               <div className="flex flex-col gap-4">
-                {grouped.map(([section, group]) => (
-                  <section key={section || "root"} className="flex flex-col">
-                    <h3
-                      className="truncate px-1 pb-1 text-xs font-medium text-subtle-foreground"
-                      title={group.name}
-                    >
-                      {group.name}
-                    </h3>
-                    <ul className="flex flex-col">
-                      {group.items.map((item) => {
-                        const here = item.state === "current";
-                        const disabled = here || progress !== null;
-                        return (
-                          <li key={item.key}>
-                            <label
-                              className={cn(
-                                "flex h-row items-center gap-2.5 rounded-md px-1",
-                                disabled
-                                  ? "cursor-default"
-                                  : "cursor-pointer hover:bg-accent",
-                                here && "text-muted-foreground",
-                              )}
-                            >
-                              <Checkbox
-                                checked={selected.has(item.key)}
-                                disabled={disabled}
-                                onCheckedChange={(checked) =>
-                                  setSelected((current) => {
-                                    const next = new Set(current);
-                                    if (checked) next.add(item.key);
-                                    else next.delete(item.key);
-                                    return next;
-                                  })
-                                }
-                              />
-                              <span
-                                className="min-w-0 flex-1 truncate text-sm"
-                                title={item.filename}
-                              >
-                                {item.name}
-                              </span>
-                              <span
+                {grouped.map(([section, group]) => {
+                  const offered = group.items.filter(
+                    (item) => item.state !== "current",
+                  );
+                  const picked = offered.filter((item) =>
+                    selected.has(item.key),
+                  ).length;
+                  const locked = offered.length === 0 || progress !== null;
+                  return (
+                    <section key={section || "root"} className="flex flex-col">
+                      <label
+                        className={cn(
+                          "flex h-row items-center gap-2.5 rounded-md px-1",
+                          locked
+                            ? "cursor-default"
+                            : "cursor-pointer hover:bg-accent",
+                        )}
+                      >
+                        <Checkbox
+                          checked={
+                            picked === 0
+                              ? false
+                              : picked === offered.length
+                                ? true
+                                : "indeterminate"
+                          }
+                          disabled={locked}
+                          aria-label={`Everything in ${group.name}`}
+                          onCheckedChange={(checked) =>
+                            setSelected((current) => {
+                              const next = new Set(current);
+                              for (const item of offered) {
+                                if (checked) next.add(item.key);
+                                else next.delete(item.key);
+                              }
+                              return next;
+                            })
+                          }
+                        />
+                        <h3
+                          className="min-w-0 flex-1 truncate text-xs font-medium text-subtle-foreground"
+                          title={group.name}
+                        >
+                          {group.name}
+                        </h3>
+                      </label>
+                      <ul className="flex flex-col">
+                        {group.items.map((item) => {
+                          const here = item.state === "current";
+                          const disabled = here || progress !== null;
+                          return (
+                            <li key={item.key}>
+                              <label
                                 className={cn(
-                                  "w-24 shrink-0 text-right text-xs",
-                                  item.state === "updated"
-                                    ? "text-warning"
-                                    : "text-subtle-foreground",
+                                  "flex h-row items-center gap-2.5 rounded-md py-0 pr-1 pl-[30px]",
+                                  disabled
+                                    ? "cursor-default"
+                                    : "cursor-pointer hover:bg-accent",
+                                  here && "text-muted-foreground",
                                 )}
                               >
-                                {STATE_LABEL[item.state]}
-                              </span>
-                              <span className="w-16 shrink-0 text-right text-xs tabular-nums text-subtle-foreground">
-                                {formatBytes(item.filesize, number)}
-                              </span>
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
-                ))}
+                                <Checkbox
+                                  checked={selected.has(item.key)}
+                                  disabled={disabled}
+                                  onCheckedChange={(checked) =>
+                                    setSelected((current) => {
+                                      const next = new Set(current);
+                                      if (checked) next.add(item.key);
+                                      else next.delete(item.key);
+                                      return next;
+                                    })
+                                  }
+                                />
+                                <span
+                                  className="min-w-0 flex-1 truncate text-sm"
+                                  title={item.filename}
+                                >
+                                  {item.name}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "w-24 shrink-0 text-right text-xs",
+                                    item.state === "updated"
+                                      ? "text-warning"
+                                      : "text-subtle-foreground",
+                                  )}
+                                >
+                                  {STATE_LABEL[item.state]}
+                                </span>
+                                <span className="w-16 shrink-0 text-right text-xs tabular-nums text-subtle-foreground">
+                                  {formatBytes(item.filesize, number)}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  );
+                })}
                 {view.contents.items.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">
                     This course has no files resit can download.
