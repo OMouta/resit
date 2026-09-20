@@ -19,6 +19,7 @@ import type {
   AnnotationColorValue,
   AnnotationSegment,
   AnnotationType,
+  FolderInfo,
   RecentWorkspace,
   ResourceInfo,
   SaveNoteResult,
@@ -105,9 +106,32 @@ export interface DesktopApi {
   }): Promise<WorkspaceSnapshot>;
   deleteSubject(id: string): Promise<WorkspaceSnapshot>;
 
+  /** Makes a folder inside a subject, or inside one of its folders. */
+  createFolder(input: {
+    subjectId: string;
+    name: string;
+    parent?: string;
+  }): Promise<FolderInfo>;
+  /**
+   * Renames a folder, moves it into another, or both. An empty `parent` moves
+   * it to the top of the subject; leaving it out keeps it where it is.
+   */
+  updateFolder(input: {
+    subjectId: string;
+    path: string;
+    name?: string;
+    parent?: string;
+  }): Promise<{ folder: FolderInfo; snapshot: WorkspaceSnapshot }>;
+  /** Moves a folder and everything in it to the trash. */
+  deleteFolder(input: {
+    subjectId: string;
+    path: string;
+  }): Promise<WorkspaceSnapshot>;
+
   createNote(input: {
     subjectId: string;
     title: string;
+    folder?: string;
   }): Promise<ResourceInfo>;
   readNote(id: string): Promise<NoteDocument>;
   saveNote(input: {
@@ -116,11 +140,17 @@ export interface DesktopApi {
     expectedRevision: string;
   }): Promise<SaveNoteResult>;
   renameResource(input: { id: string; title: string }): Promise<ResourceInfo>;
+  /** Moves a file to another subject or folder, keeping its ID. */
+  moveResource(input: {
+    id: string;
+    subjectId: string;
+    folder?: string;
+  }): Promise<ResourceInfo>;
   deleteResource(id: string): Promise<WorkspaceSnapshot>;
   listTrash(): Promise<TrashEntry[]>;
   /** Moves a deleted item back where it came from. */
   restoreFromTrash(id: string): Promise<WorkspaceSnapshot>;
-  importFiles(subjectId: string): Promise<ResourceInfo[]>;
+  importFiles(subjectId: string, folder?: string): Promise<ResourceInfo[]>;
 
   listAnnotations(documentId: string): Promise<Annotation[]>;
   createAnnotation(input: {
@@ -206,10 +236,14 @@ export const CHANNELS = {
   createSubject: "resit:subject-create",
   updateSubject: "resit:subject-update",
   deleteSubject: "resit:subject-delete",
+  createFolder: "resit:folder-create",
+  updateFolder: "resit:folder-update",
+  deleteFolder: "resit:folder-delete",
   createNote: "resit:note-create",
   readNote: "resit:note-read",
   saveNote: "resit:note-save",
   renameResource: "resit:resource-rename",
+  moveResource: "resit:resource-move",
   deleteResource: "resit:resource-delete",
   listTrash: "resit:trash-list",
   restoreFromTrash: "resit:trash-restore",

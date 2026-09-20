@@ -4,20 +4,30 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  createAnnotation,
+  listAnnotations,
+} from "../../apps/desktop/src/main/workspace/annotations";
+import {
   listTrash,
   restoreFromTrash,
 } from "../../apps/desktop/src/main/workspace/trash";
 import {
+  createFolder,
   createNote,
+  createSubject,
   createWorkspace,
+  deleteFolder,
   deleteResource,
+  importDownload,
   importFile,
+  moveResource,
   openWorkspace,
   readNote,
   renameResource,
   saveNote,
   scanWorkspace,
   snapshot,
+  updateFolder,
   type OpenWorkspace,
 } from "../../apps/desktop/src/main/workspace/workspace";
 
@@ -207,6 +217,306 @@ describe("workspace files", () => {
       type: "pdf",
       originalFilename: "Worksheet 1.pdf",
     });
+  });
+});
+
+describe("folders", () => {
+  it("holds notes and files of a folder together and trashes them as one", async () => {
+    const subjectId = mathematics().id;
+    const folder = await createFolder(workspace, {
+      subjectId,
+      name: "Fichas: 1º semestre",
+    });
+    expect(folder.path).toBe("Fichas 1º semestre");
+
+    const note = await createNote(workspace, {
+      subjectId,
+      title: "Ficha 1",
+      folder: folder.path,
+    });
+    const source = join(directory, "Ficha 1.pdf");
+    await writeFile(source, "%PDF-1.4\n");
+    const pdf = await importFile(workspace, {
+      subjectId,
+      sourcePath: source,
+      folder: folder.path,
+    });
+    expect(note.path).toBe(
+      "subjects/mathematics/notes/Fichas 1º semestre/ficha-1.md",
+    );
+    expect(pdf.path).toBe(
+      "subjects/mathematics/documents/Fichas 1º semestre/ficha-1.pdf",
+    );
+
+    await deleteFolder(workspace, { subjectId, path: folder.path });
+    const after = snapshot(workspace);
+    expect(after.folders).toEqual([]);
+    expect(after.resources).toEqual([]);
+    expect(
+      await readdir(join(workspace.root, "subjects", "mathematics", "notes")),
+    ).toEqual([]);
+
+    const [deleted] = await listTrash(workspace);
+    expect(deleted).toMatchObject({
+      kind: "folder",
+      title: "Fichas 1º semestre",
+    });
+    await restoreFromTrash(workspace, deleted!.id);
+    expect(
+      snapshot(workspace)
+        .resources.map((entry) => entry.path)
+        .sort(),
+    ).toEqual([note.path, pdf.path].sort());
+  });
+
+  it("shows empty folders and keeps them after a rescan", async () => {
+    const subjectId = mathematics().id;
+    await createFolder(workspace, { subjectId, name: "Exames" });
+    await scanWorkspace(workspace);
+    expect(snapshot(workspace).folders).toEqual([
+      { subjectId, path: "Exames", moodle: false },
+    ]);
+  });
+
+  it("leaves folders filled from Moodle to Moodle", async () => {
+    const subjectId = mathematics().id;
+    await importDownload(workspace, {
+      subjectId,
+      folder: "Aulas teoricas",
+      filename: "aula-1.pdf",
+      title: "Aula 1",
+      bytes: new TextEncoder().encode("%PDF-1.4\n"),
+      moodle: {
+        siteUrl: "https://moodle.example.edu",
+        courseId: 12,
+        moduleId: 34,
+        key: "34:/aula-1.pdf",
+        filename: "aula-1.pdf",
+        filesize: 9,
+        timemodified: 1_760_000_000,
+      },
+    });
+    await scanWorkspace(workspace);
+    expect(snapshot(workspace).folders).toEqual([
+      { subjectId, path: "Aulas teoricas", moodle: true },
+    ]);
+    await expect(
+      createNote(workspace, {
+        subjectId,
+        title: "Resumo",
+        folder: "Aulas teoricas",
+      }),
+    ).rejects.toThrow(/Moodle course/);
+  });
+
+  it("keeps files together when a folder is renamed", async () => {
+    const subjectId = mathematics().id;
+    const folder = await createFolder(workspace, { subjectId, name: "Fichas" });
+    const note = await createNote(workspace, {
+      subjectId,
+      title: "Ficha 1",
+      folder: folder.path,
+    });
+    const source = join(directory, "Ficha 1.pdf");
+    await writeFile(source, "%PDF-1.4\n");
+    await importFile(workspace, {
+      subjectId,
+      sourcePath: source,
+      folder: folder.path,
+    });
+
+    const renamed = await updateFolder(workspace, {
+      subjectId,
+      path: folder.path,
+      name: "Fichas resolvidas",
+    });
+    expect(renamed.path).toBe("Fichas resolvidas");
+    const after = snapshot(workspace);
+    expect(after.folders.map((entry) => entry.path)).toEqual([
+      "Fichas resolvidas",
+    ]);
+    expect(after.resources.map((entry) => entry.path).sort()).toEqual([
+      "subjects/mathematics/documents/Fichas resolvidas/ficha-1.pdf",
+      "subjects/mathematics/notes/Fichas resolvidas/ficha-1.md",
+    ]);
+    // The note keeps its ID, so open tabs and links still find it.
+    expect(after.resources.some((entry) => entry.id === note.id)).toBe(true);
+  });
+
+  it("moves a folder into another with what is inside it", async () => {
+    const subjectId = mathematics().id;
+    await createFolder(workspace, { subjectId, name: "Ano 1" });
+    const fichas = await createFolder(workspace, { subjectId, name: "Fichas" });
+    await createNote(workspace, {
+      subjectId,
+      title: "Ficha 1",
+      folder: fichas.path,
+    });
+
+    const moved = await updateFolder(workspace, {
+      subjectId,
+      path: fichas.path,
+      parent: "Ano 1",
+    });
+    expect(moved.path).toBe("Ano 1/Fichas");
+    const after = snapshot(workspace);
+    expect(after.folders.map((entry) => entry.path).sort()).toEqual([
+      "Ano 1",
+      "Ano 1/Fichas",
+    ]);
+    expect(after.resources[0]?.folder).toBe("Ano 1/Fichas");
+
+    await expect(
+      updateFolder(workspace, {
+        subjectId,
+        path: "Ano 1",
+        parent: "Ano 1/Fichas",
+      }),
+    ).rejects.toThrow(/cannot go inside itself/);
+  });
+
+  it("makes folders inside folders, and refuses one inside Moodle's", async () => {
+    const subjectId = mathematics().id;
+    const year = await createFolder(workspace, { subjectId, name: "Ano 1" });
+    const inside = await createFolder(workspace, {
+      subjectId,
+      name: "Fichas",
+      parent: year.path,
+    });
+    expect(inside.path).toBe("Ano 1/Fichas");
+
+    await importDownload(workspace, {
+      subjectId,
+      folder: "Aulas",
+      filename: "aula-1.pdf",
+      title: "Aula 1",
+      bytes: new TextEncoder().encode("%PDF-1.4\n"),
+      moodle: {
+        siteUrl: "https://moodle.example.edu",
+        courseId: 12,
+        moduleId: 34,
+        key: "34:/aula-1.pdf",
+        filename: "aula-1.pdf",
+        filesize: 9,
+        timemodified: 1_760_000_000,
+      },
+    });
+    await scanWorkspace(workspace);
+    await expect(
+      createFolder(workspace, { subjectId, name: "Resumos", parent: "Aulas" }),
+    ).rejects.toThrow(/Moodle course/);
+    await expect(
+      updateFolder(workspace, { subjectId, path: "Aulas", name: "Teóricas" }),
+    ).rejects.toThrow(/Moodle course/);
+  });
+
+  it("takes a file to another subject with its sidecar and highlights", async () => {
+    const from = mathematics().id;
+    const physics = await createSubject(workspace, {
+      name: "Physics",
+      color: "red",
+    });
+    const source = join(directory, "Worksheet 1.pdf");
+    await writeFile(source, "%PDF-1.4\n");
+    const pdf = await importFile(workspace, {
+      subjectId: from,
+      sourcePath: source,
+    });
+    await createAnnotation(workspace, {
+      documentId: pdf.id,
+      type: "highlight",
+      color: "yellow",
+      segments: [
+        {
+          pageIndex: 0,
+          cropBox: [0, 0, 595, 842],
+          quads: [[120, 224, 421, 224, 120, 203, 421, 203]],
+          text: "sin(x)/x",
+        },
+      ],
+    });
+    await createFolder(workspace, {
+      subjectId: physics.id,
+      name: "Fichas",
+    });
+
+    const moved = await moveResource(workspace, {
+      id: pdf.id,
+      subjectId: physics.id,
+      folder: "Fichas",
+    });
+    expect(moved.id).toBe(pdf.id);
+    expect(moved.path).toBe(
+      "subjects/physics/documents/Fichas/worksheet-1.pdf",
+    );
+    expect(await listAnnotations(workspace, pdf.id)).toHaveLength(1);
+    const sidecar = JSON.parse(
+      await readFile(
+        join(workspace.root, `${moved.path}.resource.json`),
+        "utf8",
+      ),
+    );
+    expect(sidecar).toMatchObject({ id: pdf.id, subjectId: physics.id });
+
+    await scanWorkspace(workspace);
+    const after = snapshot(workspace).resources[0];
+    expect(after).toMatchObject({
+      id: pdf.id,
+      subjectId: physics.id,
+      folder: "Fichas",
+    });
+  });
+
+  it("files a note into a folder and back out of it", async () => {
+    const subjectId = mathematics().id;
+    const folder = await createFolder(workspace, { subjectId, name: "Fichas" });
+    const note = await createNote(workspace, { subjectId, title: "Ficha 1" });
+
+    const filed = await moveResource(workspace, {
+      id: note.id,
+      subjectId,
+      folder: folder.path,
+    });
+    expect(filed.path).toBe("subjects/mathematics/notes/Fichas/ficha-1.md");
+
+    const back = await moveResource(workspace, { id: note.id, subjectId });
+    expect(back.path).toBe("subjects/mathematics/notes/ficha-1.md");
+    expect(back.folder).toBeUndefined();
+    await scanWorkspace(workspace);
+    expect(snapshot(workspace).resources[0]?.folder).toBeUndefined();
+  });
+
+  it("refuses to file anything into a folder Moodle fills", async () => {
+    const subjectId = mathematics().id;
+    const note = await createNote(workspace, { subjectId, title: "Resumo" });
+    await importDownload(workspace, {
+      subjectId,
+      folder: "Aulas",
+      filename: "aula-1.pdf",
+      title: "Aula 1",
+      bytes: new TextEncoder().encode("%PDF-1.4\n"),
+      moodle: {
+        siteUrl: "https://moodle.example.edu",
+        courseId: 12,
+        moduleId: 34,
+        key: "34:/aula-1.pdf",
+        filename: "aula-1.pdf",
+        filesize: 9,
+        timemodified: 1_760_000_000,
+      },
+    });
+    await scanWorkspace(workspace);
+    await expect(
+      moveResource(workspace, { id: note.id, subjectId, folder: "Aulas" }),
+    ).rejects.toThrow(/Moodle course/);
+  });
+
+  it("refuses a second folder with the same name", async () => {
+    const subjectId = mathematics().id;
+    await createFolder(workspace, { subjectId, name: "Fichas" });
+    await expect(
+      createFolder(workspace, { subjectId, name: "Fichas" }),
+    ).rejects.toThrow(/already has a Fichas folder/);
   });
 });
 

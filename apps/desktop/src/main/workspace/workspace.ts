@@ -18,6 +18,7 @@ import {
   subjectFileSchema,
   workspaceFileSchema,
   type BinaryKind,
+  type FolderInfo,
   type ResourceInfo,
   type SaveNoteResult,
   type SidecarFile,
@@ -31,6 +32,7 @@ import {
 import {
   assertInsideWorkspace,
   exists,
+  folderName,
   isDirectory,
   readJson,
   sha256,
@@ -57,10 +59,50 @@ interface ResourceEntry {
   sidecarPath?: string;
 }
 
+/**
+ * One folder as the student sees it. Notes, documents, and images each keep
+ * their own area on disk, so the same folder can be more than one directory.
+ */
+interface FolderEntry {
+  info: FolderInfo;
+  dirs: string[];
+}
+
+/** Areas inside a subject. The folder a student sees sits below one of them. */
+const AREAS = ["notes", "documents", "images"];
+
+function folderKey(subjectId: string, path: string): string {
+  return `${subjectId}/${path}`;
+}
+
+/** Where a directory sits inside its subject, with the area stripped off. */
+function folderPath(subjectDir: string, dir: string): string {
+  const segments = toPosix(relative(subjectDir, dir))
+    .split("/")
+    .filter(Boolean);
+  if (AREAS.includes(segments[0] ?? "")) segments.shift();
+  return segments.join("/");
+}
+
+/** A folder path split into the folder it sits in and its own name. */
+function splitFolder(path: string): { parent: string; name: string } {
+  const at = path.lastIndexOf("/");
+  return at === -1
+    ? { parent: "", name: path }
+    : { parent: path.slice(0, at), name: path.slice(at + 1) };
+}
+
+/** The area directory a resource of this kind lives in. */
+function areaFor(kind: ResourceInfo["kind"]): string {
+  if (kind === "note") return "notes";
+  return kind === "image" ? "images" : "documents";
+}
+
 export interface OpenWorkspace {
   root: string;
   file: WorkspaceFile;
   subjects: Map<string, SubjectEntry>;
+  folders: Map<string, FolderEntry>;
   resources: Map<string, ResourceEntry>;
   issues: WorkspaceIssue[];
   locks: Map<string, Promise<unknown>>;
@@ -152,6 +194,7 @@ export async function openWorkspace(folder: string): Promise<OpenWorkspace> {
     root: folder,
     file: parsed.data,
     subjects: new Map(),
+    folders: new Map(),
     resources: new Map(),
     issues: [],
     locks: new Map(),
@@ -160,18 +203,19 @@ export async function openWorkspace(folder: string): Promise<OpenWorkspace> {
   return workspace;
 }
 
-/** Rebuilds the in-memory index of subjects and resources from disk. */
+/** Rebuilds the in-memory index of subjects, folders, and files from disk. */
 export async function scanWorkspace(workspace: OpenWorkspace): Promise<void> {
   const subjects = new Map<string, SubjectEntry>();
   const resources = new Map<string, ResourceEntry>();
+  const folders = new Map<string, FolderEntry>();
   const issues: WorkspaceIssue[] = [];
   const subjectsDir = join(workspace.root, "subjects");
   const rel = (path: string) => toPosix(relative(workspace.root, path));
 
-  const folders = (await isDirectory(subjectsDir))
+  const subjectDirs = (await isDirectory(subjectsDir))
     ? await readdir(subjectsDir, { withFileTypes: true })
     : [];
-  for (const folder of folders) {
+  for (const folder of subjectDirs) {
     if (!folder.isDirectory() || folder.name.startsWith(".")) continue;
     const dir = join(subjectsDir, folder.name);
     const subjectPath = join(dir, "subject.json");
@@ -206,22 +250,36 @@ export async function scanWorkspace(workspace: OpenWorkspace): Promise<void> {
         ...(subject.moodle ? { moodle: subject.moodle } : {}),
       },
     });
-    await scanSubjectFiles(workspace, subject.id, dir, dir, resources, issues);
+    await scanSubjectFiles(
+      {
+        root: workspace.root,
+        subjectId: subject.id,
+        subjectDir: dir,
+        resources,
+        folders,
+        issues,
+      },
+      dir,
+    );
   }
 
   workspace.subjects = subjects;
   workspace.resources = resources;
+  workspace.folders = folders;
   workspace.issues = issues;
 }
 
-async function scanSubjectFiles(
-  workspace: OpenWorkspace,
-  subjectId: string,
-  subjectDir: string,
-  dir: string,
-  resources: Map<string, ResourceEntry>,
-  issues: WorkspaceIssue[],
-): Promise<void> {
+interface SubjectScan {
+  root: string;
+  subjectId: string;
+  subjectDir: string;
+  resources: Map<string, ResourceEntry>;
+  folders: Map<string, FolderEntry>;
+  issues: WorkspaceIssue[];
+}
+
+async function scanSubjectFiles(scan: SubjectScan, dir: string): Promise<void> {
+  const { subjectDir, resources, folders, issues } = scan;
   const entries = await readdir(dir, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
   for (const entry of entries) {
@@ -229,27 +287,26 @@ async function scanSubjectFiles(
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (dir === subjectDir && entry.name === "annotations") continue;
-      await scanSubjectFiles(
-        workspace,
-        subjectId,
-        subjectDir,
-        path,
-        resources,
-        issues,
-      );
+      const nested = folderPath(subjectDir, path);
+      if (nested) {
+        const existing = folders.get(folderKey(scan.subjectId, nested));
+        if (existing) existing.dirs.push(path);
+        else
+          folders.set(folderKey(scan.subjectId, nested), {
+            info: { subjectId: scan.subjectId, path: nested, moodle: false },
+            dirs: [path],
+          });
+      }
+      await scanSubjectFiles(scan, path);
       continue;
     }
     if (!entry.isFile()) continue;
     if (dir === subjectDir && entry.name === "subject.json") continue;
     if (entry.name.endsWith(SIDECAR_SUFFIX)) continue;
 
-    const segments = toPosix(relative(subjectDir, dirname(path)))
-      .split("/")
-      .filter(Boolean);
-    if (["notes", "documents", "images"].includes(segments[0] ?? ""))
-      segments.shift();
-    const folder = segments.join("/");
-    const relativePath = toPosix(relative(workspace.root, path));
+    const folder = folderPath(subjectDir, dirname(path));
+    const relativePath = toPosix(relative(scan.root, path));
+    const subjectId = scan.subjectId;
 
     try {
       const entryInfo = entry.name.toLowerCase().endsWith(".md")
@@ -285,6 +342,12 @@ async function scanSubjectFiles(
           updatedAt: entryInfo.updatedAt,
         },
       });
+      // A folder holding a downloaded file belongs to the course, not the
+      // student: resit fills it from Moodle and leaves it alone otherwise.
+      if (folder && entryInfo.fromMoodle) {
+        const owner = folders.get(folderKey(subjectId, folder));
+        if (owner) owner.info.moodle = true;
+      }
     } catch (error) {
       issues.push({
         kind: "invalid-file",
@@ -329,11 +392,13 @@ async function readNoteEntry(path: string, subjectId: string) {
       revision: noteRevision(text),
       size: Buffer.byteLength(text),
       updatedAt: at,
+      fromMoodle: false,
     };
   }
   return {
     id: data.id,
     kind: "note" as const,
+    fromMoodle: false,
     title:
       typeof data.title === "string" && data.title
         ? data.title
@@ -381,6 +446,7 @@ async function readBinaryEntry(
     revision: sidecar.revision,
     size: info.size,
     updatedAt: sidecar.updatedAt,
+    fromMoodle: sidecar.moodle !== undefined,
     sidecarPath,
   };
 }
@@ -397,6 +463,9 @@ export function snapshot(workspace: OpenWorkspace): WorkspaceSnapshot {
       .sort(
         (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
       ),
+    folders: [...workspace.folders.values()]
+      .map((entry) => entry.info)
+      .sort((a, b) => a.path.localeCompare(b.path)),
     resources: [...workspace.resources.values()]
       .map((entry) => entry.info)
       .sort((a, b) => a.title.localeCompare(b.title)),
@@ -544,11 +613,14 @@ async function moveToTrash(
   const moved: { from: string; to: string }[] = [];
   for (const path of paths) {
     if (!(await exists(path))) continue;
-    const target = join(dir, basename(path));
+    // A folder deletion moves the notes, documents, and images directories
+    // that share its name, so the trash cannot take them under one name.
+    const { name, extension } = splitExtension(basename(path));
+    const target = await uniquePath(dir, name, extension);
     await rename(path, target);
     moved.push({
       from: toPosix(relative(workspace.root, path)),
-      to: basename(path),
+      to: basename(target),
     });
   }
   await writeJson(join(dir, "trash.json"), {
@@ -571,18 +643,172 @@ export async function deleteSubject(
   await scanWorkspace(workspace);
 }
 
+/**
+ * Keeps the index in step with a directory that has just been made, so a
+ * folder deleted before the next scan still takes all of its areas with it.
+ */
+function rememberFolder(
+  workspace: OpenWorkspace,
+  input: { subjectId: string; path: string; dir: string; moodle?: boolean },
+): FolderInfo {
+  const key = folderKey(input.subjectId, input.path);
+  const entry = workspace.folders.get(key);
+  if (!entry) {
+    const info: FolderInfo = {
+      subjectId: input.subjectId,
+      path: input.path,
+      moodle: input.moodle ?? false,
+    };
+    workspace.folders.set(key, { info, dirs: [input.dir] });
+    return info;
+  }
+  if (!entry.dirs.includes(input.dir)) entry.dirs.push(input.dir);
+  if (input.moodle) entry.info.moodle = true;
+  return entry.info;
+}
+
+/** Makes a folder a student can put things in. Moodle keeps its own. */
+export async function createFolder(
+  workspace: OpenWorkspace,
+  input: { subjectId: string; name: string; parent?: string | undefined },
+): Promise<FolderInfo> {
+  const subject = subjectEntry(workspace, input.subjectId);
+  const name = folderName(input.name);
+  if (!name) throw new WorkspaceError("That folder name cannot be used.");
+  const parent = writableFolder(workspace, input.subjectId, input.parent);
+  const path = parent ? `${parent}/${name}` : name;
+  if (workspace.folders.has(folderKey(input.subjectId, path)))
+    throw new WorkspaceError(
+      `${parent || subject.info.name} already has a ${name} folder.`,
+    );
+  const dir = join(subject.dir, "notes", ...path.split("/"));
+  await mkdir(dir, { recursive: true });
+  return rememberFolder(workspace, {
+    subjectId: input.subjectId,
+    path,
+    dir,
+  });
+}
+
+function folderEntry(
+  workspace: OpenWorkspace,
+  subjectId: string,
+  path: string,
+): FolderEntry {
+  const entry = workspace.folders.get(folderKey(subjectId, path));
+  if (!entry) throw new WorkspaceError("That folder no longer exists.");
+  return entry;
+}
+
+export async function deleteFolder(
+  workspace: OpenWorkspace,
+  input: { subjectId: string; path: string },
+): Promise<void> {
+  const entry = folderEntry(workspace, input.subjectId, input.path);
+  await moveToTrash(workspace, entry.dirs, {
+    kind: "folder",
+    title: entry.info.path,
+  });
+  await scanWorkspace(workspace);
+}
+
+/** True when the folder, or a folder above it, is filled from Moodle. */
+function moodleOwned(
+  workspace: OpenWorkspace,
+  subjectId: string,
+  path: string,
+): boolean {
+  const segments = path.split("/");
+  for (let depth = segments.length; depth > 0; depth -= 1) {
+    const key = folderKey(subjectId, segments.slice(0, depth).join("/"));
+    if (workspace.folders.get(key)?.info.moodle) return true;
+  }
+  return false;
+}
+
+/** Checks a folder something is headed for, and returns it for the path. */
+function writableFolder(
+  workspace: OpenWorkspace,
+  subjectId: string,
+  folder: string | undefined,
+): string {
+  if (!folder) return "";
+  const entry = folderEntry(workspace, subjectId, folder);
+  if (moodleOwned(workspace, subjectId, entry.info.path))
+    throw new WorkspaceError(
+      "This folder is filled from the Moodle course. Choose another folder.",
+    );
+  return entry.info.path;
+}
+
+/**
+ * Renames a folder, moves it into another, or both. An empty `parent` moves
+ * it to the top of the subject; leaving it out keeps the folder where it is.
+ */
+export async function updateFolder(
+  workspace: OpenWorkspace,
+  input: {
+    subjectId: string;
+    path: string;
+    name?: string | undefined;
+    parent?: string | undefined;
+  },
+): Promise<FolderInfo> {
+  const subject = subjectEntry(workspace, input.subjectId);
+  const entry = folderEntry(workspace, input.subjectId, input.path);
+  if (moodleOwned(workspace, input.subjectId, entry.info.path))
+    throw new WorkspaceError(
+      "resit keeps this folder in step with the Moodle course. Following the course again would download its files under the old name.",
+    );
+  const current = splitFolder(entry.info.path);
+  const name = input.name === undefined ? current.name : folderName(input.name);
+  if (!name) throw new WorkspaceError("That folder name cannot be used.");
+  const parent =
+    input.parent === undefined
+      ? current.parent
+      : writableFolder(workspace, input.subjectId, input.parent || undefined);
+  if (parent === entry.info.path || parent.startsWith(`${entry.info.path}/`))
+    throw new WorkspaceError("A folder cannot go inside itself.");
+  const path = parent ? `${parent}/${name}` : name;
+  if (path === entry.info.path) return entry.info;
+  if (workspace.folders.has(folderKey(input.subjectId, path)))
+    throw new WorkspaceError(
+      `${parent || subject.info.name} already has a ${name} folder.`,
+    );
+
+  for (const dir of entry.dirs) {
+    const [first] = toPosix(relative(subject.dir, dir)).split("/");
+    const area = first && AREAS.includes(first) ? [first] : [];
+    const target = join(subject.dir, ...area, ...path.split("/"));
+    await mkdir(dirname(target), { recursive: true });
+    await rename(dir, target);
+  }
+  await scanWorkspace(workspace);
+  return folderEntry(workspace, input.subjectId, path).info;
+}
+
 export async function createNote(
   workspace: OpenWorkspace,
-  input: { subjectId: string; title: string; body?: string | undefined },
+  input: {
+    subjectId: string;
+    title: string;
+    folder?: string | undefined;
+    body?: string | undefined;
+  },
 ): Promise<ResourceInfo> {
   const subject = subjectEntry(workspace, input.subjectId);
+  const folder = writableFolder(workspace, input.subjectId, input.folder);
   const at = now();
   const id = randomUUID();
-  const path = await uniquePath(
-    join(subject.dir, "notes"),
-    slugify(input.title),
-    ".md",
-  );
+  const directory = join(subject.dir, "notes", ...(folder ? [folder] : []));
+  await mkdir(directory, { recursive: true });
+  if (folder)
+    rememberFolder(workspace, {
+      subjectId: input.subjectId,
+      path: folder,
+      dir: directory,
+    });
+  const path = await uniquePath(directory, slugify(input.title), ".md");
   const text = serializeNote(
     {
       id,
@@ -600,6 +826,7 @@ export async function createNote(
     title: input.title,
     subjectId: input.subjectId,
     path: toPosix(relative(workspace.root, path)),
+    ...(folder ? { folder } : {}),
     revision: noteRevision(text),
     size: Buffer.byteLength(text),
     updatedAt: at,
@@ -709,6 +936,87 @@ export function renameResource(
   });
 }
 
+/**
+ * Moves a file to another subject or folder. It keeps its ID and title, so
+ * open tabs and links into it still point at it. Highlights follow the PDF.
+ */
+export function moveResource(
+  workspace: OpenWorkspace,
+  input: { id: string; subjectId: string; folder?: string | undefined },
+): Promise<ResourceInfo> {
+  return withLock(workspace, input.id, async () => {
+    const entry = resourceEntry(workspace, input.id);
+    const subject = subjectEntry(workspace, input.subjectId);
+    const folder = writableFolder(workspace, input.subjectId, input.folder);
+    const directory = join(
+      subject.dir,
+      areaFor(entry.info.kind),
+      ...(folder ? folder.split("/") : []),
+    );
+    if (directory === dirname(entry.absPath)) return entry.info;
+
+    await assertInsideWorkspace(workspace.root, entry.absPath);
+    const moved = entry.info.subjectId !== input.subjectId;
+    const highlights =
+      moved && entry.info.kind === "pdf"
+        ? annotationsPath(workspace, input.id)
+        : null;
+    await mkdir(directory, { recursive: true });
+    const { name, extension } = splitExtension(basename(entry.absPath));
+    const target = await uniquePath(directory, name, extension);
+    await rename(entry.absPath, target);
+    entry.absPath = target;
+
+    const at = now();
+    if (entry.sidecarPath) {
+      const sidecar = sidecarFileSchema.parse(
+        await readJson(entry.sidecarPath),
+      );
+      const beside = `${target}${SIDECAR_SUFFIX}`;
+      await rename(entry.sidecarPath, beside);
+      entry.sidecarPath = beside;
+      await writeJson(beside, {
+        ...sidecar,
+        subjectId: input.subjectId,
+        updatedAt: at,
+      });
+    } else if (entry.info.kind === "note" && moved) {
+      const text = await readFile(target, "utf8");
+      const parsed = parseNote(text);
+      if (parsed.ok)
+        await writeFileAtomic(
+          target,
+          serializeNote(
+            { ...parsed.data, subjectId: input.subjectId, updatedAt: at },
+            parsed.body,
+          ),
+        );
+    }
+
+    if (folder)
+      rememberFolder(workspace, {
+        subjectId: input.subjectId,
+        path: folder,
+        dir: directory,
+      });
+    const { folder: _previous, ...info } = entry.info;
+    entry.info = {
+      ...info,
+      subjectId: input.subjectId,
+      path: toPosix(relative(workspace.root, target)),
+      ...(folder ? { folder } : {}),
+      updatedAt: at,
+    };
+
+    if (highlights && (await exists(highlights))) {
+      const to = annotationsPath(workspace, input.id);
+      await mkdir(dirname(to), { recursive: true });
+      await rename(highlights, to);
+    }
+    return entry.info;
+  });
+}
+
 export function deleteResource(
   workspace: OpenWorkspace,
   id: string,
@@ -753,6 +1061,13 @@ async function addBinary(
     ...(input.folder ? [input.folder] : []),
   );
   await mkdir(directory, { recursive: true });
+  if (input.folder)
+    rememberFolder(workspace, {
+      subjectId: input.subjectId,
+      path: input.folder,
+      dir: directory,
+      moodle: input.moodle !== undefined,
+    });
   const target = await uniquePath(
     directory,
     slugify(name),
@@ -803,9 +1118,14 @@ async function addBinary(
 /** Copies an external file into a subject. The original is never modified. */
 export async function importFile(
   workspace: OpenWorkspace,
-  input: { subjectId: string; sourcePath: string },
+  input: {
+    subjectId: string;
+    sourcePath: string;
+    folder?: string | undefined;
+  },
 ): Promise<ResourceInfo> {
   subjectEntry(workspace, input.subjectId);
+  const folder = writableFolder(workspace, input.subjectId, input.folder);
   const filename = basename(input.sourcePath);
   const { extension } = splitExtension(filename);
 
@@ -818,13 +1138,19 @@ export async function importFile(
       typeof data.title === "string" && data.title
         ? data.title
         : titleFromFilename(filename);
-    return createNote(workspace, { subjectId: input.subjectId, title, body });
+    return createNote(workspace, {
+      subjectId: input.subjectId,
+      title,
+      ...(folder ? { folder } : {}),
+      body,
+    });
   }
 
   return addBinary(
     workspace,
     {
       subjectId: input.subjectId,
+      ...(folder ? { folder } : {}),
       filename,
       title: titleFromFilename(filename),
     },

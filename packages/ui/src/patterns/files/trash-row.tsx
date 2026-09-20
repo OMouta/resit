@@ -1,6 +1,7 @@
 import {
   FileTextIcon,
   FolderIcon,
+  FoldersIcon,
   ImageIcon,
   MessageSquareIcon,
   PaperclipIcon,
@@ -27,7 +28,14 @@ import { cn } from "@resit/ui/lib/utils";
 export interface TrashItem {
   id: string;
   title: string;
-  kind: "note" | "pdf" | "image" | "attachment" | "subject" | "conversation";
+  kind:
+    | "note"
+    | "pdf"
+    | "image"
+    | "attachment"
+    | "subject"
+    | "folder"
+    | "conversation";
   subjectName: string | null;
   deletedAt: string | Date;
   originalPath: string;
@@ -40,7 +48,8 @@ const icons = {
   pdf: FileTextIcon,
   image: ImageIcon,
   attachment: PaperclipIcon,
-  subject: FolderIcon,
+  subject: FoldersIcon,
+  folder: FolderIcon,
   conversation: MessageSquareIcon,
 };
 

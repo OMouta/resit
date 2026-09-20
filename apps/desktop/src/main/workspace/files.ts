@@ -143,6 +143,24 @@ export function slugify(value: string): string {
   return RESERVED.test(slug) ? `${slug}-file` : slug;
 }
 
+/**
+ * A folder name every platform accepts, as close to what was typed as it can
+ * be: folders have no metadata, so what is on disk is what the student sees.
+ * Returns an empty string when nothing usable is left.
+ */
+export function folderName(value: string): string {
+  const name = value
+    .normalize("NFC")
+    .replace(/[<>:"/\x5c|?*\p{Cc}]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\.+|\.+$/g, "")
+    .trim()
+    .slice(0, 60)
+    .trim();
+  return RESERVED.test(name) ? `${name}-folder` : name;
+}
+
 /** First free path of the form `name.ext`, `name-2.ext`, `name-3.ext`, ... */
 export async function uniquePath(
   directory: string,

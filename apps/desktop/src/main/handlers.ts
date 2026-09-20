@@ -52,13 +52,16 @@ import { loadSettings, updateSettings } from "./settings";
 import { searchWorkspace } from "./workspace/search";
 import { listTrash, restoreFromTrash } from "./workspace/trash";
 import {
+  createFolder,
   createNote,
   createSubject,
   createWorkspace,
+  deleteFolder,
   deleteResource,
   deleteSubject,
   importFile,
   linkSubject,
+  moveResource,
   openWorkspace,
   readNote,
   readResourceBytes,
@@ -66,10 +69,14 @@ import {
   resourcePath,
   saveNote,
   snapshot,
+  updateFolder,
   updateSubject,
 } from "./workspace/workspace";
 
 const path = z.string().min(1).max(4096);
+const folderPath = z.string().trim().min(1).max(200);
+/** A folder to put something in. Empty means the top of the subject. */
+const parentFolder = z.string().trim().max(200);
 const courseId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const MAX_LAYOUT_BYTES = 256 * 1024;
 const MAX_NOTE_BYTES = 20 * 1024 * 1024;
@@ -233,8 +240,45 @@ export function registerHandlers(
   });
 
   handle(
+    CHANNELS.createFolder,
+    z.tuple([
+      z.object({ subjectId: id, name: title, parent: folderPath.optional() }),
+    ]),
+    (input) => createFolder(currentWorkspace(), input),
+  );
+
+  handle(
+    CHANNELS.updateFolder,
+    z.tuple([
+      z.object({
+        subjectId: id,
+        path: folderPath,
+        name: title.optional(),
+        parent: parentFolder.optional(),
+      }),
+    ]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const folder = await updateFolder(workspace, input);
+      return { folder, snapshot: snapshot(workspace) };
+    },
+  );
+
+  handle(
+    CHANNELS.deleteFolder,
+    z.tuple([z.object({ subjectId: id, path: folderPath })]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      await deleteFolder(workspace, input);
+      return snapshot(workspace);
+    },
+  );
+
+  handle(
     CHANNELS.createNote,
-    z.tuple([z.object({ subjectId: id, title })]),
+    z.tuple([
+      z.object({ subjectId: id, title, folder: folderPath.optional() }),
+    ]),
     (input) => createNote(currentWorkspace(), input),
   );
 
@@ -258,35 +302,66 @@ export function registerHandlers(
     renameResource(currentWorkspace(), input),
   );
 
+  handle(
+    CHANNELS.moveResource,
+    z.tuple([
+      z.object({
+        id,
+        subjectId: id,
+        folder: folderPath.optional(),
+      }),
+    ]),
+    (input) => moveResource(currentWorkspace(), input),
+  );
+
   handle(CHANNELS.deleteResource, z.tuple([id]), async (resourceId) => {
     const workspace = currentWorkspace();
     await deleteResource(workspace, resourceId);
     return snapshot(workspace);
   });
 
-  handle(CHANNELS.importFiles, z.tuple([id]), async (subjectId) => {
-    const workspace = currentWorkspace();
-    const owner = window();
-    const options: Electron.OpenDialogOptions = {
-      title: "Import files",
-      properties: ["openFile", "multiSelections"],
-      filters: [
-        {
-          name: "Documents, notes, and images",
-          extensions: ["pdf", "md", "png", "jpg", "jpeg", "gif", "webp", "svg"],
-        },
-        { name: "All files", extensions: ["*"] },
-      ],
-    };
-    const result = owner
-      ? await dialog.showOpenDialog(owner, options)
-      : await dialog.showOpenDialog(options);
-    if (result.canceled) return [];
-    const imported = [];
-    for (const sourcePath of result.filePaths)
-      imported.push(await importFile(workspace, { subjectId, sourcePath }));
-    return imported;
-  });
+  handle(
+    CHANNELS.importFiles,
+    z.tuple([id, folderPath.optional()]),
+    async (subjectId, intoFolder) => {
+      const workspace = currentWorkspace();
+      const owner = window();
+      const options: Electron.OpenDialogOptions = {
+        title: "Import files",
+        properties: ["openFile", "multiSelections"],
+        filters: [
+          {
+            name: "Documents, notes, and images",
+            extensions: [
+              "pdf",
+              "md",
+              "png",
+              "jpg",
+              "jpeg",
+              "gif",
+              "webp",
+              "svg",
+            ],
+          },
+          { name: "All files", extensions: ["*"] },
+        ],
+      };
+      const result = owner
+        ? await dialog.showOpenDialog(owner, options)
+        : await dialog.showOpenDialog(options);
+      if (result.canceled) return [];
+      const imported = [];
+      for (const sourcePath of result.filePaths)
+        imported.push(
+          await importFile(workspace, {
+            subjectId,
+            sourcePath,
+            ...(intoFolder ? { folder: intoFolder } : {}),
+          }),
+        );
+      return imported;
+    },
+  );
 
   handle(CHANNELS.listTrash, z.tuple([]), () => listTrash(currentWorkspace()));
 

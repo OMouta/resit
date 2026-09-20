@@ -29,6 +29,7 @@ const KINDS: TrashKind[] = [
   "image",
   "attachment",
   "subject",
+  "folder",
   "conversation",
 ];
 

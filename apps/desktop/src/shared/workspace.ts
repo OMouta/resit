@@ -96,6 +96,14 @@ export interface ResourceInfo {
   updatedAt: string;
 }
 
+export interface FolderInfo {
+  subjectId: string;
+  /** Folder path inside the subject, with forward slashes. */
+  path: string;
+  /** Holds files resit downloaded from the subject's Moodle course. */
+  moodle: boolean;
+}
+
 export interface WorkspaceInfo {
   id: string;
   name: string;
@@ -111,6 +119,7 @@ export interface WorkspaceIssue {
 export interface WorkspaceSnapshot {
   workspace: WorkspaceInfo;
   subjects: SubjectInfo[];
+  folders: FolderInfo[];
   resources: ResourceInfo[];
   issues: WorkspaceIssue[];
 }
@@ -121,7 +130,7 @@ export interface RecentWorkspace {
   path: string;
 }
 
-export type TrashKind = ResourceKind | "subject" | "conversation";
+export type TrashKind = ResourceKind | "subject" | "folder" | "conversation";
 
 /** One deletion sitting in `.resit/trash`. */
 export interface TrashEntry {
