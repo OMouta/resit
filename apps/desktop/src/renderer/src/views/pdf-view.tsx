@@ -239,6 +239,20 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     };
   }, [resource.id, goToPage, missingHighlight]);
 
+  // The assistant can highlight this PDF while it is open.
+  useEffect(
+    () =>
+      api.onEvent((event) => {
+        if (
+          event.type !== "annotations-changed" ||
+          event.documentId !== resource.id
+        )
+          return;
+        api.listAnnotations(resource.id).then(setAnnotations, () => undefined);
+      }),
+    [resource.id],
+  );
+
   useEffect(repaint, [repaint, annotations, selectedId]);
 
   useEffect(() => {

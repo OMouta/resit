@@ -783,9 +783,10 @@ export function ChatPanel({
         <div className="flex flex-col items-center gap-2 px-2 py-10 text-center">
           <p className="text-sm font-medium">Ask about your notes or PDFs</p>
           <p className="max-w-64 text-xs text-muted-foreground">
-            {PROVIDER_NAMES[providerId]} can read the subjects and files listed
-            above. Your messages, the open file's name, selected text, and what
-            it reads leave your computer.
+            {PROVIDER_NAMES[providerId]} reads the subjects and files listed
+            above, and the file you have open. Ask it to write in a note or
+            highlight a passage. Your messages and what it reads leave your
+            computer.
           </p>
         </div>
       }

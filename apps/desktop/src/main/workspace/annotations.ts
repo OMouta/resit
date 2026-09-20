@@ -99,6 +99,8 @@ export function createAnnotation(
     color: AnnotationColorValue;
     segments: AnnotationSegment[];
     comment?: string | undefined;
+    /** Set when the assistant made the highlight rather than the student. */
+    author?: "assistant" | undefined;
   },
 ): Promise<Annotation> {
   const revision = pdfRevision(workspace, input.documentId);
@@ -111,6 +113,7 @@ export function createAnnotation(
     color: input.color,
     segments: input.segments,
     ...(input.comment ? { comment: input.comment } : {}),
+    ...(input.author ? { author: input.author } : {}),
     createdAt: at,
     updatedAt: at,
   };

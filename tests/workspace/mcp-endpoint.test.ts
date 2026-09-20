@@ -64,7 +64,9 @@ beforeEach(async () => {
     expectedRevision: (await readNote(workspace, note.id)).revision,
   });
   endpoint = await startMcpEndpoint(
-    studyTools(workspace, { subjectIds: [subject.id], resourceIds: [] }),
+    studyTools(workspace, {
+      scope: { subjectIds: [subject.id], resourceIds: [] },
+    }),
   );
 });
 

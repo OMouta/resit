@@ -4,7 +4,6 @@ import { join } from "node:path";
 import type {
   AssistantStatus,
   ChatMessage,
-  ConversationScope,
   TurnEvent,
 } from "../../shared/conversations";
 import { bindCodexThread, codexThreadFor } from "../conversations/store";
@@ -14,7 +13,7 @@ import { loadSettings } from "../settings";
 import type { OpenWorkspace } from "../workspace/workspace";
 import { INSTRUCTIONS } from "./instructions";
 import { startMcpEndpoint } from "./mcp-endpoint";
-import { describeToolCall, studyTools } from "./study-tools";
+import { describeToolCall, studyTools, type TurnGrant } from "./study-tools";
 import { TurnStream } from "./turn-stream";
 
 /** Codex names the study server; its tools arrive prefixed with it. */
@@ -52,7 +51,7 @@ async function scratchDirectory(
 
 export interface CodexTurnJob {
   conversationId: string;
-  scope: ConversationScope;
+  grant: TurnGrant;
   prompt: string;
   /** Set when the turn was stopped from the UI. */
   cancelled: () => boolean;
@@ -74,7 +73,7 @@ export async function runCodexTurn(
   const settings = await loadSettings();
   const model = settings.codex.model;
   const endpoint = await startMcpEndpoint(
-    studyTools(workspace, job.scope),
+    studyTools(workspace, job.grant),
     MCP_SERVER,
   );
   const launch = await codexLaunch({

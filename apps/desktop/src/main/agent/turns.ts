@@ -14,29 +14,35 @@ import type {
   ConversationScope,
   ToolSummary,
   TurnContext,
-  TurnEvent,
 } from "../../shared/conversations";
+import type { DesktopEvent } from "../../shared/ipc";
 import {
   appendMessage,
   bindClaudeSession,
   claudeSessionFor,
   readConversation,
 } from "../conversations/store";
+import { liveContext } from "../context";
 import { claudeStatus } from "../providers/claude";
 import { codexStatus } from "../providers/codex";
 import { loadSettings } from "../settings";
-import type { OpenWorkspace } from "../workspace/workspace";
+import { snapshot, type OpenWorkspace } from "../workspace/workspace";
 import { runCodexTurn } from "./codex-turn";
 import { INSTRUCTIONS } from "./instructions";
+import { renderPdfPage } from "./render";
 import {
   STUDY_SERVER,
   STUDY_TOOLS,
   createStudyServer,
   describeToolCall,
+  type StudyChange,
+  type TurnGrant,
 } from "./study-tools";
 
 const MAX_HANDOFF_CHARS = 12_000;
 const PROGRESS_INTERVAL_MS = 60;
+/** Wide enough to read a dense worksheet without sending a huge image. */
+const PAGE_IMAGE_WIDTH = 1400;
 
 interface ActiveTurn {
   turnId: string;
@@ -87,30 +93,26 @@ function composeContext(
       scope.resourceIds.length > 0
         ? `, plus ${scope.resourceIds.length} added ${scope.resourceIds.length === 1 ? "file" : "files"}`
         : ""
-    }. The study tools can read only files in this scope.`,
+    }. The study tools read and write the files in this scope, and the file open below.`,
   ];
   const focused = context.focused;
   if (focused) {
     const entry = workspace.resources.get(focused.resourceId);
-    const inScope =
-      entry !== undefined &&
-      (scope.subjectIds.includes(entry.info.subjectId) ||
-        scope.resourceIds.includes(entry.info.id));
     const where = focused.page
       ? `, page ${focused.page}${focused.pageCount ? ` of ${focused.pageCount}` : ""}`
       : "";
     lines.push(
-      inScope
-        ? `Open file: "${focused.title}" (${focused.kind}, id ${focused.resourceId}${where}).`
-        : `Open file: "${focused.title}", which is outside this conversation's scope, so its contents are not available.`,
+      entry
+        ? `Open file: "${focused.title}" (${focused.kind}, id ${focused.resourceId}${where}). The student attached it to this message, so you can read it whether or not its subject is in the scope.`
+        : `Open file: "${focused.title}", which resit can no longer find.`,
     );
-    if (inScope && context.annotation) {
+    if (entry && context.annotation) {
       const { id, page, text, comment } = context.annotation;
       lines.push(
         `The student is asking about one of their own highlights in that file (page ${page}, highlight id ${id}). It covers:\n"""\n${text}\n"""`,
       );
       if (comment) lines.push(`Their note on that highlight: "${comment}"`);
-    } else if (inScope && context.selection)
+    } else if (entry && context.selection)
       lines.push(`Selected text:\n"""\n${context.selection}\n"""`);
   }
   return `<study-context>\n${lines.join("\n")}\n</study-context>`;
@@ -164,9 +166,36 @@ function assistantErrorText(code: string): string {
   }
 }
 
+/** What one turn may read and write, and how its tools reach the window. */
+function turnGrant(
+  workspace: OpenWorkspace,
+  emit: (event: DesktopEvent) => void,
+  input: { scope: ConversationScope; context: TurnContext; images: boolean },
+): TurnGrant {
+  return {
+    scope: input.scope,
+    context: input.context,
+    images: input.images,
+    liveContext,
+    renderPage: ({ resourceId, page }) =>
+      renderPdfPage(emit, {
+        resourceId,
+        revision: workspace.resources.get(resourceId)?.info.revision ?? "",
+        page,
+        maxWidth: PAGE_IMAGE_WIDTH,
+      }),
+    onChange: (change: StudyChange) =>
+      emit(
+        change.kind === "annotations"
+          ? { type: "annotations-changed", documentId: change.documentId }
+          : { type: "workspace-changed", snapshot: snapshot(workspace) },
+      ),
+  };
+}
+
 export async function startTurn(
   workspace: OpenWorkspace,
-  emit: (event: TurnEvent) => void,
+  emit: (event: DesktopEvent) => void,
   input: { conversationId: string; text: string; context: TurnContext },
 ): Promise<{ turnId: string }> {
   if (active.has(input.conversationId))
@@ -206,10 +235,15 @@ export async function startTurn(
     meta,
   });
   const prompt = `${composeContext(workspace, meta.scope, input.context)}\n\n${input.text}`;
+  const grant = turnGrant(workspace, emit, {
+    scope: meta.scope,
+    context: input.context,
+    images: providerId === "claude",
+  });
   if (providerId === "codex")
     void runCodexTurn(workspace, emit, turn.turnId, {
       conversationId: input.conversationId,
-      scope: meta.scope,
+      grant,
       prompt,
       cancelled: () => turn.cancelled,
       onStoppable: (stop) => {
@@ -237,7 +271,7 @@ export async function startTurn(
       turn,
       conversationId: input.conversationId,
       executable: status.path,
-      scope: meta.scope,
+      grant,
       prompt,
       history: history.messages,
     });
@@ -247,7 +281,7 @@ export async function startTurn(
 /** Saves a finished reply and tells the window the turn is over. */
 async function deliver(
   workspace: OpenWorkspace,
-  emit: (event: TurnEvent) => void,
+  emit: (event: DesktopEvent) => void,
   conversationId: string,
   turn: ActiveTurn,
   message: ChatMessage,
@@ -268,12 +302,12 @@ async function deliver(
 
 async function runTurn(
   workspace: OpenWorkspace,
-  emit: (event: TurnEvent) => void,
+  emit: (event: DesktopEvent) => void,
   job: {
     turn: ActiveTurn;
     conversationId: string;
     executable: string;
-    scope: ConversationScope;
+    grant: TurnGrant;
     prompt: string;
     history: ChatMessage[];
   },
@@ -327,7 +361,7 @@ async function runTurn(
       ...(resume ? { resume } : {}),
       ...(settings.claude.model ? { model: settings.claude.model } : {}),
       tools: [],
-      mcpServers: { [STUDY_SERVER]: createStudyServer(workspace, job.scope) },
+      mcpServers: { [STUDY_SERVER]: createStudyServer(workspace, job.grant) },
       allowedTools: STUDY_TOOLS.map((name) => `mcp__${STUDY_SERVER}__${name}`),
       permissionMode: "dontAsk",
       settingSources: [],
