@@ -1,0 +1,345 @@
+import { z } from "zod";
+
+import type { MoodleCourse } from "../../shared/moodle";
+
+/** The external service the Moodle mobile app uses. */
+const SERVICE = "moodle_mobile_app";
+const CALL_TIMEOUT = 20_000;
+const DOWNLOAD_TIMEOUT = 5 * 60_000;
+
+export interface MoodleSession {
+  siteUrl: string;
+  token: string;
+}
+
+export class MoodleError extends Error {}
+
+export type NetworkFetch = (
+  input: string,
+  init?: RequestInit,
+) => Promise<Response>;
+
+/**
+ * Electron's `net.fetch` follows the system proxy and certificate store, which
+ * a university network usually needs. Tests replace it.
+ */
+let networkFetch: NetworkFetch = fetch;
+
+export function useNetworkFetch(implementation: NetworkFetch): void {
+  networkFetch = implementation;
+}
+
+/** Hides a token that found its way into a message from the site. */
+export function redact(text: string): string {
+  return text.replace(/((?:ws)?token)=[^&\s"']+/gi, "$1=***");
+}
+
+/**
+ * Accepts what a student is likely to type ("moodle.example.edu",
+ * "https://moodle.example.edu/my/") and returns the site root.
+ */
+export function normalizeSiteUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) throw new MoodleError("Enter your Moodle address.");
+  let url: URL;
+  try {
+    url = new URL(
+      /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`,
+    );
+  } catch {
+    throw new MoodleError(`${trimmed} is not a valid address.`);
+  }
+  if (url.protocol !== "https:" && url.hostname !== "localhost")
+    throw new MoodleError("Moodle must be reached over https.");
+  const path = url.pathname
+    .replace(/\/(login|webservice|my|course)(\/.*)?$/i, "")
+    .replace(/\/+$/, "");
+  return `${url.origin}${path}`;
+}
+
+const errorSchema = z.looseObject({
+  exception: z.string().optional(),
+  errorcode: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
+/** Turns Moodle's error bodies into something a student can act on. */
+function assertNotError(body: unknown, siteHost: string): void {
+  const parsed = errorSchema.safeParse(body);
+  if (!parsed.success) return;
+  const { exception, errorcode, error, message } = parsed.data;
+  if (!exception && !error && !errorcode) return;
+  const detail = redact(
+    message ?? error ?? errorcode ?? "Moodle refused the request.",
+  );
+  if (errorcode === "invalidtoken" || errorcode === "accessexception")
+    throw new MoodleError(
+      `${siteHost} no longer accepts this connection. Connect again in settings.`,
+    );
+  if (errorcode === "nopermissions" || errorcode === "requireloginerror")
+    throw new MoodleError(`Your account cannot see that in Moodle. ${detail}`);
+  throw new MoodleError(detail);
+}
+
+async function readJson(
+  response: Response,
+  siteHost: string,
+): Promise<unknown> {
+  const text = await response.text();
+  if (!response.ok)
+    throw new MoodleError(
+      `${siteHost} answered ${response.status}. ${redact(text.slice(0, 200))}`.trim(),
+    );
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new MoodleError(
+      `${siteHost} did not answer with web-service data. Check the address, and that web services are enabled.`,
+    );
+  }
+}
+
+async function call<T>(
+  session: MoodleSession,
+  wsfunction: string,
+  schema: z.ZodType<T>,
+  params: Record<string, string | number> = {},
+): Promise<T> {
+  const siteHost = new URL(session.siteUrl).host;
+  const url = new URL(`${session.siteUrl}/webservice/rest/server.php`);
+  url.searchParams.set("wstoken", session.token);
+  url.searchParams.set("wsfunction", wsfunction);
+  url.searchParams.set("moodlewsrestformat", "json");
+  for (const [key, value] of Object.entries(params))
+    url.searchParams.set(key, String(value));
+
+  let response: Response;
+  try {
+    response = await networkFetch(url.toString(), {
+      signal: AbortSignal.timeout(CALL_TIMEOUT),
+    });
+  } catch (error) {
+    throw new MoodleError(
+      `resit could not reach ${siteHost}. ${redact(error instanceof Error ? error.message : String(error))}`,
+    );
+  }
+  const body = await readJson(response, siteHost);
+  assertNotError(body, siteHost);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success)
+    throw new MoodleError(
+      `${siteHost} answered ${wsfunction} in a shape resit does not understand.`,
+    );
+  return parsed.data;
+}
+
+const tokenSchema = z.looseObject({ token: z.string().min(1) });
+
+/** Exchanges a password for a web-service token. The password is not kept. */
+export async function requestToken(input: {
+  siteUrl: string;
+  username: string;
+  password: string;
+}): Promise<string> {
+  const siteHost = new URL(input.siteUrl).host;
+  const body = new URLSearchParams({
+    username: input.username,
+    password: input.password,
+    service: SERVICE,
+  });
+  let response: Response;
+  try {
+    response = await networkFetch(`${input.siteUrl}/login/token.php`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      signal: AbortSignal.timeout(CALL_TIMEOUT),
+    });
+  } catch (error) {
+    throw new MoodleError(
+      `resit could not reach ${siteHost}. ${redact(error instanceof Error ? error.message : String(error))}`,
+    );
+  }
+  const payload = await readJson(response, siteHost);
+  const failure = errorSchema.safeParse(payload);
+  if (failure.success && (failure.data.error || failure.data.errorcode)) {
+    const code = failure.data.errorcode;
+    if (code === "invalidlogin")
+      throw new MoodleError("That username or password was not accepted.");
+    if (code === "enablewsdescription")
+      throw new MoodleError(
+        `${siteHost} has web services turned off, so resit cannot connect.`,
+      );
+    throw new MoodleError(
+      redact(failure.data.error ?? code ?? "Moodle refused the sign-in."),
+    );
+  }
+  const parsed = tokenSchema.safeParse(payload);
+  if (!parsed.success)
+    throw new MoodleError(
+      `${siteHost} did not return a token. Its mobile web service may be turned off.`,
+    );
+  return parsed.data.token;
+}
+
+const siteInfoSchema = z.looseObject({
+  sitename: z.string().catch(""),
+  username: z.string().catch(""),
+  fullname: z.string().catch(""),
+  userid: z.number().int(),
+  functions: z.array(z.looseObject({ name: z.string() })).catch([]),
+});
+
+export interface MoodleSiteInfo {
+  siteName: string;
+  username: string;
+  fullName: string;
+  userId: number;
+}
+
+const NEEDED = ["core_enrol_get_users_courses", "core_course_get_contents"];
+
+/** Checks the token and that the site exposes the functions resit uses. */
+export async function siteInfo(
+  session: MoodleSession,
+): Promise<MoodleSiteInfo> {
+  const info = await call(
+    session,
+    "core_webservice_get_site_info",
+    siteInfoSchema,
+  );
+  if (info.functions.length > 0) {
+    const available = new Set(info.functions.map((entry) => entry.name));
+    const missing = NEEDED.filter((name) => !available.has(name));
+    if (missing.length > 0)
+      throw new MoodleError(
+        `${new URL(session.siteUrl).host} does not let this account read course contents through its web service.`,
+      );
+  }
+  return {
+    siteName: info.sitename,
+    username: info.username,
+    fullName: info.fullname,
+    userId: info.userid,
+  };
+}
+
+const coursesSchema = z.array(
+  z.looseObject({
+    id: z.number().int(),
+    shortname: z.string().catch(""),
+    fullname: z.string().catch(""),
+  }),
+);
+
+export async function userCourses(
+  session: MoodleSession,
+  userId: number,
+): Promise<MoodleCourse[]> {
+  const courses = await call(
+    session,
+    "core_enrol_get_users_courses",
+    coursesSchema,
+    { userid: userId },
+  );
+  return courses.map((course) => ({
+    id: course.id,
+    shortname: course.shortname,
+    fullname: course.fullname || course.shortname || `Course ${course.id}`,
+  }));
+}
+
+export const moodleContentSchema = z.looseObject({
+  type: z.string().catch("file"),
+  filename: z.string().catch(""),
+  filepath: z.string().catch("/"),
+  filesize: z.number().catch(0),
+  fileurl: z.string().optional(),
+  timemodified: z.number().catch(0),
+  isexternalfile: z.boolean().optional(),
+});
+
+export const moodleModuleSchema = z.looseObject({
+  id: z.number().int(),
+  name: z.string().catch(""),
+  modname: z.string().catch(""),
+  uservisible: z.boolean().optional(),
+  contents: z.array(moodleContentSchema).optional(),
+});
+
+export const moodleSectionSchema = z.looseObject({
+  name: z.string().catch(""),
+  section: z.number().catch(0),
+  modules: z.array(moodleModuleSchema).catch([]),
+});
+
+export type MoodleSection = z.infer<typeof moodleSectionSchema>;
+
+export function courseContents(
+  session: MoodleSession,
+  courseId: number,
+): Promise<MoodleSection[]> {
+  return call(
+    session,
+    "core_course_get_contents",
+    z.array(moodleSectionSchema),
+    { courseid: courseId },
+  );
+}
+
+/**
+ * Downloads one course file. Only the configured site is fetched, so a course
+ * cannot point resit at another host with the token attached.
+ */
+export async function downloadFile(
+  session: MoodleSession,
+  fileUrl: string,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const site = new URL(session.siteUrl);
+  let url: URL;
+  try {
+    url = new URL(fileUrl);
+  } catch {
+    throw new MoodleError("Moodle gave an address resit cannot read.");
+  }
+  if (url.origin !== site.origin)
+    throw new MoodleError(`That file is stored outside ${site.host}.`);
+  url.searchParams.set("token", session.token);
+
+  let response: Response;
+  try {
+    response = await networkFetch(url.toString(), {
+      redirect: "follow",
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
+    });
+  } catch (error) {
+    throw new MoodleError(
+      `The download stopped. ${redact(error instanceof Error ? error.message : String(error))}`,
+    );
+  }
+  if (!response.ok)
+    throw new MoodleError(`${site.host} answered ${response.status}.`);
+
+  const declared = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBytes)
+    throw new MoodleError("The file is larger than resit downloads.");
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > maxBytes)
+    throw new MoodleError("The file is larger than resit downloads.");
+
+  // An expired token answers the file endpoint with a JSON error, not a file.
+  if (response.headers.get("content-type")?.includes("application/json")) {
+    try {
+      assertNotError(
+        JSON.parse(Buffer.from(bytes).toString("utf8")),
+        site.host,
+      );
+    } catch (error) {
+      if (error instanceof MoodleError) throw error;
+    }
+  }
+  return bytes;
+}
