@@ -153,7 +153,8 @@ export async function appState(extra?: {
 async function openLastWorkspace(): Promise<string | undefined> {
   if (current) return undefined;
   const settings = await loadSettings();
-  if (!settings.lastWorkspacePath) return undefined;
+  if (!settings.reopenLastWorkspace || !settings.lastWorkspacePath)
+    return undefined;
   try {
     await activateWorkspace(await openWorkspace(settings.lastWorkspacePath));
     return undefined;

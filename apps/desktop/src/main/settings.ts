@@ -36,6 +36,20 @@ async function save(next: AppSettings): Promise<AppSettings> {
   return next;
 }
 
+/** Overwrites only the keys a patch actually carries. */
+function merge<T extends Record<string, unknown>>(
+  current: T,
+  patch: { [K in keyof T]?: T[K] | undefined } | undefined,
+): T {
+  if (!patch) return current;
+  const next = { ...current };
+  for (const key of Object.keys(patch) as (keyof T)[]) {
+    const value = patch[key];
+    if (value !== undefined) next[key] = value;
+  }
+  return next;
+}
+
 export async function updateSettings(
   patch: SettingsPatch,
 ): Promise<AppSettings> {
@@ -61,7 +75,16 @@ export async function updateSettings(
   return save({
     ...current,
     ...(patch.theme ? { theme: patch.theme } : {}),
+    ...(patch.reduceMotion === undefined
+      ? {}
+      : { reduceMotion: patch.reduceMotion }),
+    ...(patch.reopenLastWorkspace === undefined
+      ? {}
+      : { reopenLastWorkspace: patch.reopenLastWorkspace }),
     ...(patch.provider ? { provider: patch.provider } : {}),
+    document: merge(current.document, patch.document),
+    editor: merge(current.editor, patch.editor),
+    pdf: merge(current.pdf, patch.pdf),
     claude,
     codex,
   });
