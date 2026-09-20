@@ -1,5 +1,11 @@
+import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { FileCodeIcon, HistoryIcon } from "lucide-react";
+import {
+  FileCodeIcon,
+  HistoryIcon,
+  ListTreeIcon,
+  SearchIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
@@ -8,7 +14,12 @@ import { InlineMessage } from "@resit/ui/components/inline-message";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
+import { isMac } from "@resit/ui/lib/keys";
 import { DocumentHeader } from "@resit/ui/patterns/document/document-header";
+import {
+  NoteOutline,
+  type OutlineHeading,
+} from "@resit/ui/patterns/document/note-outline";
 import {
   EditorToolbar,
   type EditorBlock,
@@ -26,6 +37,7 @@ import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api, errorMessage } from "../lib/api";
 import { parseResitLink } from "../lib/citations";
+import { useSettings } from "../lib/settings-context";
 import { useWidth } from "../lib/use-width";
 import { registerView, type DocumentTarget } from "../views/view-registry";
 import {
@@ -33,6 +45,7 @@ import {
   roundTripLosesText,
   type MathHandlers,
 } from "./extensions";
+import { FindBar } from "./find-bar";
 import { MathDialog, type MathRequest } from "./math-dialog";
 import { NoteHistory } from "./note-history";
 
@@ -113,6 +126,36 @@ interface NoteEditorProps extends NoteViewProps {
   onReplace: (document: NoteDocument) => void;
 }
 
+interface DocumentSummary {
+  headings: OutlineHeading[];
+  words: number;
+  /** The heading the cursor sits under. */
+  activeId: string | undefined;
+}
+
+/** The note's headings and its length, in one pass over the text. */
+function summarise(editor: Editor): DocumentSummary {
+  const headings: OutlineHeading[] = [];
+  let words = 0;
+  editor.state.doc.descendants((node, pos) => {
+    if (!node.isTextblock) return true;
+    const text = node.textContent;
+    if (text) words += text.split(/\s+/).filter(Boolean).length;
+    if (node.type.name === "heading")
+      headings.push({
+        id: String(pos),
+        level: Number(node.attrs.level ?? 1),
+        text: text || "Untitled heading",
+      });
+    return false;
+  });
+  const at = editor.state.selection.from;
+  let activeId: string | undefined;
+  for (const heading of headings)
+    if (Number(heading.id) <= at) activeId = heading.id;
+  return { headings, words, activeId };
+}
+
 function NoteEditor({
   resource,
   subject,
@@ -121,7 +164,8 @@ function NoteEditor({
   initial,
   onReplace,
 }: NoteEditorProps) {
-  const [mode, setMode] = useState<"rich" | "source">("rich");
+  const settings = useSettings();
+  const [mode, setMode] = useState<"rich" | "source">(settings.editor.mode);
   const [source, setSource] = useState(initial.body);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string>();
@@ -130,9 +174,12 @@ function NoteEditor({
   const [math, setMath] = useState<MathRequest | null>(null);
   const [prompt, setPrompt] = useState<PromptRequest | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(settings.editor.outline);
+  const [find, setFind] = useState<{ replacing: boolean } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useWidth(rootRef);
   const narrow = width > 0 && width < 560;
+  const showOutline = outlineOpen && width > 0 && width >= 720;
 
   const revision = useRef(initial.revision);
   const edits = useRef(0);
@@ -333,6 +380,41 @@ function NoteEditor({
     [resource.id, editor, markEdited],
   );
 
+  // Spell checking can be turned on or off while a note is open.
+  useEffect(() => {
+    editor.view.dom.setAttribute(
+      "spellcheck",
+      String(settings.editor.spellcheck),
+    );
+  }, [editor, settings.editor.spellcheck]);
+
+  const [summary, setSummary] = useState<DocumentSummary>({
+    headings: [],
+    words: 0,
+    activeId: undefined,
+  });
+  // The outline only follows the note while it is on screen.
+  useEffect(() => {
+    if (!showOutline || mode === "source") return;
+    const update = () => setSummary(summarise(editor));
+    update();
+    editor.on("update", update);
+    editor.on("selectionUpdate", update);
+    return () => {
+      editor.off("update", update);
+      editor.off("selectionUpdate", update);
+    };
+  }, [editor, showOutline, mode]);
+
+  const openFind = (replacing: boolean) => {
+    setFind((current) =>
+      current ? { replacing: current.replacing || replacing } : { replacing },
+    );
+    rootRef.current
+      ?.querySelector<HTMLInputElement>('input[aria-label="Find in note"]')
+      ?.select();
+  };
+
   const toolbar = useEditorState({
     editor,
     selector: ({ editor: current }) => {
@@ -472,6 +554,20 @@ function NoteEditor({
       ref={rootRef}
       className="flex h-full min-h-0 flex-col overflow-hidden"
       data-mode={mode}
+      onKeyDown={(event) => {
+        if (!(event.ctrlKey || event.metaKey)) return;
+        const key = event.key.toLowerCase();
+        // Ctrl+H deletes a character on macOS, so replace also has Alt+F.
+        const replace =
+          (key === "f" && event.altKey) || (key === "h" && !isMac());
+        if (mode === "rich" && (replace || (key === "f" && !event.shiftKey))) {
+          event.preventDefault();
+          openFind(replace);
+        } else if (key === "o" && event.shiftKey) {
+          event.preventDefault();
+          setOutlineOpen((open) => !open);
+        }
+      }}
     >
       <EditorToolbar
         textStyle={toolbar.textStyle}
@@ -498,6 +594,21 @@ function NoteEditor({
                 ? { onAction: () => void save() }
                 : {})}
             />
+            <ToolbarButton
+              label="Find and replace"
+              active={find !== null}
+              disabled={mode === "source"}
+              onClick={() => (find ? setFind(null) : openFind(false))}
+            >
+              <SearchIcon />
+            </ToolbarButton>
+            <ToolbarButton
+              label="Outline"
+              active={outlineOpen}
+              onClick={() => setOutlineOpen((open) => !open)}
+            >
+              <ListTreeIcon />
+            </ToolbarButton>
             <ToolbarButton
               label="Version history"
               onClick={() => {
@@ -570,36 +681,71 @@ function NoteEditor({
           </p>
         </InlineMessage>
       ) : null}
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto flex w-full max-w-[calc(var(--document-measure)+4rem)] flex-col pb-24">
-          <DocumentHeader
-            title={resource.title}
-            {...(subject
-              ? { subject: { name: subject.name, color: subject.color } }
-              : {})}
-            path={resource.path}
-            onRename={(title) => void onRename(title)}
-          />
-          <div className="px-8">
-            {mode === "rich" ? (
-              <EditorContent editor={editor} />
-            ) : (
-              <textarea
-                id={`source-${resource.id}`}
-                aria-label="Markdown source"
-                value={source}
-                spellCheck={false}
-                onChange={(event) => {
-                  setSource(event.target.value);
-                  markEdited();
-                }}
-                onBlur={() => void save()}
-                className="field-sizing-content min-h-[50vh] w-full resize-none bg-transparent font-mono text-sm leading-relaxed outline-none"
-              />
-            )}
+      {find && mode === "rich" ? (
+        <FindBar
+          editor={editor}
+          replacing={find.replacing}
+          onReplacingChange={(replacing) => setFind({ replacing })}
+          onClose={() => setFind(null)}
+        />
+      ) : null}
+      <div className="flex min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-auto flex w-full max-w-[calc(var(--document-measure)+4rem)] flex-col pb-24">
+            <DocumentHeader
+              title={resource.title}
+              {...(subject
+                ? { subject: { name: subject.name, color: subject.color } }
+                : {})}
+              path={resource.path}
+              onRename={(title) => void onRename(title)}
+            />
+            <div className="px-8">
+              {mode === "rich" ? (
+                <EditorContent editor={editor} />
+              ) : (
+                <textarea
+                  id={`source-${resource.id}`}
+                  aria-label="Markdown source"
+                  value={source}
+                  spellCheck={false}
+                  onChange={(event) => {
+                    setSource(event.target.value);
+                    markEdited();
+                  }}
+                  onBlur={() => void save()}
+                  className="field-sizing-content min-h-[50vh] w-full resize-none bg-transparent font-mono text-sm leading-relaxed outline-none"
+                />
+              )}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+        {showOutline && mode === "rich" ? (
+          <aside
+            aria-label="Note outline"
+            className="flex w-60 shrink-0 flex-col border-l bg-sidebar"
+          >
+            <ScrollArea className="min-h-0 flex-1">
+              <NoteOutline
+                className="p-2"
+                headings={summary.headings}
+                {...(summary.activeId ? { activeId: summary.activeId } : {})}
+                onNavigate={(id) => {
+                  editor
+                    .chain()
+                    .focus()
+                    .setTextSelection(Number(id) + 1)
+                    .scrollIntoView()
+                    .run();
+                }}
+              />
+            </ScrollArea>
+            <div className="border-t px-3 py-2 text-xs text-muted-foreground">
+              {summary.words} {summary.words === 1 ? "word" : "words"}
+            </div>
+          </aside>
+        ) : null}
+      </div>
       <PromptDialog request={prompt} onClose={() => setPrompt(null)} />
       <NoteHistory
         noteId={resource.id}

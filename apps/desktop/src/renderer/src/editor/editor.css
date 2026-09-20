@@ -153,3 +153,14 @@
 .chat-markdown h4 {
   font-size: 1em;
 }
+
+/* Find and replace inside a note. */
+.note-content .find-match {
+  background: var(--highlight);
+  border-radius: 2px;
+}
+
+.note-content .find-match-current {
+  background: color-mix(in srgb, var(--ring) 32%, transparent);
+  box-shadow: 0 0 0 1px var(--ring);
+}

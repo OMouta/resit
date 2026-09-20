@@ -8,6 +8,8 @@ import { Markdown } from "@tiptap/markdown";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 
+import { Find } from "./find";
+
 export interface MathHandlers {
   /** A math node was clicked. */
   onEdit: (display: boolean, latex: string, pos: number) => void;
@@ -86,6 +88,7 @@ export function noteExtensions(handlers: () => MathHandlers): Extensions {
         handlers().onEdit(true, String(node.attrs.latex ?? ""), pos),
     }),
     mathTyping(handlers),
+    Find,
     Placeholder.configure({
       placeholder:
         "Write here. Type $x^2$ for math, or $$ and Enter for a block.",
