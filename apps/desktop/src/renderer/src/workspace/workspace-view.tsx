@@ -23,6 +23,7 @@ import type {
   WorkspaceSnapshot,
 } from "../../../shared/workspace";
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
+import type { SettingsTopic } from "../settings/settings-dialog";
 import { api } from "../lib/api";
 import { insertIntoNote } from "../lib/citations";
 import { useNotices } from "../lib/notices";
@@ -54,7 +55,8 @@ export interface WorkspaceViewProps {
   onSwitchWorkspace: (path: string) => void;
   onCreateWorkspace: () => void;
   onOpenFolder: () => void;
-  onOpenSettings: () => void;
+  /** Opens settings, at a topic when the action points at one. */
+  onOpenSettings: (topic?: SettingsTopic) => void;
   /** The AI panel, given the layout so it can read the focused tab. */
   renderAiPanel?: (context: {
     layout: Layout;
@@ -365,7 +367,7 @@ export function WorkspaceView({
       });
     },
     openTrash: () => setTrashOpen(true),
-    openSettings: onOpenSettings,
+    openSettings: () => onOpenSettings(),
   };
 
   const actionsRef = useRef(actions);
@@ -535,7 +537,7 @@ export function WorkspaceView({
             id: "settings",
             label: "Settings",
             icon: "settings",
-            run: onOpenSettings,
+            run: () => onOpenSettings(),
           },
         ]}
       />

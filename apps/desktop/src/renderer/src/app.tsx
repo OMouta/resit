@@ -20,8 +20,9 @@ import type { WorkspaceSnapshot } from "../../shared/workspace";
 import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
 import { useNotices } from "./lib/notices";
+import { AppearanceSettings } from "./settings/appearance-settings";
 import { ProviderSettings } from "./settings/provider-settings";
-import { SettingsDialog } from "./settings/settings-dialog";
+import { SettingsDialog, type SettingsTopic } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
 import { WorkspaceView } from "./workspace/workspace-view";
 
@@ -30,7 +31,10 @@ export function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot | null>(null);
   const [creating, setCreating] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** The open settings topic, or null when settings are closed. */
+  const [settingsTopic, setSettingsTopic] = useState<SettingsTopic | null>(
+    null,
+  );
   const [workspaceKey, setWorkspaceKey] = useState(0);
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>(
     { claude: { status: "checking" }, codex: { status: "checking" } },
@@ -150,6 +154,9 @@ export function App() {
     [notices, checkProvider],
   );
 
+  const openSettings = (topic: SettingsTopic = "appearance") =>
+    setSettingsTopic(topic);
+
   if (!state) return <div className="h-dvh bg-background" />;
 
   let screen;
@@ -195,7 +202,7 @@ export function App() {
         onSwitchWorkspace={(path) => void openPath(path)}
         onCreateWorkspace={() => setCreating(true)}
         onOpenFolder={() => void openFolder()}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={openSettings}
         renderAiPanel={(context) => (
           <ChatPanel
             {...context}
@@ -203,7 +210,7 @@ export function App() {
             onCheckProvider={checkProvider}
             settings={state.settings}
             onSettingsChange={(patch) => void changeSettings(patch)}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenSettings={() => openSettings("providers")}
           />
         )}
       />
@@ -220,17 +227,25 @@ export function App() {
       )}
       {screen}
       <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={state.settings}
-        onChange={(patch) => void changeSettings(patch)}
+        open={settingsTopic !== null}
+        onOpenChange={(open) => !open && setSettingsTopic(null)}
+        topic={settingsTopic ?? "appearance"}
+        onTopicChange={setSettingsTopic}
       >
-        <ProviderSettings
-          providers={providers}
-          settings={state.settings}
-          onChange={(patch) => void changeSettings(patch)}
-          onRefresh={(provider) => checkProvider(provider, true)}
-        />
+        {settingsTopic === "appearance" ? (
+          <AppearanceSettings
+            settings={state.settings}
+            onChange={(patch) => void changeSettings(patch)}
+          />
+        ) : null}
+        {settingsTopic === "providers" ? (
+          <ProviderSettings
+            providers={providers}
+            settings={state.settings}
+            onChange={(patch) => void changeSettings(patch)}
+            onRefresh={(provider) => checkProvider(provider, true)}
+          />
+        ) : null}
       </SettingsDialog>
     </main>
   );
