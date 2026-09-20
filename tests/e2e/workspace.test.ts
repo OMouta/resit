@@ -328,6 +328,60 @@ describe("desktop workspace", () => {
     await expect.poll(noteFile).toContain("> 1. Compute sin(x)/x");
   });
 
+  it("keeps a new note in the folder it was made in", async () => {
+    await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
+    await page.getByRole("button", { name: "Subject actions" }).first().click();
+    await page.getByRole("menuitem", { name: /New folder/ }).click();
+    await page.getByLabel("Name").fill("Fichas");
+    await page.getByRole("button", { name: "Create folder" }).click();
+
+    const row = page.getByRole("treeitem", { name: /Fichas folder/ });
+    await row.waitFor();
+    await row.hover();
+    await page.getByRole("button", { name: "Folder actions" }).click();
+    await page.getByRole("menuitem", { name: "New note" }).click();
+    await page.getByLabel("Title").fill("Ficha 1");
+    await page.getByRole("button", { name: "Create note" }).click();
+    await page.getByRole("tab", { name: "Ficha 1", exact: true }).waitFor();
+
+    const subjects = join(folder, "subjects");
+    const [subject] = await readdir(subjects);
+    await expect
+      .poll(() => readdir(join(subjects, subject!, "notes", "Fichas")))
+      .toContain("ficha-1.md");
+  });
+
+  it("files a note into another folder by dragging it", async () => {
+    await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
+    await page.getByRole("button", { name: "Subject actions" }).first().click();
+    await page.getByRole("menuitem", { name: /New folder/ }).click();
+    await page.getByLabel("Name").fill("Exames");
+    await page.getByRole("button", { name: "Create folder" }).click();
+    const exames = page.getByRole("treeitem", { name: /Exames folder/ });
+    await exames.waitFor();
+
+    await page
+      .getByRole("treeitem", { name: "Ficha 1", exact: true })
+      .dragTo(exames);
+
+    const subjects = join(folder, "subjects");
+    const [subject] = await readdir(subjects);
+    await expect
+      .poll(() => readdir(join(subjects, subject!, "notes", "Exames")))
+      .toContain("ficha-1.md");
+    expect(await readdir(join(subjects, subject!, "notes", "Fichas"))).toEqual(
+      [],
+    );
+
+    // Folders go inside each other the same way.
+    await page
+      .getByRole("treeitem", { name: /Fichas folder/ })
+      .dragTo(page.getByRole("treeitem", { name: /Exames folder/ }));
+    await expect
+      .poll(() => readdir(join(subjects, subject!, "notes", "Exames")))
+      .toContain("Fichas");
+  });
+
   it("explains when Claude Code cannot be found", async () => {
     await page.evaluate(() =>
       window.resit.updateSettings({

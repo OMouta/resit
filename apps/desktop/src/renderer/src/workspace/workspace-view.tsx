@@ -173,23 +173,39 @@ export function WorkspaceView({
     [setSnapshot],
   );
 
+  /** Opens the subject, and the folder inside it when a file went there. */
+  const revealIn = useCallback((subjectId: string, folder?: string) => {
+    dispatch({ type: "set-expanded", id: subjectId, expanded: true });
+    if (folder)
+      dispatch({
+        type: "set-expanded",
+        id: `${subjectId}/folder/${folder}`,
+        expanded: true,
+      });
+  }, []);
+
   const newNote = useCallback(
-    (subjectId: string) => {
+    (subjectId: string, folder?: string) => {
       const subject = subjects.get(subjectId);
+      const where = [subject?.name, folder].filter(Boolean).join(" / ");
       setPrompt({
         title: "New note",
-        ...(subject ? { description: `In ${subject.name}` } : {}),
+        ...(where ? { description: `In ${where}` } : {}),
         label: "Title",
         placeholder: "Limits and continuity",
         submitLabel: "Create note",
         onSubmit: async (title) => {
           try {
-            const resource = await api.createNote({ subjectId, title });
+            const resource = await api.createNote({
+              subjectId,
+              title,
+              ...(folder ? { folder } : {}),
+            });
             setSnapshot((current) => ({
               ...current,
               resources: [...current.resources, resource],
             }));
-            dispatch({ type: "set-expanded", id: subjectId, expanded: true });
+            revealIn(subjectId, folder);
             dispatch({ type: "open", resourceId: resource.id, title });
           } catch (error) {
             notices.fail("The note was not created", error);
@@ -197,19 +213,89 @@ export function WorkspaceView({
         },
       });
     },
-    [subjects, setSnapshot, notices],
+    [subjects, setSnapshot, notices, revealIn],
+  );
+
+  const newFolder = useCallback(
+    (subjectId: string, parent?: string) => {
+      const subject = subjects.get(subjectId);
+      const where = [subject?.name, parent].filter(Boolean).join(" / ");
+      setPrompt({
+        title: "New folder",
+        ...(where ? { description: `In ${where}` } : {}),
+        label: "Name",
+        placeholder: "Worksheets",
+        submitLabel: "Create folder",
+        onSubmit: async (name) => {
+          try {
+            const folder = await api.createFolder({
+              subjectId,
+              name,
+              ...(parent ? { parent } : {}),
+            });
+            setSnapshot((current) => ({
+              ...current,
+              folders: [...current.folders, folder],
+            }));
+            revealIn(subjectId, parent);
+          } catch (error) {
+            notices.fail("The folder was not created", error);
+          }
+        },
+      });
+    },
+    [subjects, setSnapshot, notices, revealIn],
+  );
+
+  /** Renames a folder or moves it into another, keeping it open in the tree. */
+  const relocateFolder = useCallback(
+    async (
+      input: {
+        subjectId: string;
+        path: string;
+        name?: string;
+        parent?: string;
+      },
+      failure: string,
+    ) => {
+      try {
+        const { folder, snapshot: next } = await api.updateFolder(input);
+        setSnapshot(next);
+        revealIn(folder.subjectId, folder.path);
+      } catch (error) {
+        notices.fail(failure, error);
+      }
+    },
+    [setSnapshot, notices, revealIn],
+  );
+
+  const renameFolder = useCallback(
+    (subjectId: string, path: string) => {
+      setPrompt({
+        title: "Rename folder",
+        label: "Name",
+        initialValue: path.slice(path.lastIndexOf("/") + 1),
+        submitLabel: "Rename",
+        onSubmit: (name) =>
+          relocateFolder(
+            { subjectId, path, name },
+            "The folder was not renamed",
+          ),
+      });
+    },
+    [relocateFolder],
   );
 
   const importFiles = useCallback(
-    async (subjectId: string) => {
+    async (subjectId: string, folder?: string) => {
       try {
-        const imported = await api.importFiles(subjectId);
+        const imported = await api.importFiles(subjectId, folder);
         if (imported.length === 0) return;
         setSnapshot((current) => ({
           ...current,
           resources: [...current.resources, ...imported],
         }));
-        dispatch({ type: "set-expanded", id: subjectId, expanded: true });
+        revealIn(subjectId, folder);
         const first = imported[0];
         if (first)
           dispatch({ type: "open", resourceId: first.id, title: first.title });
@@ -217,7 +303,7 @@ export function WorkspaceView({
         notices.fail("Import stopped", error);
       }
     },
-    [setSnapshot, notices],
+    [setSnapshot, notices, revealIn],
   );
 
   const connected = moodle.status === "connected";
@@ -352,8 +438,69 @@ export function WorkspaceView({
       })();
     },
     newNote,
-    importFiles: (subjectId: string) => void importFiles(subjectId),
+    newFolder,
+    renameFolder,
+    moveFolder: (subjectId: string, path: string, parent?: string) =>
+      void relocateFolder(
+        { subjectId, path, parent: parent ?? "" },
+        "The folder was not moved",
+      ),
+    moveResource: (resourceId: string, subjectId: string, folder?: string) =>
+      void (async () => {
+        try {
+          await viewFor(resourceId)?.flush?.();
+          const resource = await api.moveResource({
+            id: resourceId,
+            subjectId,
+            ...(folder ? { folder } : {}),
+          });
+          setSnapshot((current) => ({
+            ...current,
+            resources: current.resources.map((entry) =>
+              entry.id === resourceId ? resource : entry,
+            ),
+          }));
+          revealIn(subjectId, folder);
+        } catch (error) {
+          notices.fail("The file was not moved", error);
+        }
+      })(),
+    importFiles: (subjectId: string, folder?: string) =>
+      void importFiles(subjectId, folder),
     openMoodle: (subjectId: string) => setMoodleSubjectId(subjectId),
+    deleteFolder: (subjectId: string, path: string) => {
+      const folder = snapshot.folders.find(
+        (entry) => entry.subjectId === subjectId && entry.path === path,
+      );
+      if (!folder) return;
+      const owned = snapshot.resources.filter(
+        (resource) =>
+          resource.subjectId === subjectId &&
+          (resource.folder === path ||
+            resource.folder?.startsWith(`${path}/`) === true),
+      );
+      setConfirm({
+        title: `Move “${path}” to the trash?`,
+        description: folder.moodle
+          ? `This folder holds ${owned.length} ${owned.length === 1 ? "file" : "files"} downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.`
+          : owned.length === 0
+            ? "The folder is empty."
+            : `Its ${owned.length} ${owned.length === 1 ? "note or file moves" : "notes and files move"} with it. They stay in the workspace's .resit/trash folder.`,
+        confirmLabel: "Move to trash",
+        onConfirm: async () => {
+          try {
+            await Promise.all(
+              owned.map((resource) => viewFor(resource.id)?.flush?.()),
+            );
+            refresh(await api.deleteFolder({ subjectId, path }));
+            for (const resource of owned)
+              dispatch({ type: "close-resource", resourceId: resource.id });
+          } catch (error) {
+            notices.fail("The folder was not moved to the trash", error);
+          }
+        },
+      });
+    },
     renameResource: (resourceId: string) => {
       const resource = resources.get(resourceId);
       if (!resource) return;

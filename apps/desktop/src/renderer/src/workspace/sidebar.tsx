@@ -1,5 +1,6 @@
 import {
   FilePlusIcon,
+  FolderPlusIcon,
   GraduationCapIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -17,10 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@resit/ui/components/dropdown-menu";
-import type { TreeSubject } from "@resit/ui/patterns/navigation/subject-tree";
+import type {
+  TreeRow,
+  TreeSubject,
+} from "@resit/ui/patterns/navigation/subject-tree";
 import { WorkspaceSidebar } from "@resit/ui/patterns/navigation/workspace-sidebar";
 
-import type { WorkspaceSnapshot } from "../../../shared/workspace";
+import type { FolderInfo, WorkspaceSnapshot } from "../../../shared/workspace";
 
 export interface SidebarActions {
   openResource: (resourceId: string) => void;
@@ -28,10 +32,20 @@ export interface SidebarActions {
   editSubject: (subjectId: string) => void;
   deleteSubject: (subjectId: string) => void;
   moveSubject: (subjectId: string, direction: -1 | 1) => void;
-  newNote: (subjectId: string) => void;
-  importFiles: (subjectId: string) => void;
+  newNote: (subjectId: string, folder?: string) => void;
+  importFiles: (subjectId: string, folder?: string) => void;
   openMoodle: (subjectId: string) => void;
+  newFolder: (subjectId: string, parent?: string) => void;
+  renameFolder: (subjectId: string, folder: string) => void;
+  /** Without a parent the folder goes to the top of its subject. */
+  moveFolder: (subjectId: string, folder: string, parent?: string) => void;
+  deleteFolder: (subjectId: string, folder: string) => void;
   renameResource: (resourceId: string) => void;
+  moveResource: (
+    resourceId: string,
+    subjectId: string,
+    folder?: string,
+  ) => void;
   deleteResource: (resourceId: string) => void;
   openTrash: () => void;
   openSettings: () => void;
@@ -64,6 +78,29 @@ function RowMenu({
   );
 }
 
+/** The folder a path sits in, or nothing when it is already at the top. */
+function parentOf(path: string): string | undefined {
+  const at = path.lastIndexOf("/");
+  return at === -1 ? undefined : path.slice(0, at);
+}
+
+/** Folders Moodle fills, including everything below them. */
+function moodleFolders(folders: FolderInfo[]): (folder: FolderInfo) => boolean {
+  const filled = new Set(
+    folders
+      .filter((folder) => folder.moodle)
+      .map((folder) => `${folder.subjectId}/${folder.path}`),
+  );
+  return (folder) => {
+    const segments = folder.path.split("/");
+    return segments.some((_, index) =>
+      filled.has(
+        `${folder.subjectId}/${segments.slice(0, index + 1).join("/")}`,
+      ),
+    );
+  };
+}
+
 export function Sidebar({
   snapshot,
   expanded,
@@ -80,28 +117,46 @@ export function Sidebar({
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [subjectsOpen, setSubjectsOpen] = useState(true);
 
-  const subjects = useMemo<TreeSubject[]>(
-    () =>
-      snapshot.subjects.map((subject) => ({
-        id: subject.id,
-        name: subject.name,
-        color: subject.color,
-        archived: subject.archived,
-        ...(subject.moodle
-          ? { linked: `following ${subject.moodle.shortname} in Moodle` }
-          : {}),
-        resources: snapshot.resources
-          .filter((resource) => resource.subjectId === subject.id)
-          .map((resource) => ({
-            id: resource.id,
-            kind: resource.kind,
-            title: resource.title,
-            ...(resource.folder ? { folder: resource.folder } : {}),
-          })),
-      })),
-    [snapshot],
-  );
+  const subjects = useMemo<TreeSubject[]>(() => {
+    const fromMoodle = moodleFolders(snapshot.folders);
+    return snapshot.subjects.map((subject) => ({
+      id: subject.id,
+      name: subject.name,
+      color: subject.color,
+      archived: subject.archived,
+      ...(subject.moodle
+        ? { linked: `following ${subject.moodle.shortname} in Moodle` }
+        : {}),
+      folders: snapshot.folders
+        .filter((folder) => folder.subjectId === subject.id)
+        .map((folder) => ({
+          path: folder.path,
+          ...(fromMoodle(folder) ? { linked: "filled from Moodle" } : {}),
+        })),
+      resources: snapshot.resources
+        .filter((resource) => resource.subjectId === subject.id)
+        .map((resource) => ({
+          id: resource.id,
+          kind: resource.kind,
+          title: resource.title,
+          ...(resource.folder ? { folder: resource.folder } : {}),
+        })),
+    }));
+  }, [snapshot]);
   const expandedIds = useMemo(() => new Set(expanded), [expanded]);
+  const resources = useMemo(
+    () =>
+      new Map(snapshot.resources.map((resource) => [resource.id, resource])),
+    [snapshot.resources],
+  );
+
+  /** Where a dragged row would land: a subject, and a folder inside it. */
+  const destination = (target: TreeRow) =>
+    target.kind === "subject"
+      ? { subjectId: target.id, folder: undefined }
+      : target.kind === "folder"
+        ? { subjectId: target.subjectId, folder: target.folder.path }
+        : null;
 
   return (
     <WorkspaceSidebar
@@ -114,55 +169,147 @@ export function Sidebar({
         onSelect: setSelectedId,
         onOpenResource: actions.openResource,
         onMoveSubject: actions.moveSubject,
-        renderActions: ({ kind, id }) =>
-          kind === "subject" ? (
-            <>
-              <Button
-                variant="subtle"
-                size="icon-sm"
-                aria-label="New note"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  actions.newNote(id);
-                }}
-              >
-                <FilePlusIcon />
-              </Button>
-              <RowMenu label="Subject actions">
-                <DropdownMenuItem onSelect={() => actions.newNote(id)}>
-                  <FilePlusIcon /> New note
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => actions.importFiles(id)}>
-                  <UploadIcon /> Import files…
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => actions.openMoodle(id)}>
-                  <GraduationCapIcon /> Moodle…
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => actions.editSubject(id)}>
-                  <PencilIcon /> Rename or recolour…
-                </DropdownMenuItem>
+        move: {
+          canDrop: (dragged, target) => {
+            const to = destination(target);
+            if (!to) return false;
+            if (target.kind === "folder" && target.folder.linked) return false;
+            if (dragged.kind === "resource") {
+              const resource = resources.get(dragged.id);
+              if (!resource) return false;
+              return !(
+                resource.subjectId === to.subjectId &&
+                (resource.folder ?? undefined) === to.folder
+              );
+            }
+            if (dragged.kind !== "folder") return false;
+            // Folders stay in their subject: their files would all move with
+            // them, which is a different job from filing one away.
+            if (dragged.subjectId !== to.subjectId) return false;
+            if (dragged.folder.linked) return false;
+            const path = dragged.folder.path;
+            if (to.folder === path || to.folder?.startsWith(`${path}/`))
+              return false;
+            return to.folder !== parentOf(path);
+          },
+          onMove: (dragged, target) => {
+            const to = destination(target);
+            if (!to) return;
+            if (dragged.kind === "resource")
+              actions.moveResource(dragged.id, to.subjectId, to.folder);
+            else if (dragged.kind === "folder")
+              actions.moveFolder(
+                dragged.subjectId,
+                dragged.folder.path,
+                to.folder,
+              );
+          },
+        },
+        renderActions: (row) => {
+          if (row.kind === "subject")
+            return (
+              <>
+                <Button
+                  variant="subtle"
+                  size="icon-sm"
+                  aria-label="New note"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    actions.newNote(row.id);
+                  }}
+                >
+                  <FilePlusIcon />
+                </Button>
+                <RowMenu label="Subject actions">
+                  <DropdownMenuItem onSelect={() => actions.newNote(row.id)}>
+                    <FilePlusIcon /> New note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => actions.newFolder(row.id)}>
+                    <FolderPlusIcon /> New folder…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => actions.importFiles(row.id)}
+                  >
+                    <UploadIcon /> Import files…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => actions.openMoodle(row.id)}>
+                    <GraduationCapIcon /> Moodle…
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => actions.editSubject(row.id)}
+                  >
+                    <PencilIcon /> Rename or recolour…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() => actions.deleteSubject(row.id)}
+                  >
+                    <Trash2Icon /> Move to trash…
+                  </DropdownMenuItem>
+                </RowMenu>
+              </>
+            );
+          if (row.kind === "folder")
+            return (
+              <RowMenu label="Folder actions">
+                {row.folder.linked ? null : (
+                  <>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        actions.newNote(row.subjectId, row.folder.path)
+                      }
+                    >
+                      <FilePlusIcon /> New note
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        actions.newFolder(row.subjectId, row.folder.path)
+                      }
+                    >
+                      <FolderPlusIcon /> New folder…
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        actions.importFiles(row.subjectId, row.folder.path)
+                      }
+                    >
+                      <UploadIcon /> Import files…
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        actions.renameFolder(row.subjectId, row.folder.path)
+                      }
+                    >
+                      <PencilIcon /> Rename…
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem
                   variant="destructive"
-                  onSelect={() => actions.deleteSubject(id)}
+                  onSelect={() =>
+                    actions.deleteFolder(row.subjectId, row.folder.path)
+                  }
                 >
                   <Trash2Icon /> Move to trash…
                 </DropdownMenuItem>
               </RowMenu>
-            </>
-          ) : (
+            );
+          return (
             <RowMenu label="File actions">
-              <DropdownMenuItem onSelect={() => actions.renameResource(id)}>
+              <DropdownMenuItem onSelect={() => actions.renameResource(row.id)}>
                 <PencilIcon /> Rename…
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => actions.deleteResource(id)}
+                onSelect={() => actions.deleteResource(row.id)}
               >
                 <Trash2Icon /> Move to trash…
               </DropdownMenuItem>
             </RowMenu>
-          ),
+          );
+        },
       }}
       onOpenProject={() => undefined}
       onNavigate={() => undefined}
