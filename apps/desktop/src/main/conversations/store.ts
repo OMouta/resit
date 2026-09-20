@@ -143,18 +143,13 @@ export async function appendMessage(
 export async function updateConversation(
   workspace: OpenWorkspace,
   id: string,
-  patch: {
-    title?: string | undefined;
-    scope?: ConversationScope | undefined;
-    provider?: ProviderId | undefined;
-  },
+  patch: { title?: string | undefined; scope?: ConversationScope | undefined },
 ): Promise<ConversationMeta> {
   const meta = await readMeta(workspace, id);
   const next: ConversationMeta = {
     ...meta,
     ...(patch.title ? { title: patch.title } : {}),
     ...(patch.scope ? { scope: patch.scope } : {}),
-    ...(patch.provider ? { provider: patch.provider } : {}),
     updatedAt: now(),
   };
   await writeMeta(workspace, next);

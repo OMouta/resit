@@ -370,12 +370,7 @@ export function registerHandlers(
   handle(
     CHANNELS.updateConversation,
     z.tuple([
-      z.object({
-        id,
-        title: title.optional(),
-        scope: scopeSchema.optional(),
-        provider: providerIdSchema.optional(),
-      }),
+      z.object({ id, title: title.optional(), scope: scopeSchema.optional() }),
     ]),
     ({ id: conversationId, ...patch }) =>
       updateConversation(currentWorkspace(), conversationId, patch),

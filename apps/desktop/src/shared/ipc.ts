@@ -145,7 +145,6 @@ export interface DesktopApi {
     id: string;
     title?: string;
     scope?: ConversationScope;
-    provider?: ProviderId;
   }): Promise<ConversationMeta>;
   deleteConversation(id: string): Promise<void>;
   sendMessage(input: {

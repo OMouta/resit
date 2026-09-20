@@ -408,9 +408,12 @@ export function ChatPanel({
   }, [refreshPreview]);
 
   const createConversation = useCallback(
-    async (scope: ConversationScope) => {
+    async (scope: ConversationScope, provider?: ProviderId) => {
       try {
-        const meta = await api.createConversation(scope, settings.provider);
+        const meta = await api.createConversation(
+          scope,
+          provider ?? settings.provider,
+        );
         remember(meta);
         // Turn events for it can arrive before the next render.
         currentIdRef.current = meta.id;
@@ -562,19 +565,16 @@ export function ChatPanel({
     )
     .slice(0, 100);
 
-  /** Moves this conversation to another provider, and new ones with it. */
+  /**
+   * A conversation stays with the provider that started it: its saved
+   * thread belongs to that one. Choosing another opens a new conversation
+   * with the same scope.
+   */
   const switchProvider = async (next: ProviderId) => {
     if (next === providerId) return;
     onCheckProvider(next);
     onSettingsChange({ provider: next });
-    if (!current) return;
-    try {
-      remember(
-        await api.updateConversation({ id: current.meta.id, provider: next }),
-      );
-    } catch (error) {
-      notices.fail("The provider was not changed", error);
-    }
+    if (current) await createConversation(scope, next);
   };
 
   const composerItems = contextItems(outgoingContext());
@@ -601,6 +601,7 @@ export function ChatPanel({
         }),
         providerId,
         ...(selectedModel ? { modelId: selectedModel.id } : {}),
+        providerLocked: current !== null,
         onProviderChange: (id) => void switchProvider(id as ProviderId),
         onModelChange: (id) => {
           const chosen = models[providerId].find((entry) => entry.id === id);

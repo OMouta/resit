@@ -79,6 +79,11 @@ export interface ProviderModelSelectProps {
   disabled?: boolean;
   /** A quiet trigger without status badge, for the composer. */
   compact?: boolean;
+  /**
+   * The conversation already belongs to a provider. Choosing another one
+   * starts a new conversation instead of moving this one.
+   */
+  providerLocked?: boolean;
   className?: string;
 }
 
@@ -95,6 +100,7 @@ export function ProviderModelSelect({
   onConnect,
   disabled = false,
   compact = false,
+  providerLocked = false,
   className,
 }: ProviderModelSelectProps) {
   const provider = providers.find((entry) => entry.id === providerId);
@@ -142,7 +148,14 @@ export function ProviderModelSelect({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-72">
-          <DropdownMenuLabel>Provider</DropdownMenuLabel>
+          <DropdownMenuLabel className="flex flex-col items-start gap-0.5">
+            Provider
+            {providerLocked ? (
+              <span className="text-2xs font-normal text-subtle-foreground">
+                Choosing another starts a new conversation
+              </span>
+            ) : null}
+          </DropdownMenuLabel>
           {providers.map((entry) => (
             <DropdownMenuItem
               key={entry.id}
