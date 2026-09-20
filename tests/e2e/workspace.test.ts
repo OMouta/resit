@@ -433,7 +433,7 @@ describe("desktop workspace", () => {
     await page.getByRole("button", { name: "Open settings" }).click();
     // Settings opens on the topic the student came from.
     await page.getByLabel("Moodle address").waitFor();
-    await page.getByRole("tab", { name: "Appearance" }).click();
+    await page.getByRole("tab", { name: "General" }).click();
     await page.getByRole("tablist", { name: "Theme" }).waitFor();
     await page.keyboard.press("Escape");
   });

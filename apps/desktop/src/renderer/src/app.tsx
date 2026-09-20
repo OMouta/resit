@@ -7,7 +7,7 @@ import {
 } from "react";
 
 import { ResitLogo } from "@resit/ui/components/resit-mark";
-import { applyAppearance } from "@resit/ui/lib/theme";
+import { applyAppearance, applyDocumentStyle } from "@resit/ui/lib/theme";
 import {
   CreateWorkspaceStep,
   Onboarding,
@@ -21,8 +21,11 @@ import type { WorkspaceSnapshot } from "../../shared/workspace";
 import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
 import { useNotices } from "./lib/notices";
-import { AppearanceSettings } from "./settings/appearance-settings";
+import { SettingsProvider } from "./lib/settings-context";
+import { EditorSettings } from "./settings/editor-settings";
+import { GeneralSettings } from "./settings/general-settings";
 import { MoodleSettings } from "./settings/moodle-settings";
+import { PdfSettings } from "./settings/pdf-settings";
 import { ProviderSettings } from "./settings/provider-settings";
 import { SettingsDialog, type SettingsTopic } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
@@ -104,14 +107,22 @@ export function App() {
   }, [apply, notices]);
 
   const theme = state?.settings.theme ?? "system";
+  const reducedMotion = state?.settings.reduceMotion ?? false;
   useEffect(() => {
-    applyAppearance(document.documentElement, { theme });
+    const appearance = { theme, reducedMotion };
+    applyAppearance(document.documentElement, appearance);
     if (theme !== "system") return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const update = () => applyAppearance(document.documentElement, { theme });
+    const update = () => applyAppearance(document.documentElement, appearance);
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme]);
+  }, [theme, reducedMotion]);
+
+  const { font, size, width } = state?.settings.document ?? {};
+  useEffect(() => {
+    if (!font || !size || !width) return;
+    applyDocumentStyle(document.documentElement, { font, size, width });
+  }, [font, size, width]);
 
   const updateSnapshot = useCallback(
     (action: SetStateAction<WorkspaceSnapshot>) =>
@@ -179,7 +190,7 @@ export function App() {
     }
   };
 
-  const openSettings = (topic: SettingsTopic = "appearance") =>
+  const openSettings = (topic: SettingsTopic = "general") =>
     setSettingsTopic(topic);
 
   const checkMoodle = () => {
@@ -253,51 +264,65 @@ export function App() {
     );
 
   return (
-    <main aria-label="resit" className="flex h-dvh flex-col">
-      {snapshot && !creating ? null : (
-        <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
-          <div aria-hidden className="titlebar-inset-start shrink-0" />
-          <ResitLogo className="ml-1.5 flex-1 text-sm" />
-          <div aria-hidden className="titlebar-inset-end shrink-0" />
-        </header>
-      )}
-      {screen}
-      <SettingsDialog
-        open={settingsTopic !== null}
-        onOpenChange={(open) => !open && setSettingsTopic(null)}
-        topic={settingsTopic ?? "appearance"}
-        onTopicChange={setSettingsTopic}
-      >
-        {settingsTopic === "appearance" ? (
-          <AppearanceSettings
-            settings={state.settings}
-            onChange={(patch) => void changeSettings(patch)}
-          />
-        ) : null}
-        {settingsTopic === "providers" ? (
-          <ProviderSettings
-            providers={providers}
-            settings={state.settings}
-            onChange={(patch) => void changeSettings(patch)}
-            onRefresh={(provider) => checkProvider(provider, true)}
-          />
-        ) : null}
-        {settingsTopic === "moodle" ? (
-          <MoodleSettings
-            connection={moodle}
-            checking={checkingMoodle}
-            onConnect={connectMoodle}
-            onDisconnect={() => {
-              void api
-                .disconnectMoodle()
-                .then(setMoodle, (error: unknown) =>
-                  notices.fail("Moodle was not disconnected", error),
-                );
-            }}
-            onRefresh={checkMoodle}
-          />
-        ) : null}
-      </SettingsDialog>
-    </main>
+    <SettingsProvider value={state.settings}>
+      <main aria-label="resit" className="flex h-dvh flex-col">
+        {snapshot && !creating ? null : (
+          <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
+            <div aria-hidden className="titlebar-inset-start shrink-0" />
+            <ResitLogo className="ml-1.5 flex-1 text-sm" />
+            <div aria-hidden className="titlebar-inset-end shrink-0" />
+          </header>
+        )}
+        {screen}
+        <SettingsDialog
+          open={settingsTopic !== null}
+          onOpenChange={(open) => !open && setSettingsTopic(null)}
+          topic={settingsTopic ?? "general"}
+          onTopicChange={setSettingsTopic}
+        >
+          {settingsTopic === "general" ? (
+            <GeneralSettings
+              settings={state.settings}
+              onChange={(patch) => void changeSettings(patch)}
+            />
+          ) : null}
+          {settingsTopic === "editor" ? (
+            <EditorSettings
+              settings={state.settings}
+              onChange={(patch) => void changeSettings(patch)}
+            />
+          ) : null}
+          {settingsTopic === "pdf" ? (
+            <PdfSettings
+              settings={state.settings}
+              onChange={(patch) => void changeSettings(patch)}
+            />
+          ) : null}
+          {settingsTopic === "providers" ? (
+            <ProviderSettings
+              providers={providers}
+              settings={state.settings}
+              onChange={(patch) => void changeSettings(patch)}
+              onRefresh={(provider) => checkProvider(provider, true)}
+            />
+          ) : null}
+          {settingsTopic === "moodle" ? (
+            <MoodleSettings
+              connection={moodle}
+              checking={checkingMoodle}
+              onConnect={connectMoodle}
+              onDisconnect={() => {
+                void api
+                  .disconnectMoodle()
+                  .then(setMoodle, (error: unknown) =>
+                    notices.fail("Moodle was not disconnected", error),
+                  );
+              }}
+              onRefresh={checkMoodle}
+            />
+          ) : null}
+        </SettingsDialog>
+      </main>
+    </SettingsProvider>
   );
 }

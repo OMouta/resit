@@ -1,7 +1,9 @@
 import {
+  FileTextIcon,
   GraduationCapIcon,
+  PenLineIcon,
+  SlidersHorizontalIcon,
   SparklesIcon,
-  SunMoonIcon,
   type LucideIcon,
 } from "lucide-react";
 import { useRef, type ReactNode } from "react";
@@ -18,7 +20,9 @@ import { useRovingFocus } from "@resit/ui/hooks/use-roving-focus";
 import { cn } from "@resit/ui/lib/utils";
 
 export const SETTINGS_TOPICS = [
-  { id: "appearance", label: "Appearance", icon: SunMoonIcon },
+  { id: "general", label: "General", icon: SlidersHorizontalIcon },
+  { id: "editor", label: "Editor", icon: PenLineIcon },
+  { id: "pdf", label: "PDFs", icon: FileTextIcon },
   { id: "providers", label: "AI providers", icon: SparklesIcon },
   { id: "moodle", label: "Moodle", icon: GraduationCapIcon },
 ] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[];
@@ -44,6 +48,41 @@ export function SettingsSection({
       </div>
       {children}
     </section>
+  );
+}
+
+/** A setting on one line: what it does on the left, its control on the right. */
+export function SettingRow({
+  label,
+  description,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  description?: string;
+  /** Points the label at the control, for controls that take an id. */
+  htmlFor?: string;
+  children: ReactNode;
+}) {
+  const text = (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-sm">{label}</span>
+      {description ? (
+        <span className="text-xs text-muted-foreground">{description}</span>
+      ) : null}
+    </span>
+  );
+  return (
+    <div className="flex items-center justify-between gap-6">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="min-w-0 flex-1">
+          {text}
+        </label>
+      ) : (
+        <span className="min-w-0 flex-1">{text}</span>
+      )}
+      <span className="shrink-0">{children}</span>
+    </div>
   );
 }
 
