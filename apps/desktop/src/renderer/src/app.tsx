@@ -12,6 +12,7 @@ import {
   CreateWorkspaceStep,
   Onboarding,
 } from "@resit/ui/patterns/screens/onboarding";
+import { Splash } from "@resit/ui/patterns/screens/splash";
 
 import type { ProviderId, ProviderState } from "../../shared/conversations";
 import type { AppState } from "../../shared/ipc";
@@ -124,6 +125,24 @@ export function App() {
     applyDocumentStyle(document.documentElement, { font, size, width });
   }, [font, size, width]);
 
+  // The splash stays up long enough to be read, then fades out. It runs off
+  // the first state arriving, not off later changes to it.
+  const startedAt = useRef(Date.now());
+  const started = state !== null;
+  const [splash, setSplash] = useState<"showing" | "leaving" | "gone">(
+    "showing",
+  );
+  useEffect(() => {
+    if (!started) return;
+    const wait = Math.max(0, 700 - (Date.now() - startedAt.current));
+    const fade = window.setTimeout(() => setSplash("leaving"), wait);
+    const gone = window.setTimeout(() => setSplash("gone"), wait + 280);
+    return () => {
+      window.clearTimeout(fade);
+      window.clearTimeout(gone);
+    };
+  }, [started]);
+
   const updateSnapshot = useCallback(
     (action: SetStateAction<WorkspaceSnapshot>) =>
       setSnapshot((current) =>
@@ -203,7 +222,13 @@ export function App() {
       .finally(() => setCheckingMoodle(false));
   };
 
-  if (!state) return <div className="h-dvh bg-background" />;
+  if (!state || splash !== "gone")
+    return (
+      <main aria-label="resit" className="flex h-dvh flex-col">
+        <TitleBar />
+        <Splash className="min-h-0 flex-1" leaving={splash === "leaving"} />
+      </main>
+    );
 
   let screen;
   if (creating)
@@ -266,13 +291,7 @@ export function App() {
   return (
     <SettingsProvider value={state.settings}>
       <main aria-label="resit" className="flex h-dvh flex-col">
-        {snapshot && !creating ? null : (
-          <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
-            <div aria-hidden className="titlebar-inset-start shrink-0" />
-            <ResitLogo className="ml-1.5 flex-1 text-sm" />
-            <div aria-hidden className="titlebar-inset-end shrink-0" />
-          </header>
-        )}
+        {snapshot && !creating ? null : <TitleBar />}
         {screen}
         <SettingsDialog
           open={settingsTopic !== null}
@@ -324,5 +343,16 @@ export function App() {
         </SettingsDialog>
       </main>
     </SettingsProvider>
+  );
+}
+
+/** The window's own title bar, on the screens without the workspace shell. */
+function TitleBar() {
+  return (
+    <header className="app-titlebar flex h-toolbar shrink-0 items-center border-b bg-sidebar px-3">
+      <div aria-hidden className="titlebar-inset-start shrink-0" />
+      <ResitLogo className="ml-1.5 flex-1 text-sm" />
+      <div aria-hidden className="titlebar-inset-end shrink-0" />
+    </header>
   );
 }
