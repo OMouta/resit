@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { AppState, DesktopEvent } from "../shared/ipc";
 import { abortAllTurns } from "./agent/turns";
+import { moodleConnection } from "./moodle/credentials";
 import {
   forgetLastWorkspace,
   loadSettings,
@@ -131,6 +132,7 @@ export async function appState(extra?: {
   return {
     settings,
     recent: settings.recent,
+    moodle: await moodleConnection(),
     workspace: current ? snapshot(current) : null,
     layout: current ? await readLayout(current) : null,
     ...(extra?.reopenError ? { reopenError: extra.reopenError } : {}),

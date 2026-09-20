@@ -1,10 +1,11 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { app, BrowserWindow, nativeTheme, session } from "electron";
+import { app, BrowserWindow, nativeTheme, net, session } from "electron";
 import { EVENT_CHANNEL } from "../shared/ipc";
 import { abortAllTurns } from "./agent/turns";
 import { registerHandlers } from "./handlers";
 import { setIpcContext } from "./ipc";
+import { useNetworkFetch } from "./moodle/client";
 import { setEventSink } from "./session";
 import { loadSettings } from "./settings";
 
@@ -103,6 +104,10 @@ void app
         callback(permission === "clipboard-sanitized-write");
       },
     );
+
+    // Moodle is reached through Chromium, so system proxies and certificates
+    // that a university network relies on apply.
+    useNetworkFetch(net.fetch);
 
     setIpcContext({ window: () => mainWindow, rendererUrl });
     setEventSink((event) => {

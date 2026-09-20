@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
+import type { MoodleLink } from "../shared/moodle";
 import { providerIdSchema, settingsPatchSchema } from "../shared/settings";
 import {
   annotationColorSchema,
@@ -27,6 +28,15 @@ import {
 } from "./conversations/store";
 import { checkHealth } from "./health";
 import { handle, id, title } from "./ipc";
+import { MoodleError, userCourses } from "./moodle/client";
+import {
+  connectMoodle,
+  disconnectMoodle,
+  moodleSession,
+  moodleStatus,
+  moodleUserId,
+} from "./moodle/credentials";
+import { downloadItems, listItems } from "./moodle/sync";
 import {
   activateWorkspace,
   appState,
@@ -48,6 +58,7 @@ import {
   deleteResource,
   deleteSubject,
   importFile,
+  linkSubject,
   openWorkspace,
   readNote,
   readResourceBytes,
@@ -59,6 +70,7 @@ import {
 } from "./workspace/workspace";
 
 const path = z.string().min(1).max(4096);
+const courseId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const MAX_LAYOUT_BYTES = 256 * 1024;
 const MAX_NOTE_BYTES = 20 * 1024 * 1024;
 const MAX_COMMENT_CHARS = 4000;
@@ -94,6 +106,21 @@ const NEVER_LAUNCH = new Set([
   ".desktop",
   ".appimage",
 ]);
+
+/** Looks a course up among the student's enrolments before linking to it. */
+async function moodleLink(course: number): Promise<MoodleLink> {
+  const session = await moodleSession();
+  const courses = await userCourses(session, await moodleUserId());
+  const found = courses.find((entry) => entry.id === course);
+  if (!found)
+    throw new MoodleError("That course is not one of your Moodle enrolments.");
+  return {
+    siteUrl: session.siteUrl,
+    courseId: found.id,
+    shortname: found.shortname,
+    fullname: found.fullname,
+  };
+}
 
 export function registerHandlers(
   window: () => BrowserWindow | null,
@@ -171,8 +198,18 @@ export function registerHandlers(
 
   handle(
     CHANNELS.createSubject,
-    z.tuple([z.object({ name: title, color: subjectColorSchema })]),
-    (input) => createSubject(currentWorkspace(), input),
+    z.tuple([
+      z.object({
+        name: title,
+        color: subjectColorSchema,
+        moodleCourseId: courseId.optional(),
+      }),
+    ]),
+    async ({ moodleCourseId, ...input }) =>
+      createSubject(currentWorkspace(), {
+        ...input,
+        ...(moodleCourseId ? { moodle: await moodleLink(moodleCourseId) } : {}),
+      }),
   );
 
   handle(
@@ -334,6 +371,75 @@ export function registerHandlers(
       if (!["http:", "https:", "mailto:"].includes(parsed.protocol))
         throw new Error("Only web and email links open outside resit.");
       await shell.openExternal(parsed.href);
+    },
+  );
+
+  handle(CHANNELS.getMoodleStatus, z.tuple([z.boolean()]), (refresh) =>
+    moodleStatus(refresh),
+  );
+
+  handle(
+    CHANNELS.connectMoodle,
+    z.tuple([
+      z.object({
+        siteUrl: z.string().trim().min(1).max(2048),
+        username: z.string().trim().min(1).max(200),
+        password: z.string().min(1).max(500),
+      }),
+    ]),
+    (input) => connectMoodle(input),
+  );
+
+  handle(CHANNELS.disconnectMoodle, z.tuple([]), () => disconnectMoodle());
+
+  handle(CHANNELS.listMoodleCourses, z.tuple([]), async () =>
+    userCourses(await moodleSession(), await moodleUserId()),
+  );
+
+  handle(
+    CHANNELS.setMoodleCourse,
+    z.tuple([
+      z.object({ subjectId: id, courseId: z.number().int().nonnegative() }),
+    ]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const subject = await linkSubject(workspace, {
+        subjectId: input.subjectId,
+        link: input.courseId ? await moodleLink(input.courseId) : null,
+      });
+      emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      return subject;
+    },
+  );
+
+  handle(CHANNELS.listMoodleItems, z.tuple([id]), async (subjectId) =>
+    listItems(currentWorkspace(), await moodleSession(), subjectId),
+  );
+
+  handle(
+    CHANNELS.downloadMoodleItems,
+    z.tuple([
+      z.object({
+        subjectId: id,
+        keys: z.array(z.string().max(500)).min(1).max(500),
+      }),
+    ]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const result = await downloadItems(workspace, await moodleSession(), {
+        subjectId: input.subjectId,
+        keys: input.keys,
+        onProgress: ({ filename, done, total }) =>
+          emitEvent({
+            type: "moodle-progress",
+            subjectId: input.subjectId,
+            filename,
+            done,
+            total,
+          }),
+      });
+      emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      return result;
     },
   );
 

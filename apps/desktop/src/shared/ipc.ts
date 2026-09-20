@@ -7,6 +7,12 @@ import type {
   TurnContext,
   TurnEvent,
 } from "./conversations";
+import type {
+  MoodleConnection,
+  MoodleCourse,
+  MoodleCourseContents,
+  MoodleDownloadResult,
+} from "./moodle";
 import type { AppSettings, ProviderId, SettingsPatch } from "./settings";
 import type {
   Annotation,
@@ -32,6 +38,8 @@ export interface HealthCheckResult {
 export interface AppState {
   settings: AppSettings;
   recent: RecentWorkspace[];
+  /** The stored Moodle account, without contacting the site. */
+  moodle: MoodleConnection;
   workspace: WorkspaceSnapshot | null;
   /** Saved tabs and panes for the open workspace, validated by the renderer. */
   layout: unknown;
@@ -49,6 +57,13 @@ export type DesktopEvent =
   | { type: "workspace-changed"; snapshot: WorkspaceSnapshot }
   /** The window is closing: save pending edits, then call confirmClose. */
   | { type: "before-close" }
+  | {
+      type: "moodle-progress";
+      subjectId: string;
+      filename: string;
+      done: number;
+      total: number;
+    }
   | TurnEvent;
 
 export interface SearchResult {
@@ -79,6 +94,8 @@ export interface DesktopApi {
   createSubject(input: {
     name: string;
     color: SubjectColorValue;
+    /** Follows this Moodle course from the start. */
+    moodleCourseId?: number;
   }): Promise<SubjectInfo>;
   updateSubject(input: {
     id: string;
@@ -127,6 +144,26 @@ export interface DesktopApi {
   search(query: string): Promise<SearchResult[]>;
   /** Opens an http, https, or mailto link in the system browser. */
   openExternal(url: string): Promise<void>;
+
+  /** `refresh` checks the stored token against the site. */
+  getMoodleStatus(refresh: boolean): Promise<MoodleConnection>;
+  connectMoodle(input: {
+    siteUrl: string;
+    username: string;
+    password: string;
+  }): Promise<MoodleConnection>;
+  disconnectMoodle(): Promise<MoodleConnection>;
+  listMoodleCourses(): Promise<MoodleCourse[]>;
+  /** A `courseId` of 0 stops the subject following a course. */
+  setMoodleCourse(input: {
+    subjectId: string;
+    courseId: number;
+  }): Promise<SubjectInfo>;
+  listMoodleItems(subjectId: string): Promise<MoodleCourseContents>;
+  downloadMoodleItems(input: {
+    subjectId: string;
+    keys: string[];
+  }): Promise<MoodleDownloadResult>;
 
   getProviderStatus(
     provider: ProviderId,
@@ -185,6 +222,13 @@ export const CHANNELS = {
   openResourceExternally: "resit:resource-open-external",
   search: "resit:search",
   openExternal: "resit:open-external",
+  getMoodleStatus: "resit:moodle-status",
+  connectMoodle: "resit:moodle-connect",
+  disconnectMoodle: "resit:moodle-disconnect",
+  listMoodleCourses: "resit:moodle-courses",
+  setMoodleCourse: "resit:moodle-set-course",
+  listMoodleItems: "resit:moodle-items",
+  downloadMoodleItems: "resit:moodle-download",
   getProviderStatus: "resit:provider-status",
   getModels: "resit:provider-models",
   listConversations: "resit:conversation-list",
