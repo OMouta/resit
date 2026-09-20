@@ -34,15 +34,21 @@ Select text in a PDF to highlight it. Highlights are saved beside the file, so t
 
 You can also edit notes in another app. resit reloads those changes and asks which version to keep if you have unsaved edits.
 
+resit keeps earlier versions of a note. Open **Version history** in the editor toolbar to compare one with the note as it stands and put it back. Restoring keeps the text it replaced, so you can undo that too.
+
 ## Ask about your material
 
 AI chat runs through a coding assistant you already have: Claude Code or Codex. Sign in with `claude` or `codex login` in a terminal, then open resit's **Settings** and choose **Check again** under that provider.
 
 Press `Ctrl+J` to open the AI panel, and pick the provider and model at the bottom of it. Ask for an explanation, a summary, or help working through a problem. Select text in a note or PDF to send it with your question, or choose **Ask about this** on a highlight to ask about that passage.
 
-The subjects and files listed at the top of the conversation are all it can read. Add more with the **+** beside them. Opening another subject's file does not change that list.
+The subjects and files listed at the top of the conversation are what it can read, along with the file you have open when you write. Add more with the **+** beside them.
 
-Your messages, the open file's name, selected text, and whatever the assistant reads go to the provider you picked. It cannot edit your files or run commands. Use **Insert into note** to add a reply to an open note.
+Ask it to write something down and it edits the note itself. Ask it to mark a passage and the highlight appears in the PDF, in the same colours you use, with its comment on it. Every change it makes to a note goes into that note's history, so **Version history** undoes anything you did not want. You can still use **Insert into note** to add a reply yourself.
+
+Claude can also look at a page instead of reading its text, which is how it handles diagrams, handwriting, and scans. Codex reads text only.
+
+Your messages, the open file's name, selected text, and whatever the assistant reads go to the provider you picked. It cannot run commands or reach anything outside your workspace.
 
 ## Keep your files
 
