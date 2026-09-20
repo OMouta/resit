@@ -4,7 +4,6 @@ import {
   KeyRoundIcon,
   Loader2Icon,
   PackageXIcon,
-  SparklesIcon,
 } from "lucide-react";
 
 import { Badge } from "@resit/ui/components/badge";
@@ -17,6 +16,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@resit/ui/components/dropdown-menu";
+import {
+  ProviderMark,
+  providerMarkColor,
+} from "@resit/ui/components/provider-mark";
 import { cn } from "@resit/ui/lib/utils";
 import type {
   ProviderOption,
@@ -111,8 +114,14 @@ export function ProviderModelSelect({
             )}
             aria-label="Provider and model"
           >
-            <SparklesIcon
-              className={cn(usable ? "text-primary" : "text-muted-foreground")}
+            <ProviderMark
+              provider={providerId}
+              className={cn(
+                "size-4",
+                usable
+                  ? (providerMarkColor[providerId ?? ""] ?? "text-primary")
+                  : "text-muted-foreground",
+              )}
             />
             <span className="truncate">
               {compact ? (
@@ -151,7 +160,15 @@ export function ProviderModelSelect({
                 ) : null}
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="font-medium">{entry.name}</span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <ProviderMark
+                    provider={entry.id}
+                    className={cn(
+                      providerMarkColor[entry.id] ?? "text-muted-foreground",
+                    )}
+                  />
+                  {entry.name}
+                </span>
                 {/* A provider with nothing to fix needs no badge. */}
                 {entry.status === "ready" ? (
                   entry.version ? (

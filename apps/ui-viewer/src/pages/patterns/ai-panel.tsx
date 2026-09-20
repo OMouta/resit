@@ -48,7 +48,7 @@ function useSimulatedStream(active: boolean, onDone: () => void) {
 
 function Panel({ ctx, width }: { ctx: ExampleContext; width: number }) {
   const state = ctx.state;
-  const [providerId, setProviderId] = useState("claude-code");
+  const [providerId, setProviderId] = useState("claude");
   const [modelId, setModelId] = useState<string | undefined>(
     "claude-fable-5-1",
   );
@@ -168,7 +168,11 @@ function Panel({ ctx, width }: { ctx: ExampleContext; width: number }) {
         status={status}
         composer={{
           onSend: (text) => ctx.log("send", text),
-          onStop: () => ctx.log("stop"),
+          onStop: () => {
+            stream.stop();
+            setStopped(true);
+            ctx.log("stop");
+          },
           onAttach: () => ctx.log("attach"),
           busy: status.kind === "streaming",
           disabledReason:
@@ -178,11 +182,6 @@ function Panel({ ctx, width }: { ctx: ExampleContext; width: number }) {
         }}
         context={contextInspector}
         notice={notice}
-        onStop={() => {
-          stream.stop();
-          setStopped(true);
-          ctx.log("onStop");
-        }}
         onRetry={() => ctx.log("onRetry")}
         onResume={(id) => ctx.log("onResume", id)}
         onAcceptEdit={(id) => {

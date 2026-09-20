@@ -14,6 +14,10 @@ import {
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
 import { cn } from "@resit/ui/lib/utils";
+import {
+  ProviderMark,
+  providerMarkColor,
+} from "@resit/ui/components/provider-mark";
 import { Composer, type ComposerProps } from "@resit/ui/patterns/ai/composer";
 import {
   ContextInspector,
@@ -46,7 +50,6 @@ export interface AiPanelProps {
   context?: ContextInspectorProps | undefined;
   /** Rendered above the transcript, for example a scope mismatch notice. */
   notice?: ReactNode;
-  onStop?: () => void;
   onRetry?: () => void;
   onResume?: (turnId: string) => void;
   onAcceptEdit?: (editId: string) => void;
@@ -78,7 +81,6 @@ export function AiPanel({
   composer,
   context,
   notice,
-  onStop,
   onRetry,
   onResume,
   onAcceptEdit,
@@ -104,9 +106,15 @@ export function AiPanel({
     viewport.scrollTop = viewport.scrollHeight;
   }, [turns.length, streamingText]);
 
-  const providerName =
-    provider.providers.find((entry) => entry.id === provider.providerId)
-      ?.name ?? "Assistant";
+  const selectedProvider = provider.providers.find(
+    (entry) => entry.id === provider.providerId,
+  );
+  const providerName = selectedProvider?.name ?? "Assistant";
+  const modelName = (model: string | undefined) =>
+    model
+      ? (selectedProvider?.models.find((entry) => entry.id === model)?.name ??
+        model)
+      : undefined;
 
   return (
     <section
@@ -210,11 +218,20 @@ export function AiPanel({
                 status={turn.status}
                 text={turn.text}
                 providerName={providerName}
+                modelName={modelName(turn.model)}
+                avatar={
+                  <ProviderMark
+                    provider={provider.providerId}
+                    className={cn(
+                      providerMarkColor[provider.providerId ?? ""] ??
+                        "text-muted-foreground",
+                    )}
+                  />
+                }
                 tools={turn.tools}
                 citations={turn.citations}
                 error={turn.error}
                 at={turn.at}
-                {...(onStop ? { onStop } : {})}
                 {...(onRetry ? { onRetry } : {})}
                 {...(onResume ? { onResume: () => onResume(turn.id) } : {})}
                 {...(onOpenCitation ? { onOpenCitation } : {})}
@@ -237,7 +254,6 @@ export function AiPanel({
       <TurnStatusBar
         status={status}
         className="shrink-0 border-t"
-        {...(onStop ? { onStop } : {})}
         {...(onRetry ? { onRetry } : {})}
         {...(onConnect ? { onConnect } : {})}
       />

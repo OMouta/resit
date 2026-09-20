@@ -184,6 +184,7 @@ function toTurn(message: ChatMessage): Turn {
           : "failed",
     text: message.text,
     tools: toolCalls(message.tools),
+    ...(message.model ? { model: message.model } : {}),
     ...(message.error ? { error: { ...message.error, retryable: true } } : {}),
     at: message.at,
   };
@@ -764,9 +765,6 @@ export function ChatPanel({
               ))}
             </ul>
           ) : undefined,
-      }}
-      onStop={() => {
-        if (current) void api.stopTurn(current.meta.id);
       }}
       {...(lastUser && lastUser.role === "user" && !busy
         ? { onRetry: () => void send(lastUser.text, lastUser.context) }

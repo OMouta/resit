@@ -1,6 +1,6 @@
 /** Conversation fixtures: scope, attachments, turns, tool activity, and a streaming script. */
 
-export type ProviderId = "claude-code" | "codex";
+export type ProviderId = "claude" | "codex";
 
 export interface ProviderFixture {
   id: ProviderId;
@@ -12,7 +12,7 @@ export interface ProviderFixture {
 
 export const providers: ProviderFixture[] = [
   {
-    id: "claude-code",
+    id: "claude",
     name: "Claude Code",
     status: "ready",
     version: "2.1.14",
@@ -33,7 +33,7 @@ export const providers: ProviderFixture[] = [
 
 export const providersMissing: ProviderFixture[] = [
   {
-    id: "claude-code",
+    id: "claude",
     name: "Claude Code",
     status: "not-installed",
     models: [],
@@ -123,6 +123,7 @@ export type TurnFixture =
       status:
         "streaming" | "complete" | "awaiting-review" | "stopped" | "failed";
       text: string;
+      model?: string;
       tools?: ToolCallFixture[];
       citations?: {
         id: string;
@@ -155,6 +156,7 @@ export const turns: TurnFixture[] = [
     id: "turn_2",
     role: "assistant",
     status: "complete",
+    model: "claude-sonnet-5",
     tools: [
       {
         id: "tool_1",

@@ -3,6 +3,10 @@ import { useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
 import {
+  ProviderMark,
+  providerMarkColor,
+} from "@resit/ui/components/provider-mark";
+import {
   ApprovalCard,
   type ApprovalStatus,
 } from "@resit/ui/patterns/ai/approval-card";
@@ -46,7 +50,7 @@ import type { ExampleContext, ExamplePage } from "../../viewer/types";
 function ProviderExample({ ctx }: { ctx: ExampleContext }) {
   const list = ctx.state === "missing" ? providersMissing : providers;
   const [providerId, setProviderId] = useState(
-    ctx.state === "codex" ? "codex" : "claude-code",
+    ctx.state === "codex" ? "codex" : "claude",
   );
   const [modelId, setModelId] = useState<string | undefined>(
     "claude-fable-5-1",
@@ -291,6 +295,13 @@ export const page: ExamplePage = {
               status="complete"
               text={assistantTurn.text}
               providerName="Claude Code"
+              modelName="Claude Sonnet 5"
+              avatar={
+                <ProviderMark
+                  provider="claude"
+                  className={providerMarkColor.claude}
+                />
+              }
               tools={assistantTurn.tools}
               citations={assistantTurn.citations}
               at={assistantTurn.at}
@@ -326,7 +337,6 @@ export const page: ExamplePage = {
                 },
               ]}
               at="2026-09-16T20:56:00Z"
-              onStop={() => ctx.log("onStop")}
             />
           );
         if (ctx.state === "awaiting-review" && reviewTurn)
@@ -449,7 +459,6 @@ export const page: ExamplePage = {
         <div className="-m-4 border-t">
           <TurnStatusBar
             status={statusByState[ctx.state] ?? { kind: "idle" }}
-            onStop={() => ctx.log("onStop")}
             onRetry={() => ctx.log("onRetry")}
             onReview={() => ctx.log("onReview")}
             onConnect={() => ctx.log("onConnect")}

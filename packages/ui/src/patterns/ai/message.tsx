@@ -186,13 +186,16 @@ export interface AssistantMessageProps {
   status: TurnStatus;
   text: string;
   providerName?: string;
+  /** The model that wrote this reply, shown in place of the provider. */
+  modelName?: string | undefined;
+  /** The provider logo. Defaults to a generic mark. */
+  avatar?: ReactNode;
   tools?: ToolCall[] | undefined;
   citations?: Citation[] | undefined;
   error?: TurnError | undefined;
   at: string | Date;
   /** Edit preview or approval card rendered after the body. */
   children?: ReactNode;
-  onStop?: () => void;
   onResume?: () => void;
   onRetry?: () => void;
   onDiagnostics?: () => void;
@@ -210,12 +213,13 @@ export function AssistantMessage({
   status,
   text,
   providerName = "Assistant",
+  modelName,
+  avatar,
   tools,
   citations,
   error,
   at,
   children,
-  onStop,
   onResume,
   onRetry,
   onDiagnostics,
@@ -236,8 +240,8 @@ export function AssistantMessage({
       aria-busy={status === "streaming"}
       className={cn("group/message flex gap-2.5", className)}
     >
-      <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-b from-primary-top to-primary-bottom text-white shadow-primary">
-        <SparklesIcon className="size-3.5" />
+      <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-md border bg-surface-raised">
+        {avatar ?? <SparklesIcon className="size-3.5 text-muted-foreground" />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         {tools && tools.length > 0 ? <ToolActivity calls={tools} /> : null}
@@ -282,22 +286,10 @@ export function AssistantMessage({
         ) : null}
         <footer className="flex h-6 items-center gap-1 text-2xs text-subtle-foreground">
           {status === "streaming" ? (
-            <>
-              <span className="text-muted-foreground">Writing…</span>
-              {onStop ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="ml-2"
-                  onClick={onStop}
-                >
-                  <SquareIcon className="size-3 fill-current" /> Stop
-                </Button>
-              ) : null}
-            </>
+            <span className="text-muted-foreground">Writing…</span>
           ) : (
             <>
-              <span>{providerName}</span>
+              <span>{modelName ?? providerName}</span>
               <span>·</span>
               <time>{time(at)}</time>
               {status === "awaiting-review" ? (

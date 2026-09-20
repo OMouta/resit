@@ -18,7 +18,6 @@ export type PanelStatus =
 
 export interface TurnStatusBarProps {
   status: PanelStatus;
-  onStop?: () => void;
   onRetry?: () => void;
   onReview?: () => void;
   onConnect?: () => void;
@@ -28,7 +27,6 @@ export interface TurnStatusBarProps {
 /** Thin bar between transcript and composer. Idle turns show nothing. */
 export function TurnStatusBar({
   status,
-  onStop,
   onRetry,
   onReview,
   onConnect,
@@ -51,16 +49,6 @@ export function TurnStatusBar({
             : status.phase === "tools"
               ? "Using study tools…"
               : "Writing…"}
-          {onStop ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="ml-auto"
-              onClick={onStop}
-            >
-              <SquareIcon className="size-3 fill-current" /> Stop
-            </Button>
-          ) : null}
         </div>
       );
     case "awaiting-review":

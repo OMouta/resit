@@ -109,7 +109,7 @@ export function ScreenFrame({
         <AiPanel
           provider={{
             providers,
-            providerId: "claude-code",
+            providerId: "claude",
             modelId: "claude-fable-5-1",
             onProviderChange: (id) => ctx.log("provider", id),
             onModelChange: (id) => ctx.log("model", id),

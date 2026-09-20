@@ -90,6 +90,8 @@ export type Turn =
       role: "assistant";
       status: TurnStatus;
       text: string;
+      /** The model that wrote it, when it is known. */
+      model?: string;
       tools?: ToolCall[];
       citations?: Citation[];
       edit?: EditProposal;
