@@ -4,6 +4,7 @@ import {
   FileTextIcon,
   FolderIcon,
   ImageIcon,
+  LinkIcon,
   PaperclipIcon,
 } from "lucide-react";
 import {
@@ -38,6 +39,8 @@ export interface TreeSubject {
   name: string;
   color: SubjectColor;
   archived?: boolean;
+  /** Shows the subject follows a course somewhere else, such as Moodle. */
+  linked?: string;
   resources: TreeResource[];
 }
 
@@ -347,7 +350,7 @@ export function SubjectTree({
               onSelect={() => select(subject.id)}
               onToggle={() => onExpandedChange(subject.id, !expanded)}
               typeahead={subject.name}
-              label={`${subject.name}${subject.archived ? ", archived" : ""}, ${count} resources`}
+              label={`${subject.name}${subject.archived ? ", archived" : ""}${subject.linked ? `, ${subject.linked}` : ""}, ${count} resources`}
               actions={renderActions?.({ kind: "subject", id: subject.id })}
               className={cn(
                 "font-medium",
@@ -358,9 +361,16 @@ export function SubjectTree({
                 className={cn("size-2 shrink-0 rounded-full", colors.dot)}
                 aria-hidden
               />
-              <span className="min-w-0 flex-1 truncate" title={subject.name}>
+              <span className="min-w-0 truncate" title={subject.name}>
                 {subject.name}
               </span>
+              {subject.linked ? (
+                <LinkIcon
+                  className="size-3 shrink-0 text-subtle-foreground"
+                  aria-hidden
+                />
+              ) : null}
+              <span className="flex-1" />
               {subject.archived ? (
                 <span className="shrink-0 text-2xs font-normal text-subtle-foreground">
                   Archived

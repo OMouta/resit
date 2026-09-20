@@ -15,6 +15,7 @@ import { cn } from "@resit/ui/lib/utils";
 import { SplitLayout } from "@resit/ui/patterns/navigation/split-handle";
 import { AppShell } from "@resit/ui/patterns/screens/app-shell";
 
+import type { MoodleConnection, MoodleCourse } from "../../../shared/moodle";
 import type { AppSettings } from "../../../shared/settings";
 import type {
   RecentWorkspace,
@@ -41,6 +42,7 @@ import {
   type SubjectRequest,
 } from "./dialogs";
 import { activeTab, layoutReducer, restoreLayout, type Layout } from "./layout";
+import { MoodleDialog } from "./moodle-dialog";
 import { WorkspacePane } from "./pane";
 import { QuickOpen } from "./quick-open";
 import { Sidebar } from "./sidebar";
@@ -51,6 +53,7 @@ export interface WorkspaceViewProps {
   savedLayout: unknown;
   recent: RecentWorkspace[];
   settings: AppSettings;
+  moodle: MoodleConnection;
   setSnapshot: Dispatch<SetStateAction<WorkspaceSnapshot>>;
   onSwitchWorkspace: (path: string) => void;
   onCreateWorkspace: () => void;
@@ -70,6 +73,7 @@ export function WorkspaceView({
   snapshot,
   savedLayout,
   recent,
+  moodle,
   setSnapshot,
   onSwitchWorkspace,
   onCreateWorkspace,
@@ -94,6 +98,8 @@ export function WorkspaceView({
   );
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [moodleSubjectId, setMoodleSubjectId] = useState<string | null>(null);
+  const [courses, setCourses] = useState<MoodleCourse[]>();
 
   const resources = useMemo(
     () =>
@@ -213,13 +219,23 @@ export function WorkspaceView({
     [setSnapshot, notices],
   );
 
+  const connected = moodle.status === "connected";
+
   const addSubject = useCallback(() => {
+    // Loading the course list can wait: the picker appears once it arrives.
+    if (connected && !courses)
+      api.listMoodleCourses().then(setCourses, () => undefined);
     setSubjectRequest({
       title: "New subject",
       submitLabel: "Add subject",
-      onSubmit: async ({ name, color }) => {
+      linkable: connected,
+      onSubmit: async ({ name, color, moodleCourseId }) => {
         try {
-          const subject = await api.createSubject({ name, color });
+          const subject = await api.createSubject({
+            name,
+            color,
+            ...(moodleCourseId ? { moodleCourseId } : {}),
+          });
           setSnapshot((current) => ({
             ...current,
             subjects: [...current.subjects, subject],
@@ -230,7 +246,7 @@ export function WorkspaceView({
         }
       },
     });
-  }, [setSnapshot, notices]);
+  }, [setSnapshot, notices, connected, courses]);
 
   const renameResource = useCallback(
     async (resourceId: string, title: string) => {
@@ -336,6 +352,7 @@ export function WorkspaceView({
     },
     newNote,
     importFiles: (subjectId: string) => void importFiles(subjectId),
+    openMoodle: (subjectId: string) => setMoodleSubjectId(subjectId),
     renameResource: (resourceId: string) => {
       const resource = resources.get(resourceId);
       if (!resource) return;
@@ -544,7 +561,16 @@ export function WorkspaceView({
       <PromptDialog request={prompt} onClose={() => setPrompt(null)} />
       <SubjectDialog
         request={subjectRequest}
+        courses={courses}
         onClose={() => setSubjectRequest(null)}
+      />
+      <MoodleDialog
+        subject={
+          moodleSubjectId ? (subjects.get(moodleSubjectId) ?? null) : null
+        }
+        connection={moodle}
+        onOpenChange={(open) => !open && setMoodleSubjectId(null)}
+        onOpenSettings={() => onOpenSettings("moodle")}
       />
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <TrashDialog

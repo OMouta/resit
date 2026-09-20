@@ -1,5 +1,6 @@
 import {
   FilePlusIcon,
+  GraduationCapIcon,
   MoreHorizontalIcon,
   PencilIcon,
   SettingsIcon,
@@ -35,6 +36,7 @@ export interface SidebarActions {
   moveSubject: (subjectId: string, direction: -1 | 1) => void;
   newNote: (subjectId: string) => void;
   importFiles: (subjectId: string) => void;
+  openMoodle: (subjectId: string) => void;
   renameResource: (resourceId: string) => void;
   deleteResource: (resourceId: string) => void;
   openTrash: () => void;
@@ -93,6 +95,9 @@ export function Sidebar({
         name: subject.name,
         color: subject.color,
         archived: subject.archived,
+        ...(subject.moodle
+          ? { linked: `following ${subject.moodle.shortname} in Moodle` }
+          : {}),
         resources: snapshot.resources
           .filter((resource) => resource.subjectId === subject.id)
           .map((resource) => ({
@@ -152,6 +157,9 @@ export function Sidebar({
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => actions.importFiles(id)}>
                   <UploadIcon /> Import files…
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => actions.openMoodle(id)}>
+                  <GraduationCapIcon /> Moodle…
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => actions.editSubject(id)}>

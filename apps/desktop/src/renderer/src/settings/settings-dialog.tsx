@@ -1,4 +1,9 @@
-import { SparklesIcon, SunMoonIcon, type LucideIcon } from "lucide-react";
+import {
+  GraduationCapIcon,
+  SparklesIcon,
+  SunMoonIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { useRef, type ReactNode } from "react";
 
 import {
@@ -15,6 +20,7 @@ import { cn } from "@resit/ui/lib/utils";
 export const SETTINGS_TOPICS = [
   { id: "appearance", label: "Appearance", icon: SunMoonIcon },
   { id: "providers", label: "AI providers", icon: SparklesIcon },
+  { id: "moodle", label: "Moodle", icon: GraduationCapIcon },
 ] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[];
 
 export type SettingsTopic = (typeof SETTINGS_TOPICS)[number]["id"];

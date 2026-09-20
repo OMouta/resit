@@ -345,4 +345,19 @@ describe("desktop workspace", () => {
       window.resit.updateSettings({ claude: { executablePath: "" } }),
     );
   });
+
+  it("sends the student to settings before following a Moodle course", async () => {
+    await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
+    await page.getByRole("button", { name: "Subject actions" }).first().click();
+    await page.getByRole("menuitem", { name: /Moodle/ }).click();
+    await page
+      .getByText("Connect your Moodle account to follow a course.")
+      .waitFor();
+    await page.getByRole("button", { name: "Open settings" }).click();
+    // Settings opens on the topic the student came from.
+    await page.getByLabel("Moodle address").waitFor();
+    await page.getByRole("tab", { name: "Appearance" }).click();
+    await page.getByRole("tablist", { name: "Theme" }).waitFor();
+    await page.keyboard.press("Escape");
+  });
 });

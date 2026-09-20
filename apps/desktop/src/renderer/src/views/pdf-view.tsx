@@ -199,7 +199,8 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
       viewerRef.current = null;
       void loading?.destroy();
     };
-  }, [resource.id, repaint]);
+    // A new revision means the file itself changed, so the document reloads.
+  }, [resource.id, resource.revision, repaint]);
 
   const missingHighlight = useCallback(
     () =>

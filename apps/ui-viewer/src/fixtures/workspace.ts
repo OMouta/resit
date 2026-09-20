@@ -10,6 +10,8 @@ export interface SubjectFixture {
   year: string;
   color: SubjectColor;
   archived?: boolean;
+  /** How the subject describes the course it follows elsewhere. */
+  linked?: string;
 }
 
 export type ResourceKind = "note" | "pdf" | "image" | "attachment";
@@ -83,6 +85,7 @@ export const subjects: SubjectFixture[] = [
     course: "Métodos Numéricos",
     year: "Year 1 · Semester 2",
     color: "red",
+    linked: "following MN2026 in Moodle",
   },
   {
     id: "sub_alg",

@@ -22,6 +22,7 @@ export function toTreeSubjects(
       name: subject.name,
       color: subject.color,
       ...(subject.archived ? { archived: true } : {}),
+      ...(subject.linked ? { linked: subject.linked } : {}),
       resources: resourcesForSubject(subject.id).map((resource) => ({
         id: resource.id,
         kind: resource.kind,

@@ -15,12 +15,14 @@ import {
 
 import type { ProviderId, ProviderState } from "../../shared/conversations";
 import type { AppState } from "../../shared/ipc";
+import type { MoodleConnection } from "../../shared/moodle";
 import type { SettingsPatch } from "../../shared/settings";
 import type { WorkspaceSnapshot } from "../../shared/workspace";
 import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
 import { useNotices } from "./lib/notices";
 import { AppearanceSettings } from "./settings/appearance-settings";
+import { MoodleSettings } from "./settings/moodle-settings";
 import { ProviderSettings } from "./settings/provider-settings";
 import { SettingsDialog, type SettingsTopic } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
@@ -36,6 +38,10 @@ export function App() {
     null,
   );
   const [workspaceKey, setWorkspaceKey] = useState(0);
+  const [moodle, setMoodle] = useState<MoodleConnection>({
+    status: "disconnected",
+  });
+  const [checkingMoodle, setCheckingMoodle] = useState(false);
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>(
     { claude: { status: "checking" }, codex: { status: "checking" } },
   );
@@ -76,6 +82,7 @@ export function App() {
 
   const apply = useCallback((next: AppState) => {
     setState(next);
+    setMoodle(next.moodle);
     setSnapshot(next.workspace);
     setWorkspaceKey((key) => key + 1);
     setCreating(false);
@@ -154,8 +161,36 @@ export function App() {
     [notices, checkProvider],
   );
 
+  const connectMoodle = async (input: {
+    siteUrl: string;
+    username: string;
+    password: string;
+  }) => {
+    try {
+      const connection = await api.connectMoodle(input);
+      setMoodle(connection);
+      if (connection.status === "connected")
+        notices.notify({
+          tone: "success",
+          title: `Connected to ${connection.siteName}`,
+        });
+    } catch (error) {
+      notices.fail("Moodle did not connect", error);
+    }
+  };
+
   const openSettings = (topic: SettingsTopic = "appearance") =>
     setSettingsTopic(topic);
+
+  const checkMoodle = () => {
+    setCheckingMoodle(true);
+    api
+      .getMoodleStatus(true)
+      .then(setMoodle, (error: unknown) =>
+        notices.fail("Moodle could not be checked", error),
+      )
+      .finally(() => setCheckingMoodle(false));
+  };
 
   if (!state) return <div className="h-dvh bg-background" />;
 
@@ -199,6 +234,7 @@ export function App() {
         savedLayout={state.layout}
         recent={state.recent}
         settings={state.settings}
+        moodle={moodle}
         onSwitchWorkspace={(path) => void openPath(path)}
         onCreateWorkspace={() => setCreating(true)}
         onOpenFolder={() => void openFolder()}
@@ -244,6 +280,21 @@ export function App() {
             settings={state.settings}
             onChange={(patch) => void changeSettings(patch)}
             onRefresh={(provider) => checkProvider(provider, true)}
+          />
+        ) : null}
+        {settingsTopic === "moodle" ? (
+          <MoodleSettings
+            connection={moodle}
+            checking={checkingMoodle}
+            onConnect={connectMoodle}
+            onDisconnect={() => {
+              void api
+                .disconnectMoodle()
+                .then(setMoodle, (error: unknown) =>
+                  notices.fail("Moodle was not disconnected", error),
+                );
+            }}
+            onRefresh={checkMoodle}
           />
         ) : null}
       </SettingsDialog>
