@@ -137,7 +137,12 @@ export function ProviderModelSelect({
           {providers.map((entry) => (
             <DropdownMenuItem
               key={entry.id}
-              onSelect={() => onProviderChange(entry.id)}
+              // Stays open: the model list below belongs to the provider
+              // just chosen, so both can be set in one visit.
+              onSelect={(event) => {
+                event.preventDefault();
+                onProviderChange(entry.id);
+              }}
               className="items-start gap-2 py-2"
             >
               <span className="flex size-4 items-center justify-center pt-0.5">
@@ -145,19 +150,32 @@ export function ProviderModelSelect({
                   <CheckIcon className="size-4" />
                 ) : null}
               </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="font-medium">{entry.name}</span>
-                <ProviderStatusBadge
-                  status={entry.status}
-                  {...(entry.version ? { version: entry.version } : {})}
-                />
+                {/* A provider with nothing to fix needs no badge. */}
+                {entry.status === "ready" ? (
+                  entry.version ? (
+                    <span className="text-xs text-muted-foreground">
+                      {entry.version}
+                    </span>
+                  ) : null
+                ) : (
+                  <ProviderStatusBadge status={entry.status} />
+                )}
               </span>
             </DropdownMenuItem>
           ))}
-          {provider && provider.models.length > 0 ? (
+          {provider ? (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Model</DropdownMenuLabel>
+              {provider.models.length === 0 ? (
+                <p className="px-2 py-1.5 text-xs text-subtle-foreground">
+                  {provider.status === "ready"
+                    ? "Loading models…"
+                    : "Connect this provider to choose a model."}
+                </p>
+              ) : null}
               {provider.models.map((entry) => (
                 <DropdownMenuItem
                   key={entry.id}
