@@ -328,6 +328,29 @@ describe("desktop workspace", () => {
     await expect.poll(noteFile).toContain("> 1. Compute sin(x)/x");
   });
 
+  it("puts an earlier version of a note back", async () => {
+    await page.locator(".note-content").first().click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type(" Draft I regret.");
+    await page.getByText("Saved", { exact: true }).first().waitFor();
+    await expect.poll(noteFile).toContain("Draft I regret.");
+
+    await page.getByRole("button", { name: "Version history" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Version history" });
+    await dialog.waitFor();
+    // The row reveals its actions when the pointer is over it.
+    await dialog.getByText("Before your changes").first().hover();
+    await page
+      .getByRole("button", { name: /Restore as new revision/ })
+      .first()
+      .click();
+
+    await expect.poll(noteFile).not.toContain("Draft I regret.");
+    await expect
+      .poll(() => page.locator(".note-content").innerText())
+      .not.toContain("Draft I regret.");
+  });
+
   it("keeps a new note in the folder it was made in", async () => {
     await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
     await page.getByRole("button", { name: "Subject actions" }).first().click();

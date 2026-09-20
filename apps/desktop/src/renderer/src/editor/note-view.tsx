@@ -1,5 +1,5 @@
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { FileCodeIcon } from "lucide-react";
+import { FileCodeIcon, HistoryIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
@@ -34,6 +34,7 @@ import {
   type MathHandlers,
 } from "./extensions";
 import { MathDialog, type MathRequest } from "./math-dialog";
+import { NoteHistory } from "./note-history";
 
 const SAVE_DELAY_MS = 800;
 const MARKS: readonly EditorMark[] = [
@@ -128,6 +129,7 @@ function NoteEditor({
   const [lossy, setLossy] = useState(false);
   const [math, setMath] = useState<MathRequest | null>(null);
   const [prompt, setPrompt] = useState<PromptRequest | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useWidth(rootRef);
   const narrow = width > 0 && width < 560;
@@ -496,6 +498,15 @@ function NoteEditor({
                 ? { onAction: () => void save() }
                 : {})}
             />
+            <ToolbarButton
+              label="Version history"
+              onClick={() => {
+                // The history compares against the file on disk.
+                void saveRef.current().then(() => setHistoryOpen(true));
+              }}
+            >
+              <HistoryIcon />
+            </ToolbarButton>
             {narrow ? (
               <ToolbarButton
                 label={
@@ -590,6 +601,13 @@ function NoteEditor({
         </div>
       </ScrollArea>
       <PromptDialog request={prompt} onClose={() => setPrompt(null)} />
+      <NoteHistory
+        noteId={resource.id}
+        current={bodyRef.current()}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        onRestored={onReplace}
+      />
       <MathDialog
         request={math}
         onClose={() => {
