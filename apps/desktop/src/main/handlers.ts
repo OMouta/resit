@@ -2,6 +2,7 @@ import { extname } from "node:path";
 import { dialog, nativeTheme, shell, type BrowserWindow } from "electron";
 import { z } from "zod";
 
+import { liveContextSchema } from "../shared/context";
 import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
 import type { MoodleLink } from "../shared/moodle";
@@ -12,13 +13,21 @@ import {
   annotationTypeSchema,
   subjectColorSchema,
 } from "../shared/workspace";
+import { deliverRenderedPage } from "./agent/render";
 import { startTurn, stopTurn } from "./agent/turns";
+import { setLiveContext } from "./context";
 import {
   createAnnotation,
   deleteAnnotation,
   listAnnotations,
   updateAnnotation,
 } from "./workspace/annotations";
+import {
+  listNoteRevisions,
+  readNoteRevision,
+  restoreNoteRevision,
+  saveNoteWithHistory,
+} from "./workspace/history";
 import {
   createConversation,
   deleteConversation,
@@ -66,8 +75,8 @@ import {
   readNote,
   readResourceBytes,
   renameResource,
+  resourceInfo,
   resourcePath,
-  saveNote,
   snapshot,
   updateFolder,
   updateSubject,
@@ -80,6 +89,8 @@ const parentFolder = z.string().trim().max(200);
 const courseId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const MAX_LAYOUT_BYTES = 256 * 1024;
 const MAX_NOTE_BYTES = 20 * 1024 * 1024;
+/** A drawn page arrives base64 encoded, so it is larger than the image. */
+const MAX_PAGE_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_COMMENT_CHARS = 4000;
 
 /** One selection: its pages, the lines on each, and the text they cover. */
@@ -295,7 +306,33 @@ export function registerHandlers(
         expectedRevision: z.string().max(200),
       }),
     ]),
-    (input) => saveNote(currentWorkspace(), input),
+    (input) => saveNoteWithHistory(currentWorkspace(), input, "edit"),
+  );
+
+  handle(CHANNELS.listNoteRevisions, z.tuple([id]), (noteId) =>
+    listNoteRevisions(currentWorkspace(), noteId),
+  );
+
+  handle(
+    CHANNELS.readNoteRevision,
+    z.tuple([z.object({ noteId: id, revisionId: z.string().max(200) })]),
+    (input) =>
+      readNoteRevision(currentWorkspace(), input.noteId, input.revisionId),
+  );
+
+  handle(
+    CHANNELS.restoreNoteRevision,
+    z.tuple([z.object({ noteId: id, revisionId: z.string().max(200) })]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const restored = await restoreNoteRevision(
+        workspace,
+        input.noteId,
+        input.revisionId,
+      );
+      emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      return { resource: resourceInfo(workspace, input.noteId), ...restored };
+    },
   );
 
   handle(CHANNELS.renameResource, z.tuple([z.object({ id, title })]), (input) =>
@@ -573,6 +610,29 @@ export function registerHandlers(
 
   handle(CHANNELS.stopTurn, z.tuple([id]), (conversationId) =>
     stopTurn(conversationId),
+  );
+
+  handle(CHANNELS.updateLiveContext, z.tuple([liveContextSchema]), (context) =>
+    setLiveContext(context),
+  );
+
+  handle(
+    CHANNELS.deliverRenderedPage,
+    z.tuple([
+      z.object({
+        requestId: z.string().max(200),
+        page: z
+          .object({
+            data: z.string().max(MAX_PAGE_IMAGE_BYTES),
+            mimeType: z.enum(["image/png", "image/jpeg"]),
+            width: z.number().int().positive().max(20_000),
+            height: z.number().int().positive().max(20_000),
+          })
+          .optional(),
+        error: z.string().max(500).optional(),
+      }),
+    ]),
+    (result) => deliverRenderedPage(result),
   );
 
   handle(CHANNELS.confirmClose, z.tuple([]), () => onConfirmClose());

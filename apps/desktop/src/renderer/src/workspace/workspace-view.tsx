@@ -28,7 +28,9 @@ import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import type { SettingsTopic } from "../settings/settings-dialog";
 import { api } from "../lib/api";
 import { insertIntoNote } from "../lib/citations";
+import { useLiveContext } from "../lib/live-context";
 import { useNotices } from "../lib/notices";
+import { startPageRenderer } from "../lib/pdf-render";
 import {
   flushAllViews,
   onAskRequest,
@@ -132,6 +134,10 @@ export function WorkspaceView({
       }),
     [setSnapshot],
   );
+
+  // Draws the PDF pages the assistant asks to look at.
+  useEffect(() => startPageRenderer(), []);
+  useLiveContext(layout, resources);
 
   const focusedTab = activeTab(layout);
   const focusedResource = focusedTab

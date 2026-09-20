@@ -2,7 +2,9 @@ import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 
 import type { AppState, DesktopEvent } from "../shared/ipc";
+import { abandonRenders } from "./agent/render";
 import { abortAllTurns } from "./agent/turns";
+import { setLiveContext } from "./context";
 import { moodleConnection } from "./moodle/credentials";
 import {
   forgetLastWorkspace,
@@ -109,6 +111,8 @@ export async function activateWorkspace(
 ): Promise<void> {
   stopWatching();
   abortAllTurns();
+  abandonRenders();
+  setLiveContext(null);
   current = workspace;
   try {
     await rememberWorkspace({
@@ -126,6 +130,8 @@ export async function activateWorkspace(
 export async function closeCurrentWorkspace(): Promise<void> {
   stopWatching();
   abortAllTurns();
+  abandonRenders();
+  setLiveContext(null);
   current = null;
   await forgetLastWorkspace();
 }

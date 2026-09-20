@@ -1,3 +1,4 @@
+import type { LiveContext } from "./context";
 import type {
   ConversationDetail,
   ConversationMeta,
@@ -20,6 +21,8 @@ import type {
   AnnotationSegment,
   AnnotationType,
   FolderInfo,
+  NoteRevision,
+  NoteRevisionContent,
   RecentWorkspace,
   ResourceInfo,
   SaveNoteResult,
@@ -54,10 +57,29 @@ export interface NoteDocument {
   revision: string;
 }
 
+/** One PDF page drawn by the window, for an assistant that can see images. */
+export interface RenderedPage {
+  /** The image itself, base64 encoded. */
+  data: string;
+  mimeType: string;
+  width: number;
+  height: number;
+}
+
 export type DesktopEvent =
   | { type: "workspace-changed"; snapshot: WorkspaceSnapshot }
   /** The window is closing: save pending edits, then call confirmClose. */
   | { type: "before-close" }
+  /** The assistant changed a PDF's highlights. */
+  | { type: "annotations-changed"; documentId: string }
+  /** The main process needs a PDF page drawn, for the assistant to look at. */
+  | {
+      type: "render-page";
+      requestId: string;
+      resourceId: string;
+      page: number;
+      maxWidth: number;
+    }
   | {
       type: "moodle-progress";
       subjectId: string;
@@ -139,6 +161,17 @@ export interface DesktopApi {
     body: string;
     expectedRevision: string;
   }): Promise<SaveNoteResult>;
+  /** Kept copies of a note's text, newest first. */
+  listNoteRevisions(noteId: string): Promise<NoteRevision[]>;
+  readNoteRevision(input: {
+    noteId: string;
+    revisionId: string;
+  }): Promise<NoteRevisionContent>;
+  /** Puts an older version back, keeping the text it replaced. */
+  restoreNoteRevision(input: {
+    noteId: string;
+    revisionId: string;
+  }): Promise<NoteDocument>;
   renameResource(input: { id: string; title: string }): Promise<ResourceInfo>;
   /** Moves a file to another subject or folder, keeping its ID. */
   moveResource(input: {
@@ -220,6 +253,14 @@ export interface DesktopApi {
     context: TurnContext;
   }): Promise<{ turnId: string }>;
   stopTurn(conversationId: string): Promise<void>;
+  /** Tells the main process which files are open, for the assistant to see. */
+  updateLiveContext(context: LiveContext): Promise<void>;
+  /** Answers a render-page event with the drawn page, or why it failed. */
+  deliverRenderedPage(result: {
+    requestId: string;
+    page?: RenderedPage;
+    error?: string;
+  }): Promise<void>;
   confirmClose(): Promise<void>;
 
   onEvent(listener: (event: DesktopEvent) => void): () => void;
@@ -242,6 +283,9 @@ export const CHANNELS = {
   createNote: "resit:note-create",
   readNote: "resit:note-read",
   saveNote: "resit:note-save",
+  listNoteRevisions: "resit:note-history",
+  readNoteRevision: "resit:note-revision",
+  restoreNoteRevision: "resit:note-restore",
   renameResource: "resit:resource-rename",
   moveResource: "resit:resource-move",
   deleteResource: "resit:resource-delete",
@@ -272,6 +316,8 @@ export const CHANNELS = {
   deleteConversation: "resit:conversation-delete",
   sendMessage: "resit:turn-send",
   stopTurn: "resit:turn-stop",
+  updateLiveContext: "resit:context-update",
+  deliverRenderedPage: "resit:render-page-result",
   confirmClose: "resit:confirm-close",
 } as const satisfies Record<
   Exclude<keyof DesktopApi, "healthCheck" | "onEvent">,
