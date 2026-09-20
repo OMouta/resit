@@ -39,10 +39,12 @@ import type {
   ConversationMeta,
   ConversationScope,
   ModelOption,
+  ProviderId,
   ProviderState,
   ToolSummary,
   TurnContext,
 } from "../../../shared/conversations";
+import type { AppSettings, SettingsPatch } from "../../../shared/settings";
 import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import { insertIntoNote } from "../lib/citations";
@@ -67,14 +69,19 @@ export interface ChatPanelProps {
   layout: Layout;
   resources: ReadonlyMap<string, ResourceInfo>;
   subjects: ReadonlyMap<string, SubjectInfo>;
-  provider: ProviderState;
-  /** Model chosen in settings; Claude Code's default when unset. */
-  model: string | undefined;
-  /** An empty string goes back to Claude Code's default. */
-  onModelChange: (model: string) => void;
+  providers: Record<ProviderId, ProviderState>;
+  /** Checks a provider that has not been looked at yet. */
+  onCheckProvider: (provider: ProviderId) => void;
+  settings: AppSettings;
+  onSettingsChange: (patch: SettingsPatch) => void;
   setConversation: (conversationId: string | null) => void;
   onOpenSettings: () => void;
 }
+
+const PROVIDER_NAMES: Record<ProviderId, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+};
 
 const renderMarkdown = (text: string) => <ChatMarkdown text={text} />;
 
@@ -175,11 +182,12 @@ export function ChatPanel({
   layout,
   resources,
   subjects,
-  provider,
+  providers,
+  onCheckProvider,
+  settings,
+  onSettingsChange,
   setConversation,
   onOpenSettings,
-  model,
-  onModelChange,
 }: ChatPanelProps) {
   const notices = useNotices();
   const { relative } = useLocale();
@@ -191,24 +199,34 @@ export function ChatPanel({
   const [pinned, setPinned] = useState<AskRequest | null>(null);
   const [skipSelection, setSkipSelection] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
-  const [models, setModels] = useState<ModelOption[]>([]);
+  const [models, setModels] = useState<Record<ProviderId, ModelOption[]>>({
+    claude: [],
+    codex: [],
+  });
+
+  const providerId: ProviderId = current?.meta.provider ?? settings.provider;
+  const provider = providers[providerId];
 
   useEffect(() => {
-    if (provider.status !== "ready") return;
-    let cancelled = false;
-    api.getModels().then(
-      (list) => {
-        if (!cancelled) setModels(list);
-      },
-      () => undefined,
+    onCheckProvider(providerId);
+  }, [providerId, onCheckProvider]);
+
+  // Listing models starts the provider, so it happens once it is ready and
+  // only once for each.
+  const listed = useRef<Set<ProviderId>>(new Set());
+  useEffect(() => {
+    if (provider.status !== "ready" || listed.current.has(providerId)) return;
+    listed.current.add(providerId);
+    api.getModels(providerId).then(
+      (list) => setModels((current) => ({ ...current, [providerId]: list })),
+      () => listed.current.delete(providerId),
     );
-    return () => {
-      cancelled = true;
-    };
-  }, [provider.status]);
+  }, [providerId, provider.status]);
+
+  const model = settings[providerId].model;
   const selectedModel =
-    models.find((entry) => entry.id === model) ??
-    models.find((entry) => entry.isDefault);
+    models[providerId].find((entry) => entry.id === model) ??
+    models[providerId].find((entry) => entry.isDefault);
   const currentId = current?.meta.id ?? null;
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
@@ -371,7 +389,7 @@ export function ChatPanel({
   const createConversation = useCallback(
     async (scope: ConversationScope) => {
       try {
-        const meta = await api.createConversation(scope);
+        const meta = await api.createConversation(scope, settings.provider);
         remember(meta);
         // Turn events for it can arrive before the next render.
         currentIdRef.current = meta.id;
@@ -384,7 +402,7 @@ export function ChatPanel({
         return null;
       }
     },
-    [notices, remember, setConversation],
+    [notices, remember, setConversation, settings.provider],
   );
 
   const updateScope = useCallback(
@@ -478,7 +496,10 @@ export function ChatPanel({
 
   let status: PanelStatus = { kind: "idle" };
   if (provider.status !== "ready" && provider.status !== "checking")
-    status = { kind: "missing-provider", providerName: "Claude Code" };
+    status = {
+      kind: "missing-provider",
+      providerName: PROVIDER_NAMES[providerId],
+    };
   else if (streaming) status = { kind: "streaming", phase: streaming.phase };
   else if (last?.role === "assistant" && last.status === "failed")
     status = {
@@ -511,6 +532,20 @@ export function ChatPanel({
   const unscopedSubjects = [...subjects.values()].filter(
     (subject) => !subject.archived && !scope.subjectIds.includes(subject.id),
   );
+  /** Moves this conversation to another provider, and new ones with it. */
+  const switchProvider = async (next: ProviderId) => {
+    if (next === providerId) return;
+    onCheckProvider(next);
+    onSettingsChange({ provider: next });
+    if (!current) return;
+    try {
+      remember(
+        await api.updateConversation({ id: current.meta.id, provider: next }),
+      );
+    } catch (error) {
+      notices.fail("The provider was not changed", error);
+    }
+  };
 
   const composerItems = contextItems(outgoingContext());
 
@@ -518,27 +553,30 @@ export function ChatPanel({
     <AiPanel
       title={current?.meta.title ?? "New conversation"}
       provider={{
-        providers: [
-          {
-            id: "claude-code",
-            name: "Claude Code",
-            status: providerBadge(provider),
-            ...("version" in provider ? { version: provider.version } : {}),
-            models: models.map((entry) => ({
+        providers: (["claude", "codex"] as const).map((id) => {
+          const state = providers[id];
+          return {
+            id,
+            name: PROVIDER_NAMES[id],
+            status: providerBadge(state),
+            ...("version" in state ? { version: state.version } : {}),
+            models: models[id].map((entry) => ({
               id: entry.id,
               name: entry.name,
               description: entry.isDefault
-                ? `${entry.description} · Claude Code's default`
+                ? `${entry.description} · default`
                 : entry.description,
             })),
-          },
-        ],
-        providerId: "claude-code",
+          };
+        }),
+        providerId,
         ...(selectedModel ? { modelId: selectedModel.id } : {}),
-        onProviderChange: () => undefined,
+        onProviderChange: (id) => void switchProvider(id as ProviderId),
         onModelChange: (id) => {
-          const chosen = models.find((entry) => entry.id === id);
-          onModelChange(chosen?.isDefault ? "" : id);
+          const chosen = models[providerId].find((entry) => entry.id === id);
+          onSettingsChange({
+            [providerId]: { model: chosen?.isDefault ? "" : id },
+          });
         },
         onConnect: onOpenSettings,
       }}
@@ -556,7 +594,7 @@ export function ChatPanel({
               resourceIds: scope.resourceIds.filter((id) => id !== item.id),
             });
         },
-        emptyLabel: "Add a subject or file so Claude can read it.",
+        emptyLabel: `Add a subject or file so ${PROVIDER_NAMES[providerId]} can read it.`,
       }}
       turns={turns}
       status={status}
@@ -594,7 +632,7 @@ export function ChatPanel({
         disabledReason:
           provider.status === "ready" || provider.status === "checking"
             ? undefined
-            : "Connect Claude Code in Settings to ask questions",
+            : `Connect ${PROVIDER_NAMES[providerId]} in Settings to ask questions`,
         placeholder: focused
           ? `Ask about ${focused.title}…`
           : "Ask about your notes or PDFs…",
@@ -642,9 +680,9 @@ export function ChatPanel({
         <div className="flex flex-col items-center gap-2 px-2 py-10 text-center">
           <p className="text-sm font-medium">Ask about your notes or PDFs</p>
           <p className="max-w-64 text-xs text-muted-foreground">
-            Claude can read the subjects and files listed above. Your messages,
-            the open file's name, selected text, and content Claude reads are
-            sent to Anthropic.
+            {PROVIDER_NAMES[providerId]} can read the subjects and files listed
+            above. Your messages, the open file's name, selected text, and what
+            it reads leave your computer.
           </p>
         </div>
       }

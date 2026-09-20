@@ -49,10 +49,21 @@ export async function updateSettings(
       else delete claude[key];
     }
   }
+  const codex = { ...current.codex };
+  if (patch.codex) {
+    for (const key of ["executablePath", "model", "homePath"] as const) {
+      if (!(key in patch.codex)) continue;
+      const value = patch.codex[key]?.trim();
+      if (value) codex[key] = value;
+      else delete codex[key];
+    }
+  }
   return save({
     ...current,
     ...(patch.theme ? { theme: patch.theme } : {}),
+    ...(patch.provider ? { provider: patch.provider } : {}),
     claude,
+    codex,
   });
 }
 

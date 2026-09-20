@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { providerIdSchema, type ProviderId } from "./settings";
+
 export const scopeSchema = z.object({
   subjectIds: z.array(z.string().min(1).max(200)).max(100),
   resourceIds: z.array(z.string().min(1).max(200)).max(200),
@@ -15,6 +17,8 @@ export const conversationFileSchema = z.looseObject({
   id: z.string().min(1),
   title: z.string(),
   scope: scopeSchema,
+  /** Older conversations have no provider recorded; they were Claude. */
+  provider: providerIdSchema.catch("claude").default("claude"),
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -88,6 +92,8 @@ export interface ModelOption {
   /** Claude Code uses this model when none is chosen. */
   isDefault: boolean;
 }
+
+export type { ProviderId };
 
 export type ProviderState =
   | { status: "checking" }

@@ -8,6 +8,7 @@ import {
   type ConversationDetail,
   type ConversationMeta,
   type ConversationScope,
+  type ProviderId,
 } from "../../shared/conversations";
 import { exists, readJson, writeJson } from "../workspace/files";
 import type { OpenWorkspace } from "../workspace/workspace";
@@ -43,6 +44,7 @@ async function writeMeta(
 export async function createConversation(
   workspace: OpenWorkspace,
   scope: ConversationScope,
+  provider: ProviderId,
 ): Promise<ConversationMeta> {
   const at = now();
   const meta: ConversationMeta = {
@@ -51,6 +53,7 @@ export async function createConversation(
     id: randomUUID(),
     title: "New conversation",
     scope,
+    provider,
     createdAt: at,
     updatedAt: at,
   };
@@ -140,13 +143,18 @@ export async function appendMessage(
 export async function updateConversation(
   workspace: OpenWorkspace,
   id: string,
-  patch: { title?: string | undefined; scope?: ConversationScope | undefined },
+  patch: {
+    title?: string | undefined;
+    scope?: ConversationScope | undefined;
+    provider?: ProviderId | undefined;
+  },
 ): Promise<ConversationMeta> {
   const meta = await readMeta(workspace, id);
   const next: ConversationMeta = {
     ...meta,
     ...(patch.title ? { title: patch.title } : {}),
     ...(patch.scope ? { scope: patch.scope } : {}),
+    ...(patch.provider ? { provider: patch.provider } : {}),
     updatedAt: now(),
   };
   await writeMeta(workspace, next);
@@ -175,7 +183,10 @@ export async function deleteConversation(
 }
 
 interface Bindings {
-  conversations: Record<string, { claudeSessionId?: string }>;
+  conversations: Record<
+    string,
+    { claudeSessionId?: string; codexThreadId?: string }
+  >;
 }
 
 function bindingsPath(workspace: OpenWorkspace): string {
@@ -209,6 +220,28 @@ export async function bindClaudeSession(
   const entry = { ...bindings.conversations[conversationId] };
   if (sessionId) entry.claudeSessionId = sessionId;
   else delete entry.claudeSessionId;
+  bindings.conversations[conversationId] = entry;
+  await writeJson(bindingsPath(workspace), bindings);
+}
+
+/** Codex thread for a conversation on this machine, if any. */
+export async function codexThreadFor(
+  workspace: OpenWorkspace,
+  conversationId: string,
+): Promise<string | undefined> {
+  return (await readBindings(workspace)).conversations[conversationId]
+    ?.codexThreadId;
+}
+
+export async function bindCodexThread(
+  workspace: OpenWorkspace,
+  conversationId: string,
+  threadId: string | undefined,
+): Promise<void> {
+  const bindings = await readBindings(workspace);
+  const entry = { ...bindings.conversations[conversationId] };
+  if (threadId) entry.codexThreadId = threadId;
+  else delete entry.codexThreadId;
   bindings.conversations[conversationId] = entry;
   await writeJson(bindingsPath(workspace), bindings);
 }

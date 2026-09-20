@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 
 import { ResitLogo } from "@resit/ui/components/resit-mark";
 import { applyAppearance } from "@resit/ui/lib/theme";
@@ -7,14 +13,14 @@ import {
   Onboarding,
 } from "@resit/ui/patterns/screens/onboarding";
 
-import type { ProviderState } from "../../shared/conversations";
+import type { ProviderId, ProviderState } from "../../shared/conversations";
 import type { AppState } from "../../shared/ipc";
 import type { SettingsPatch } from "../../shared/settings";
 import type { WorkspaceSnapshot } from "../../shared/workspace";
 import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
 import { useNotices } from "./lib/notices";
-import { ClaudeSettings } from "./settings/claude-settings";
+import { ProviderSettings } from "./settings/provider-settings";
 import { SettingsDialog } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
 import { WorkspaceView } from "./workspace/workspace-view";
@@ -26,21 +32,33 @@ export function App() {
   const [creating, setCreating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [workspaceKey, setWorkspaceKey] = useState(0);
-  const [provider, setProvider] = useState<ProviderState>({
-    status: "checking",
-  });
+  const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>(
+    { claude: { status: "checking" }, codex: { status: "checking" } },
+  );
+  // Checking a provider starts it, so each one is only looked at when the
+  // student is about to use it.
+  const checked = useRef(new Set<ProviderId>());
 
-  const checkProvider = useCallback((refresh: boolean) => {
-    if (refresh) setProvider({ status: "checking" });
-    api.getProviderStatus(refresh).then(setProvider, (error: unknown) =>
-      setProvider({
-        status: "failed",
-        message: error instanceof Error ? error.message : String(error),
-      }),
+  const checkProvider = useCallback((provider: ProviderId, refresh = false) => {
+    if (!refresh && checked.current.has(provider)) return;
+    checked.current.add(provider);
+    if (refresh)
+      setProviders((current) => ({
+        ...current,
+        [provider]: { status: "checking" },
+      }));
+    api.getProviderStatus(provider, refresh).then(
+      (state) => setProviders((current) => ({ ...current, [provider]: state })),
+      (error: unknown) =>
+        setProviders((current) => ({
+          ...current,
+          [provider]: {
+            status: "failed",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        })),
     );
   }, []);
-
-  useEffect(() => checkProvider(false), [checkProvider]);
 
   // Save open notes before the window closes.
   useEffect(
@@ -117,11 +135,14 @@ export function App() {
       try {
         const settings = await api.updateSettings(patch);
         setState((current) => (current ? { ...current, settings } : current));
-        // The main process re-checks Claude Code when its settings change.
-        if (patch.claude && "executablePath" in patch.claude) {
-          setProvider({ status: "checking" });
-          checkProvider(false);
-        }
+        // The main process re-checks a provider when its settings change.
+        if (patch.claude && "executablePath" in patch.claude)
+          checkProvider("claude", true);
+        if (
+          patch.codex &&
+          ("executablePath" in patch.codex || "homePath" in patch.codex)
+        )
+          checkProvider("codex", true);
       } catch (error) {
         notices.fail("The setting was not saved", error);
       }
@@ -178,11 +199,10 @@ export function App() {
         renderAiPanel={(context) => (
           <ChatPanel
             {...context}
-            provider={provider}
-            model={state.settings.claude.model}
-            onModelChange={(model) =>
-              void changeSettings({ claude: { model } })
-            }
+            providers={providers}
+            onCheckProvider={checkProvider}
+            settings={state.settings}
+            onSettingsChange={(patch) => void changeSettings(patch)}
             onOpenSettings={() => setSettingsOpen(true)}
           />
         )}
@@ -205,11 +225,11 @@ export function App() {
         settings={state.settings}
         onChange={(patch) => void changeSettings(patch)}
       >
-        <ClaudeSettings
-          provider={provider}
+        <ProviderSettings
+          providers={providers}
           settings={state.settings}
           onChange={(patch) => void changeSettings(patch)}
-          onRefresh={() => checkProvider(true)}
+          onRefresh={(provider) => checkProvider(provider, true)}
         />
       </SettingsDialog>
     </main>

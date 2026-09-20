@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
-import { settingsPatchSchema } from "../shared/settings";
+import { providerIdSchema, settingsPatchSchema } from "../shared/settings";
 import {
   annotationColorSchema,
   annotationSegmentSchema,
@@ -37,7 +37,8 @@ import {
   saveLayout,
 } from "./session";
 import { claudeModels, claudeStatus } from "./providers/claude";
-import { updateSettings } from "./settings";
+import { codexModels, codexStatus } from "./providers/codex";
+import { loadSettings, updateSettings } from "./settings";
 import { searchWorkspace } from "./workspace/search";
 import { listTrash, restoreFromTrash } from "./workspace/trash";
 import {
@@ -116,6 +117,11 @@ export function registerHandlers(
       nativeTheme.themeSource = settings.theme;
       if (patch.claude && "executablePath" in patch.claude)
         void claudeStatus(true);
+      if (
+        patch.codex &&
+        ("executablePath" in patch.codex || "homePath" in patch.codex)
+      )
+        void codexStatus(true);
       return settings;
     },
   );
@@ -331,18 +337,30 @@ export function registerHandlers(
     },
   );
 
-  handle(CHANNELS.getModels, z.tuple([]), () => claudeModels());
+  handle(CHANNELS.getModels, z.tuple([providerIdSchema]), (provider) =>
+    provider === "codex" ? codexModels() : claudeModels(),
+  );
 
-  handle(CHANNELS.getProviderStatus, z.tuple([z.boolean()]), (refresh) =>
-    claudeStatus(refresh),
+  handle(
+    CHANNELS.getProviderStatus,
+    z.tuple([providerIdSchema, z.boolean()]),
+    (provider, refresh) =>
+      provider === "codex" ? codexStatus(refresh) : claudeStatus(refresh),
   );
 
   handle(CHANNELS.listConversations, z.tuple([]), () =>
     listConversations(currentWorkspace()),
   );
 
-  handle(CHANNELS.createConversation, z.tuple([scopeSchema]), (scope) =>
-    createConversation(currentWorkspace(), scope),
+  handle(
+    CHANNELS.createConversation,
+    z.tuple([scopeSchema, providerIdSchema.optional()]),
+    async (scope, provider) =>
+      createConversation(
+        currentWorkspace(),
+        scope,
+        provider ?? (await loadSettings()).provider,
+      ),
   );
 
   handle(CHANNELS.readConversation, z.tuple([id]), (conversationId) =>
@@ -352,7 +370,12 @@ export function registerHandlers(
   handle(
     CHANNELS.updateConversation,
     z.tuple([
-      z.object({ id, title: title.optional(), scope: scopeSchema.optional() }),
+      z.object({
+        id,
+        title: title.optional(),
+        scope: scopeSchema.optional(),
+        provider: providerIdSchema.optional(),
+      }),
     ]),
     ({ id: conversationId, ...patch }) =>
       updateConversation(currentWorkspace(), conversationId, patch),

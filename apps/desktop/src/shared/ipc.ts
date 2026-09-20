@@ -7,7 +7,7 @@ import type {
   TurnContext,
   TurnEvent,
 } from "./conversations";
-import type { AppSettings, SettingsPatch } from "./settings";
+import type { AppSettings, ProviderId, SettingsPatch } from "./settings";
 import type {
   Annotation,
   AnnotationColorValue,
@@ -128,16 +128,24 @@ export interface DesktopApi {
   /** Opens an http, https, or mailto link in the system browser. */
   openExternal(url: string): Promise<void>;
 
-  getProviderStatus(refresh: boolean): Promise<ProviderState>;
-  /** Models the installed Claude Code offers. Empty when it is not ready. */
-  getModels(): Promise<ModelOption[]>;
+  getProviderStatus(
+    provider: ProviderId,
+    refresh: boolean,
+  ): Promise<ProviderState>;
+  /** Models that provider offers. Empty when it is not ready. */
+  getModels(provider: ProviderId): Promise<ModelOption[]>;
   listConversations(): Promise<ConversationMeta[]>;
-  createConversation(scope: ConversationScope): Promise<ConversationMeta>;
+  /** Without a provider, the one chosen in settings answers. */
+  createConversation(
+    scope: ConversationScope,
+    provider?: ProviderId,
+  ): Promise<ConversationMeta>;
   readConversation(id: string): Promise<ConversationDetail>;
   updateConversation(input: {
     id: string;
     title?: string;
     scope?: ConversationScope;
+    provider?: ProviderId;
   }): Promise<ConversationMeta>;
   deleteConversation(id: string): Promise<void>;
   sendMessage(input: {

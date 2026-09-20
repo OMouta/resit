@@ -46,10 +46,14 @@ const subjectId = () => snapshot(workspace).subjects[0]!.id;
 
 describe("conversations", () => {
   it("keeps every complete message when the last write was cut short", async () => {
-    const meta = await createConversation(workspace, {
-      subjectIds: [subjectId()],
-      resourceIds: [],
-    });
+    const meta = await createConversation(
+      workspace,
+      {
+        subjectIds: [subjectId()],
+        resourceIds: [],
+      },
+      "claude",
+    );
     await appendMessage(workspace, meta.id, {
       id: "m1",
       role: "user",
@@ -67,10 +71,14 @@ describe("conversations", () => {
   });
 
   it("keeps native sessions out of the portable conversation files", async () => {
-    const meta = await createConversation(workspace, {
-      subjectIds: [],
-      resourceIds: [],
-    });
+    const meta = await createConversation(
+      workspace,
+      {
+        subjectIds: [],
+        resourceIds: [],
+      },
+      "claude",
+    );
     await bindClaudeSession(workspace, meta.id, "session-1");
     expect(await claudeSessionFor(workspace, meta.id)).toBe("session-1");
     expect(
@@ -79,10 +87,14 @@ describe("conversations", () => {
   });
 
   it("moves deleted conversations to the trash", async () => {
-    const meta = await createConversation(workspace, {
-      subjectIds: [],
-      resourceIds: [],
-    });
+    const meta = await createConversation(
+      workspace,
+      {
+        subjectIds: [],
+        resourceIds: [],
+      },
+      "claude",
+    );
     await deleteConversation(workspace, meta.id);
     expect(await listConversations(workspace)).toEqual([]);
   });
