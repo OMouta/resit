@@ -318,15 +318,22 @@ export const page: ExamplePage = {
     {
       id: "trash",
       title: "Trash",
+      description:
+        "Restore only, or with permanent deletion when the caller supports it.",
       width: 620,
-      states: ["default", "empty"],
+      states: ["default", "restore-only", "empty"],
       render: (ctx) => (
         <TrashList
           items={ctx.state === "empty" ? [] : trash}
           now={FIXTURE_NOW}
           onRestore={(id) => ctx.log("onRestore", id)}
-          onDeletePermanently={(id) => ctx.log("onDeletePermanently", id)}
-          onEmpty={() => ctx.log("onEmpty")}
+          {...(ctx.state === "restore-only"
+            ? {}
+            : {
+                onDeletePermanently: (id: string) =>
+                  ctx.log("onDeletePermanently", id),
+                onEmpty: () => ctx.log("onEmpty"),
+              })}
         />
       ),
     },

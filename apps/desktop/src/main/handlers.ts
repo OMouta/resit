@@ -39,6 +39,7 @@ import {
 import { claudeModels, claudeStatus } from "./providers/claude";
 import { updateSettings } from "./settings";
 import { searchWorkspace } from "./workspace/search";
+import { listTrash, restoreFromTrash } from "./workspace/trash";
 import {
   createNote,
   createSubject,
@@ -245,6 +246,14 @@ export function registerHandlers(
     for (const sourcePath of result.filePaths)
       imported.push(await importFile(workspace, { subjectId, sourcePath }));
     return imported;
+  });
+
+  handle(CHANNELS.listTrash, z.tuple([]), () => listTrash(currentWorkspace()));
+
+  handle(CHANNELS.restoreFromTrash, z.tuple([id]), async (entryId) => {
+    const workspace = currentWorkspace();
+    await restoreFromTrash(workspace, entryId);
+    return snapshot(workspace);
   });
 
   handle(CHANNELS.listAnnotations, z.tuple([id]), (documentId) =>

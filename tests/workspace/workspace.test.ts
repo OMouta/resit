@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  listTrash,
+  restoreFromTrash,
+} from "../../apps/desktop/src/main/workspace/trash";
+import {
   createNote,
   createWorkspace,
   deleteResource,
@@ -203,5 +207,103 @@ describe("workspace files", () => {
       type: "pdf",
       originalFilename: "Worksheet 1.pdf",
     });
+  });
+});
+
+describe("trash", () => {
+  it("brings a deleted note back where it came from", async () => {
+    const note = await createNote(workspace, {
+      subjectId: mathematics().id,
+      title: "Limits",
+    });
+    await saveNote(workspace, {
+      id: note.id,
+      body: "Squeeze theorem.\n",
+      expectedRevision: (await readNote(workspace, note.id)).revision,
+    });
+    await deleteResource(workspace, note.id);
+
+    const [deleted, ...rest] = await listTrash(workspace);
+    expect(rest).toEqual([]);
+    expect(deleted).toMatchObject({
+      kind: "note",
+      title: "Limits",
+      subjectName: "Mathematics",
+      originalPath: note.path,
+    });
+
+    await restoreFromTrash(workspace, deleted!.id);
+    expect(await listTrash(workspace)).toEqual([]);
+    const restored = snapshot(workspace).resources.find(
+      (entry) => entry.id === note.id,
+    );
+    expect(restored?.path).toBe(note.path);
+    expect((await readNote(workspace, note.id)).body).toBe(
+      "Squeeze theorem.\n",
+    );
+  });
+
+  it("restores a PDF together with its sidecar", async () => {
+    const source = join(directory, "Worksheet 2.pdf");
+    await writeFile(source, "%PDF-1.4\n");
+    const pdf = await importFile(workspace, {
+      subjectId: mathematics().id,
+      sourcePath: source,
+    });
+    await deleteResource(workspace, pdf.id);
+    const [deleted] = await listTrash(workspace);
+    await restoreFromTrash(workspace, deleted!.id);
+    expect(
+      snapshot(workspace).resources.find((entry) => entry.id === pdf.id)?.path,
+    ).toBe(pdf.path);
+    expect(
+      JSON.parse(
+        await readFile(
+          join(workspace.root, `${pdf.path}.resource.json`),
+          "utf8",
+        ),
+      ),
+    ).toMatchObject({ id: pdf.id });
+  });
+
+  it("keeps a file that took the name back, restoring beside it", async () => {
+    const note = await createNote(workspace, {
+      subjectId: mathematics().id,
+      title: "Limits",
+    });
+    await deleteResource(workspace, note.id);
+    const replacement = await createNote(workspace, {
+      subjectId: mathematics().id,
+      title: "Limits",
+    });
+    const [deleted] = await listTrash(workspace);
+    await restoreFromTrash(workspace, deleted!.id);
+    const paths = snapshot(workspace)
+      .resources.map((entry) => entry.path)
+      .sort();
+    expect(paths).toContain(replacement.path);
+    expect(paths).toContain("subjects/mathematics/notes/limits-2.md");
+  });
+
+  it("refuses a record that points outside the workspace", async () => {
+    const note = await createNote(workspace, {
+      subjectId: mathematics().id,
+      title: "Limits",
+    });
+    await deleteResource(workspace, note.id);
+    const [deleted] = await listTrash(workspace);
+    const record = join(
+      workspace.root,
+      ".resit",
+      "trash",
+      deleted!.id,
+      "trash.json",
+    );
+    const data = JSON.parse(await readFile(record, "utf8"));
+    data.files[0].from = "../escaped.md";
+    await writeFile(record, JSON.stringify(data));
+    await expect(restoreFromTrash(workspace, deleted!.id)).rejects.toThrow(
+      /not a place inside this workspace/,
+    );
   });
 });

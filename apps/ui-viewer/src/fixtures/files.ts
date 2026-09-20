@@ -200,7 +200,7 @@ export const history: HistoryRevisionFixture[] = [
 export interface TrashItemFixture {
   id: string;
   title: string;
-  kind: "note" | "pdf" | "image" | "attachment" | "subject";
+  kind: "note" | "pdf" | "image" | "attachment" | "subject" | "conversation";
   subjectName: string | null;
   deletedAt: string;
   originalPath: string;
@@ -223,6 +223,14 @@ export const trash: TrashItemFixture[] = [
     subjectName: "Physics",
     deletedAt: "2026-09-15T12:10:00Z",
     originalPath: "Physics/attachments/IMG_2048.jpeg",
+  },
+  {
+    id: "tr_4",
+    title: "Epsilon-delta proofs",
+    kind: "conversation",
+    subjectName: "Mathematics",
+    deletedAt: "2026-09-14T16:30:00Z",
+    originalPath: "conversations/chat_812",
   },
   {
     id: "tr_3",

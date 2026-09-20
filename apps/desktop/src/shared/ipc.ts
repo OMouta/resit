@@ -18,6 +18,7 @@ import type {
   SaveNoteResult,
   SubjectColorValue,
   SubjectInfo,
+  TrashEntry,
   WorkspaceSnapshot,
 } from "./workspace";
 
@@ -99,6 +100,9 @@ export interface DesktopApi {
   }): Promise<SaveNoteResult>;
   renameResource(input: { id: string; title: string }): Promise<ResourceInfo>;
   deleteResource(id: string): Promise<WorkspaceSnapshot>;
+  listTrash(): Promise<TrashEntry[]>;
+  /** Moves a deleted item back where it came from. */
+  restoreFromTrash(id: string): Promise<WorkspaceSnapshot>;
   importFiles(subjectId: string): Promise<ResourceInfo[]>;
 
   listAnnotations(documentId: string): Promise<Annotation[]>;
@@ -163,6 +167,8 @@ export const CHANNELS = {
   saveNote: "resit:note-save",
   renameResource: "resit:resource-rename",
   deleteResource: "resit:resource-delete",
+  listTrash: "resit:trash-list",
+  restoreFromTrash: "resit:trash-restore",
   importFiles: "resit:resource-import",
   listAnnotations: "resit:annotation-list",
   createAnnotation: "resit:annotation-create",

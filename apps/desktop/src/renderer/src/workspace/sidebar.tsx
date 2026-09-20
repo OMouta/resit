@@ -37,6 +37,7 @@ export interface SidebarActions {
   importFiles: (subjectId: string) => void;
   renameResource: (resourceId: string) => void;
   deleteResource: (resourceId: string) => void;
+  openTrash: () => void;
   openSettings: () => void;
 }
 
@@ -187,13 +188,22 @@ export function Sidebar({
         if (section === "subjects") setSubjectsOpen(open);
       }}
       footer={
-        <Button
-          variant="subtle"
-          className="w-full justify-start"
-          onClick={actions.openSettings}
-        >
-          <SettingsIcon /> Settings
-        </Button>
+        <div className="flex flex-col">
+          <Button
+            variant="subtle"
+            className="w-full justify-start"
+            onClick={actions.openTrash}
+          >
+            <Trash2Icon /> Trash
+          </Button>
+          <Button
+            variant="subtle"
+            className="w-full justify-start"
+            onClick={actions.openSettings}
+          >
+            <SettingsIcon /> Settings
+          </Button>
+        </div>
       }
     />
   );

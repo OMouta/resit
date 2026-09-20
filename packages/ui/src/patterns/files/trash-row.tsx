@@ -2,6 +2,7 @@ import {
   FileTextIcon,
   FolderIcon,
   ImageIcon,
+  MessageSquareIcon,
   PaperclipIcon,
   RotateCcwIcon,
   Trash2Icon,
@@ -26,7 +27,7 @@ import { cn } from "@resit/ui/lib/utils";
 export interface TrashItem {
   id: string;
   title: string;
-  kind: "note" | "pdf" | "image" | "attachment" | "subject";
+  kind: "note" | "pdf" | "image" | "attachment" | "subject" | "conversation";
   subjectName: string | null;
   deletedAt: string | Date;
   originalPath: string;
@@ -40,17 +41,19 @@ const icons = {
   image: ImageIcon,
   attachment: PaperclipIcon,
   subject: FolderIcon,
+  conversation: MessageSquareIcon,
 };
 
 export interface TrashRowProps {
   item: TrashItem;
   now?: Date | undefined;
   onRestore: (id: string) => void;
-  onDeletePermanently: (id: string) => void;
+  /** Omit to offer restoring only. */
+  onDeletePermanently?: ((id: string) => void) | undefined;
   className?: string;
 }
 
-/** A trashed resource or subject. Permanent deletion asks first and names the item. */
+/** A trashed item. Permanent deletion asks first and names the item. */
 export function TrashRow({
   item,
   now,
@@ -85,13 +88,15 @@ export function TrashRow({
         <Button variant="outline" size="sm" onClick={() => onRestore(item.id)}>
           <RotateCcwIcon /> Restore
         </Button>
-        <Button
-          variant="destructive-outline"
-          size="sm"
-          onClick={() => setConfirm(true)}
-        >
-          <Trash2Icon /> Delete permanently
-        </Button>
+        {onDeletePermanently ? (
+          <Button
+            variant="destructive-outline"
+            size="sm"
+            onClick={() => setConfirm(true)}
+          >
+            <Trash2Icon /> Delete permanently
+          </Button>
+        ) : null}
       </span>
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
@@ -111,7 +116,7 @@ export function TrashRow({
               variant="destructive"
               onClick={() => {
                 setConfirm(false);
-                onDeletePermanently(item.id);
+                onDeletePermanently?.(item.id);
               }}
             >
               Delete permanently
@@ -134,7 +139,7 @@ export function TrashList({
   items: TrashItem[];
   now?: Date | undefined;
   onRestore: (id: string) => void;
-  onDeletePermanently: (id: string) => void;
+  onDeletePermanently?: ((id: string) => void) | undefined;
   onEmpty?: () => void;
   className?: string;
 }) {
@@ -150,7 +155,9 @@ export function TrashList({
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <div className="flex items-center justify-between px-2.5 pb-1">
-        <p className="text-xs text-muted-foreground">{items.length} items</p>
+        <p className="text-xs text-muted-foreground">
+          {items.length} {items.length === 1 ? "item" : "items"}
+        </p>
         {onEmpty ? (
           <Button variant="subtle" size="sm" onClick={onEmpty}>
             Empty trash

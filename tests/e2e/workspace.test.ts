@@ -303,6 +303,31 @@ describe("desktop workspace", () => {
       .toBeGreaterThan(0);
   });
 
+  it("brings a deleted note back from the trash", async () => {
+    await page.getByRole("treeitem", { name: "Limites", exact: true }).hover();
+    await page.getByRole("button", { name: "File actions" }).click();
+    await page.getByRole("menuitem", { name: /Move to trash/ }).click();
+    await page.getByRole("button", { name: "Move to trash" }).click();
+    await expect
+      .poll(() =>
+        page.getByRole("treeitem", { name: "Limites", exact: true }).count(),
+      )
+      .toBe(0);
+
+    await page.getByRole("button", { name: "Trash" }).click();
+    await page.getByRole("dialog", { name: "Trash" }).waitFor();
+    await page.getByRole("button", { name: "Restore" }).first().click();
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("treeitem", { name: "Limites", exact: true })
+      .dblclick();
+    await page.getByRole("tab", { name: "Limites", exact: true }).waitFor();
+    await expect
+      .poll(() => page.locator(".note-content a").count())
+      .toBeGreaterThan(0);
+    await expect.poll(noteFile).toContain("> 1. Compute sin(x)/x");
+  });
+
   it("explains when Claude Code cannot be found", async () => {
     await page.evaluate(() =>
       window.resit.updateSettings({

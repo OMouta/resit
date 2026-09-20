@@ -43,6 +43,7 @@ import { activeTab, layoutReducer, restoreLayout, type Layout } from "./layout";
 import { WorkspacePane } from "./pane";
 import { QuickOpen } from "./quick-open";
 import { Sidebar } from "./sidebar";
+import { TrashDialog } from "./trash-dialog";
 
 export interface WorkspaceViewProps {
   snapshot: WorkspaceSnapshot;
@@ -90,6 +91,7 @@ export function WorkspaceView({
     null,
   );
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   const resources = useMemo(
     () =>
@@ -362,6 +364,7 @@ export function WorkspaceView({
         },
       });
     },
+    openTrash: () => setTrashOpen(true),
     openSettings: onOpenSettings,
   };
 
@@ -542,6 +545,11 @@ export function WorkspaceView({
         onClose={() => setSubjectRequest(null)}
       />
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+      <TrashDialog
+        open={trashOpen}
+        onOpenChange={setTrashOpen}
+        onRestored={refresh}
+      />
     </>
   );
 }

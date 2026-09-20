@@ -109,6 +109,20 @@ export interface RecentWorkspace {
   path: string;
 }
 
+export type TrashKind = ResourceKind | "subject" | "conversation";
+
+/** One deletion sitting in `.resit/trash`. */
+export interface TrashEntry {
+  /** The folder inside `.resit/trash` holding this deletion. */
+  id: string;
+  kind: TrashKind;
+  title: string;
+  subjectName: string | null;
+  deletedAt: string;
+  /** Where the deleted item came from, relative to the workspace. */
+  originalPath: string;
+}
+
 export type SaveNoteResult =
   | { status: "saved"; revision: string; resource: ResourceInfo }
   | { status: "conflict"; currentRevision: string; currentBody: string }
