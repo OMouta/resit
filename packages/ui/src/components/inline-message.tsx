@@ -59,7 +59,7 @@ function InlineMessage({
       {...props}
     >
       <Icon aria-hidden />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 break-words">
         {title ? <p className="font-medium">{title}</p> : null}
         {children ? (
           <div className="text-muted-foreground [&>p]:m-0">{children}</div>
