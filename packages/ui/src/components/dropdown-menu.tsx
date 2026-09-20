@@ -35,9 +35,15 @@ export const menuContentClassName =
 export const menuItemClassName =
   "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-danger-soft data-[variant=destructive]:focus:text-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground data-[variant=destructive]:[&_svg]:text-destructive";
 
+/**
+ * Row menus live on triggers that only appear on hover, so the trigger can
+ * go while the menu is still closing. `hideWhenDetached` takes the menu with
+ * it instead of letting it animate out from the corner of the window.
+ */
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  hideWhenDetached = true,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -45,6 +51,7 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
+        hideWhenDetached={hideWhenDetached}
         className={cn(
           menuContentClassName,
           "max-h-(--radix-dropdown-menu-content-available-height) origin-(--radix-dropdown-menu-content-transform-origin)",
