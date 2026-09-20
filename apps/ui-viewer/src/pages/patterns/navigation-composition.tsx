@@ -22,7 +22,6 @@ import {
 import {
   openTabs,
   resourceById,
-  workspace,
   type TabFixture,
 } from "../../fixtures/workspace";
 import type { ExampleContext, ExamplePage } from "../../viewer/types";
@@ -155,13 +154,6 @@ function Composition({ ctx }: { ctx: ExampleContext }) {
     <div className="flex h-full min-h-0">
       <div className="hidden w-60 shrink-0 border-r @lg:block">
         <WorkspaceSidebar
-          switcher={{
-            workspace,
-            recent: workspace.recent,
-            onSwitch: (id) => ctx.log("switchWorkspace", id),
-            onCreate: () => ctx.log("createWorkspace"),
-            onOpenFolder: () => ctx.log("openFolder"),
-          }}
           tree={{
             subjects: toTreeSubjects(),
             expandedIds: expanded,

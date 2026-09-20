@@ -24,10 +24,6 @@ import {
   SubjectTree,
   type SubjectTreeProps,
 } from "@resit/ui/patterns/navigation/subject-tree";
-import {
-  WorkspaceSwitcher,
-  type WorkspaceSwitcherProps,
-} from "@resit/ui/patterns/navigation/workspace-switcher";
 
 export type SidebarDestination =
   "library" | "study" | "calendar" | "profile" | "conversations" | "trash";
@@ -40,7 +36,6 @@ export interface SidebarProject {
 }
 
 export interface WorkspaceSidebarProps {
-  switcher: WorkspaceSwitcherProps;
   tree: SubjectTreeProps;
   /** Omit to hide the Projects section. */
   projects?: SidebarProject[];
@@ -76,9 +71,8 @@ const allDestinations: {
   { id: "trash", label: "Trash", icon: Trash2Icon },
 ];
 
-/** The whole left sidebar: workspace, subjects tree, projects, destinations. */
+/** The whole left sidebar: subjects tree, projects, destinations. */
 export function WorkspaceSidebar({
-  switcher,
   tree,
   projects,
   activeProjectId,
@@ -102,10 +96,7 @@ export function WorkspaceSidebar({
         className,
       )}
     >
-      <div className="px-2 pt-2.5">
-        <WorkspaceSwitcher {...switcher} />
-      </div>
-      <div className="scrollbar-thin mt-4 min-h-0 flex-1 overflow-y-auto pb-4">
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto py-2">
         <SidebarSection
           title="Subjects"
           count={tree.subjects.filter((subject) => !subject.archived).length}

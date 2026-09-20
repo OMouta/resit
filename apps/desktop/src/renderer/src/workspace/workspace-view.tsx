@@ -13,6 +13,7 @@ import {
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { SplitLayout } from "@resit/ui/patterns/navigation/split-handle";
+import { WorkspaceSwitcher } from "@resit/ui/patterns/navigation/workspace-switcher";
 import { AppShell } from "@resit/ui/patterns/screens/app-shell";
 
 import type { MoodleConnection, MoodleCourse } from "../../../shared/moodle";
@@ -485,15 +486,28 @@ export function WorkspaceView({
       <AppShell
         className="min-h-0 flex-1"
         title={
-          <Breadcrumb
-            workspace={snapshot.workspace.name}
-            subject={
-              focusedResource
-                ? subjects.get(focusedResource.subjectId)
-                : undefined
-            }
-            title={focusedResource?.title}
-          />
+          <div className="flex min-w-0 items-center gap-1">
+            <WorkspaceSwitcher
+              workspace={{
+                id: snapshot.workspace.id,
+                name: snapshot.workspace.name,
+                path: snapshot.workspace.root,
+              }}
+              recent={recent}
+              onSwitch={(id) => {
+                const target = recent.find((entry) => entry.id === id);
+                if (target) actions.switchWorkspace(target.path);
+              }}
+              onCreate={actions.createWorkspace}
+              onOpenFolder={actions.openFolder}
+            />
+            {focusedResource ? (
+              <Breadcrumb
+                subject={subjects.get(focusedResource.subjectId)}
+                title={focusedResource.title}
+              />
+            ) : null}
+          </div>
         }
         sidebarOpen={layout.sidebarOpen}
         onToggleSidebar={() => dispatch({ type: "toggle-sidebar" })}
@@ -501,7 +515,6 @@ export function WorkspaceView({
         sidebar={
           <Sidebar
             snapshot={snapshot}
-            recent={recent}
             expanded={layout.expanded}
             onExpandedChange={(id, expanded) =>
               dispatch({ type: "set-expanded", id, expanded })
@@ -582,25 +595,22 @@ export function WorkspaceView({
   );
 }
 
-/** Title bar location: subject and document, or the workspace when nothing is open. */
+/** Title bar location after the workspace: the open document and its subject. */
 function Breadcrumb({
-  workspace,
   subject,
   title,
 }: {
-  workspace: string;
   subject: SubjectInfo | undefined;
-  title: string | undefined;
+  title: string;
 }) {
-  if (!title)
-    return (
-      <span className="truncate font-medium text-foreground">{workspace}</span>
-    );
   return (
     <nav
       aria-label="Current document"
       className="flex min-w-0 items-center gap-1.5"
     >
+      <span aria-hidden className="text-subtle-foreground">
+        /
+      </span>
       {subject ? (
         <>
           <span

@@ -20,16 +20,10 @@ import {
 import type { TreeSubject } from "@resit/ui/patterns/navigation/subject-tree";
 import { WorkspaceSidebar } from "@resit/ui/patterns/navigation/workspace-sidebar";
 
-import type {
-  RecentWorkspace,
-  WorkspaceSnapshot,
-} from "../../../shared/workspace";
+import type { WorkspaceSnapshot } from "../../../shared/workspace";
 
 export interface SidebarActions {
   openResource: (resourceId: string) => void;
-  switchWorkspace: (path: string) => void;
-  createWorkspace: () => void;
-  openFolder: () => void;
   addSubject: () => void;
   editSubject: (subjectId: string) => void;
   deleteSubject: (subjectId: string) => void;
@@ -72,14 +66,12 @@ function RowMenu({
 
 export function Sidebar({
   snapshot,
-  recent,
   expanded,
   onExpandedChange,
   activeResourceId,
   actions,
 }: {
   snapshot: WorkspaceSnapshot;
-  recent: RecentWorkspace[];
   expanded: readonly string[];
   onExpandedChange: (id: string, expanded: boolean) => void;
   activeResourceId: string | undefined;
@@ -110,24 +102,9 @@ export function Sidebar({
     [snapshot],
   );
   const expandedIds = useMemo(() => new Set(expanded), [expanded]);
-  const current = {
-    id: snapshot.workspace.id,
-    name: snapshot.workspace.name,
-    path: snapshot.workspace.root,
-  };
 
   return (
     <WorkspaceSidebar
-      switcher={{
-        workspace: current,
-        recent,
-        onSwitch: (id) => {
-          const target = recent.find((entry) => entry.id === id);
-          if (target) actions.switchWorkspace(target.path);
-        },
-        onCreate: actions.createWorkspace,
-        onOpenFolder: actions.openFolder,
-      }}
       tree={{
         subjects,
         expandedIds,

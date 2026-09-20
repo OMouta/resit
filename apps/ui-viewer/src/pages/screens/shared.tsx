@@ -7,6 +7,7 @@ import {
   WorkspaceSidebar,
   type SidebarDestination,
 } from "@resit/ui/patterns/navigation/workspace-sidebar";
+import { WorkspaceSwitcher } from "@resit/ui/patterns/navigation/workspace-switcher";
 import { AppShell } from "@resit/ui/patterns/screens/app-shell";
 
 import { toSidebarProjects, toTreeSubjects } from "../../fixtures/adapters";
@@ -52,7 +53,18 @@ export function ScreenFrame({
 
   return (
     <AppShell
-      title={title}
+      title={
+        <div className="flex min-w-0 items-center gap-1">
+          <WorkspaceSwitcher
+            workspace={workspace}
+            recent={workspace.recent}
+            onSwitch={(id) => ctx.log("switchWorkspace", id)}
+            onCreate={() => ctx.log("createWorkspace")}
+            onOpenFolder={() => ctx.log("openFolder")}
+          />
+          {title}
+        </div>
+      }
       sidebarOpen={sidebarOpen}
       onToggleSidebar={() => setSidebarOpen((value) => !value)}
       aiPanelOpen={aiOpen}
@@ -64,13 +76,6 @@ export function ScreenFrame({
       toolbarEnd={toolbarEnd}
       sidebar={
         <WorkspaceSidebar
-          switcher={{
-            workspace,
-            recent: workspace.recent,
-            onSwitch: (id) => ctx.log("switchWorkspace", id),
-            onCreate: () => ctx.log("createWorkspace"),
-            onOpenFolder: () => ctx.log("openFolder"),
-          }}
           tree={{
             subjects: toTreeSubjects(),
             expandedIds: expanded,

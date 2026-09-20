@@ -1,6 +1,6 @@
 import {
   CheckIcon,
-  ChevronsUpDownIcon,
+  ChevronDownIcon,
   FolderOpenIcon,
   PlusIcon,
 } from "lucide-react";
@@ -35,7 +35,7 @@ export interface WorkspaceSwitcherProps {
 }
 
 /**
- * Sidebar header: current workspace with a menu of recent workspaces plus
+ * Title bar root: current workspace with a menu of recent workspaces plus
  * "Create workspace" and "Open folder".
  */
 export function WorkspaceSwitcher({
@@ -53,22 +53,14 @@ export function WorkspaceSwitcher({
       <DropdownMenuTrigger
         data-slot="workspace-switcher"
         className={cn(
-          "flex h-control-lg w-full min-w-0 items-center gap-2.5 rounded-control px-2 text-left text-sm outline-none transition-colors duration-(--duration-fast) hover:bg-accent focus-visible:shadow-focus data-[state=open]:bg-accent",
+          "flex h-control min-w-0 max-w-56 items-center gap-1.5 rounded-control px-2 text-left text-sm font-medium text-foreground outline-none transition-colors duration-(--duration-fast) hover:bg-accent focus-visible:shadow-focus data-[state=open]:bg-accent",
           className,
         )}
         title={workspace.path}
       >
-        <span
-          aria-hidden
-          className="flex size-6 shrink-0 items-center justify-center rounded-md bg-foreground/[0.07] text-xs font-semibold text-foreground/80"
-        >
-          {Array.from(workspace.name.trim())[0]?.toUpperCase()}
-        </span>
-        <span className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="truncate font-semibold">{workspace.name}</span>
-          {readOnly ? <Badge variant="muted">Read-only</Badge> : null}
-        </span>
-        <ChevronsUpDownIcon
+        <span className="truncate">{workspace.name}</span>
+        {readOnly ? <Badge variant="muted">Read-only</Badge> : null}
+        <ChevronDownIcon
           aria-hidden
           className="size-3.5 shrink-0 text-muted-foreground"
         />
