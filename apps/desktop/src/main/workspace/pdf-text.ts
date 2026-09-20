@@ -1,21 +1,23 @@
 import { Worker } from "node:worker_threads";
 
 import workerPath from "../../workers/pdf-text?modulePath";
-import type { ExtractResponse } from "../../workers/pdf-text";
+import type { ExtractResponse, PageText } from "../../workers/pdf-text";
 import { assertInsideWorkspace } from "./files";
 import { type OpenWorkspace } from "./workspace";
 
-interface CachedPdf {
+interface Cached<T> {
   revision: string;
-  pages: Promise<string[]>;
+  value: Promise<T>;
 }
 
 /** Extracted text by resource ID; rebuilt when the file's revision changes. */
-const cache = new Map<string, CachedPdf>();
+const cache = new Map<string, Cached<string[]>>();
+/** Text positions by resource ID and page, for placing highlights. */
+const pageCache = new Map<string, Cached<PageText>>();
 const MAX_CACHED = 50;
 
 interface Pending {
-  resolve: (pages: string[]) => void;
+  resolve: (response: ExtractResponse) => void;
   reject: (error: Error) => void;
 }
 
@@ -40,8 +42,8 @@ function extractionWorker(): Worker {
     const request = pending.get(response.id);
     if (!request) return;
     pending.delete(response.id);
-    if ("pages" in response) request.resolve(response.pages);
-    else request.reject(new Error(response.error));
+    if ("error" in response) request.reject(new Error(response.error));
+    else request.resolve(response);
   });
   started.on("error", failAll);
   started.on("exit", () => failAll(new Error("Reading the PDF stopped.")));
@@ -51,12 +53,38 @@ function extractionWorker(): Worker {
   return started;
 }
 
-function extract(path: string): Promise<string[]> {
+function ask(path: string, page?: number): Promise<ExtractResponse> {
   const id = (nextId += 1);
-  return new Promise<string[]>((resolve, reject) => {
+  return new Promise<ExtractResponse>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    extractionWorker().postMessage({ id, path });
+    extractionWorker().postMessage({
+      id,
+      path,
+      ...(page === undefined ? {} : { page }),
+    });
   });
+}
+
+function pdfEntry(workspace: OpenWorkspace, resourceId: string) {
+  const entry = workspace.resources.get(resourceId);
+  if (!entry || entry.info.kind !== "pdf")
+    throw new Error("That resource is not a PDF.");
+  return entry;
+}
+
+/** Keeps the map from growing without bound as documents are read. */
+function remember<T>(
+  store: Map<string, Cached<T>>,
+  key: string,
+  entry: Cached<T>,
+): Promise<T> {
+  store.set(key, entry);
+  entry.value.catch(() => store.delete(key));
+  if (store.size > MAX_CACHED) {
+    const oldest = store.keys().next().value;
+    if (oldest !== undefined) store.delete(oldest);
+  }
+  return entry.value;
 }
 
 /** Text of every page, one string per page, in page order. */
@@ -64,19 +92,46 @@ export function pdfPages(
   workspace: OpenWorkspace,
   resourceId: string,
 ): Promise<string[]> {
-  const entry = workspace.resources.get(resourceId);
-  if (!entry || entry.info.kind !== "pdf")
-    return Promise.reject(new Error("That resource is not a PDF."));
-  const cached = cache.get(resourceId);
-  if (cached && cached.revision === entry.info.revision) return cached.pages;
-  const pages = assertInsideWorkspace(workspace.root, entry.absPath).then(() =>
-    extract(entry.absPath),
-  );
-  cache.set(resourceId, { revision: entry.info.revision, pages });
-  pages.catch(() => cache.delete(resourceId));
-  if (cache.size > MAX_CACHED) {
-    const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
+  let entry;
+  try {
+    entry = pdfEntry(workspace, resourceId);
+  } catch (error) {
+    return Promise.reject(error as Error);
   }
-  return pages;
+  const cached = cache.get(resourceId);
+  if (cached && cached.revision === entry.info.revision) return cached.value;
+  const value = assertInsideWorkspace(workspace.root, entry.absPath)
+    .then(() => ask(entry.absPath))
+    .then((response) => ("pages" in response ? response.pages : []));
+  return remember(cache, resourceId, {
+    revision: entry.info.revision,
+    value,
+  });
 }
+
+/** Where the text sits on one page, for drawing a highlight over it. */
+export function pdfPageText(
+  workspace: OpenWorkspace,
+  resourceId: string,
+  page: number,
+): Promise<PageText> {
+  let entry;
+  try {
+    entry = pdfEntry(workspace, resourceId);
+  } catch (error) {
+    return Promise.reject(error as Error);
+  }
+  const key = `${resourceId}:${page}`;
+  const cached = pageCache.get(key);
+  if (cached && cached.revision === entry.info.revision) return cached.value;
+  const value = assertInsideWorkspace(workspace.root, entry.absPath)
+    .then(() => ask(entry.absPath, page))
+    .then((response) => {
+      if (!("page" in response))
+        throw new Error("The page's text could not be read.");
+      return response.page;
+    });
+  return remember(pageCache, key, { revision: entry.info.revision, value });
+}
+
+export type { PageText };
