@@ -6,6 +6,7 @@ import {
   PlusIcon,
   SettingsIcon,
   TextSearchIcon,
+  WaypointsIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -39,13 +40,14 @@ export interface QuickOpenCommand {
   id: string;
   label: string;
   shortcut?: string;
-  icon: "new-note" | "new-subject" | "settings";
+  icon: "new-note" | "new-subject" | "graph" | "settings";
   run: () => void;
 }
 
 const commandIcons = {
   "new-note": PlusIcon,
   "new-subject": FolderPlusIcon,
+  graph: WaypointsIcon,
   settings: SettingsIcon,
 };
 

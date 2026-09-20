@@ -44,7 +44,13 @@ import {
   type ConfirmRequest,
   type SubjectRequest,
 } from "./dialogs";
-import { activeTab, layoutReducer, restoreLayout, type Layout } from "./layout";
+import {
+  activeTab,
+  GRAPH_TAB_ID,
+  layoutReducer,
+  restoreLayout,
+  type Layout,
+} from "./layout";
 import { MoodleDialog } from "./moodle-dialog";
 import { WorkspacePane } from "./pane";
 import { QuickOpen } from "./quick-open";
@@ -537,6 +543,8 @@ export function WorkspaceView({
         },
       });
     },
+    openGraph: () =>
+      dispatch({ type: "open", resourceId: GRAPH_TAB_ID, title: "Graph" }),
     openTrash: () => setTrashOpen(true),
     openSettings: () => onOpenSettings(),
   };
@@ -597,6 +605,9 @@ export function WorkspaceView({
       } else if (key === "b" && event.shiftKey === false && event.altKey) {
         event.preventDefault();
         dispatch({ type: "toggle-sidebar" });
+      } else if (key === "g" && event.shiftKey) {
+        event.preventDefault();
+        actionsRef.current.openGraph();
       } else if (key === "j") {
         event.preventDefault();
         dispatch({ type: "set-ai-open", open: !layoutRef.current.aiOpen });
@@ -622,6 +633,7 @@ export function WorkspaceView({
     <WorkspacePane
       key={pane.id}
       pane={pane}
+      snapshot={snapshot}
       focused={pane.id === layout.focusedPaneId}
       canSplit={layout.panes.length === 1}
       canClose={layout.panes.length > 1}
@@ -715,6 +727,13 @@ export function WorkspaceView({
             label: "New subject",
             icon: "new-subject",
             run: addSubject,
+          },
+          {
+            id: "graph",
+            label: "Open the graph",
+            shortcut: "Ctrl+Shift+G",
+            icon: "graph",
+            run: actions.openGraph,
           },
           {
             id: "settings",

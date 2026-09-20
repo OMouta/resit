@@ -423,6 +423,17 @@ describe("desktop workspace", () => {
     );
   });
 
+  it("shows the workspace as a graph and opens a note from it", async () => {
+    await page.getByRole("button", { name: "Graph", exact: true }).click();
+    await page.getByRole("tab", { name: "Graph" }).waitFor();
+    await page.getByLabel(/Workspace graph/).waitFor();
+
+    await page.getByLabel("Search the graph").fill("Ficha 1");
+    await page.getByText("1 match").waitFor();
+    await page.keyboard.press("Enter");
+    await page.getByRole("tab", { name: "Ficha 1", exact: true }).waitFor();
+  });
+
   it("sends the student to settings before following a Moodle course", async () => {
     await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
     await page.getByRole("button", { name: "Subject actions" }).first().click();

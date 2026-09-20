@@ -6,6 +6,7 @@ import {
   PaperclipIcon,
   PinIcon,
   PlusIcon,
+  WaypointsIcon,
   XIcon,
 } from "lucide-react";
 import {
@@ -38,7 +39,7 @@ import { cn } from "@resit/ui/lib/utils";
 export interface DocumentTabItem {
   id: string;
   title: string;
-  kind: "note" | "pdf" | "image" | "attachment" | "project" | "study";
+  kind: "note" | "pdf" | "image" | "attachment" | "project" | "study" | "graph";
   subject?: { name: string; color: SubjectColor };
   /** Show the subject beside the title (title collision or foreign subject). */
   showSubject?: boolean;
@@ -82,6 +83,7 @@ const icons = {
   attachment: PaperclipIcon,
   project: FileTextIcon,
   study: FileTextIcon,
+  graph: WaypointsIcon,
 };
 
 /**

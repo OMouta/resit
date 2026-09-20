@@ -12,15 +12,21 @@ import {
   PaneHeader,
 } from "@resit/ui/patterns/navigation/pane-header";
 
-import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
+import type {
+  ResourceInfo,
+  SubjectInfo,
+  WorkspaceSnapshot,
+} from "../../../shared/workspace";
 import { NoteView } from "../editor/note-view";
 import { AttachmentView, ImageView } from "../views/file-views";
+import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
 import type { DocumentTarget } from "../views/view-registry";
-import type { LayoutAction, Pane } from "./layout";
+import { GRAPH_TAB_ID, type LayoutAction, type Pane } from "./layout";
 
 export interface PaneProps {
   pane: Pane;
+  snapshot: WorkspaceSnapshot;
   focused: boolean;
   canSplit: boolean;
   canClose: boolean;
@@ -69,6 +75,7 @@ function ResourceView({
 /** One pane: its tab strip and the open views. Inactive views stay mounted. */
 export function WorkspacePane({
   pane,
+  snapshot,
   focused,
   canSplit,
   canClose,
@@ -80,6 +87,8 @@ export function WorkspacePane({
   onCite,
 }: PaneProps) {
   const items: DocumentTabItem[] = pane.tabs.map((tab) => {
+    if (tab.resourceId === GRAPH_TAB_ID)
+      return { id: tab.id, title: "Graph", kind: "graph" };
     const resource = resources.get(tab.resourceId);
     const subject = resource ? subjects.get(resource.subjectId) : undefined;
     return {
@@ -139,17 +148,31 @@ export function WorkspacePane({
           <PaneEmpty description="Pick a note or document from the sidebar, or press Ctrl+K to find one." />
         ) : null}
         {pane.tabs.map((tab) => {
+          const graph = tab.resourceId === GRAPH_TAB_ID;
           const resource = resources.get(tab.resourceId);
           const active = tab.id === pane.activeTabId;
           return (
             <div
               key={tab.id}
               role="tabpanel"
-              aria-label={resource?.title ?? tab.title}
+              aria-label={graph ? "Graph" : (resource?.title ?? tab.title)}
               hidden={!active}
               className="absolute inset-0 flex flex-col"
             >
-              {resource ? (
+              {graph ? (
+                <GraphView
+                  snapshot={snapshot}
+                  onOpenResource={(resourceId) => {
+                    const target = resources.get(resourceId);
+                    if (target)
+                      dispatch({
+                        type: "open",
+                        resourceId,
+                        title: target.title,
+                      });
+                  }}
+                />
+              ) : resource ? (
                 <ResourceView
                   resource={resource}
                   subject={subjects.get(resource.subjectId)}

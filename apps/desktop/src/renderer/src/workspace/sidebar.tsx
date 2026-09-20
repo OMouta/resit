@@ -47,6 +47,7 @@ export interface SidebarActions {
     folder?: string,
   ) => void;
   deleteResource: (resourceId: string) => void;
+  openGraph: () => void;
   openTrash: () => void;
   openSettings: () => void;
 }
@@ -312,8 +313,10 @@ export function Sidebar({
         },
       }}
       onOpenProject={() => undefined}
-      onNavigate={() => undefined}
-      destinations={[]}
+      onNavigate={(destination) => {
+        if (destination === "graph") actions.openGraph();
+      }}
+      destinations={["graph"]}
       onAddSubject={actions.addSubject}
       sections={{ subjects: subjectsOpen, projects: false }}
       onSectionToggle={(section, open) => {

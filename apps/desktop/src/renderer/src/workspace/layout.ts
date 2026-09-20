@@ -26,6 +26,9 @@ export type Tab = z.infer<typeof tabSchema>;
 export type Pane = z.infer<typeof paneSchema>;
 export type Layout = z.infer<typeof layoutSchema>;
 
+/** The graph opens in a tab of its own rather than as a file. */
+export const GRAPH_TAB_ID = "resit:graph";
+
 const newId = () => crypto.randomUUID();
 
 export function emptyLayout(expanded: string[] = []): Layout {

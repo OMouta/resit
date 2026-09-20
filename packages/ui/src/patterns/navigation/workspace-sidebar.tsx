@@ -7,6 +7,7 @@ import {
   PlusIcon,
   Trash2Icon,
   UserRoundIcon,
+  WaypointsIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -26,7 +27,13 @@ import {
 } from "@resit/ui/patterns/navigation/subject-tree";
 
 export type SidebarDestination =
-  "library" | "study" | "calendar" | "profile" | "conversations" | "trash";
+  | "graph"
+  | "library"
+  | "study"
+  | "calendar"
+  | "profile"
+  | "conversations"
+  | "trash";
 
 export interface SidebarProject {
   id: string;
@@ -63,6 +70,7 @@ const allDestinations: {
   label: string;
   icon: typeof LibraryIcon;
 }[] = [
+  { id: "graph", label: "Graph", icon: WaypointsIcon },
   { id: "library", label: "Library", icon: LibraryIcon },
   { id: "study", label: "Study", icon: BookOpenIcon },
   { id: "calendar", label: "Calendar", icon: CalendarIcon },
