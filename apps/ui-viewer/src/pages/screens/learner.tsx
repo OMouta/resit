@@ -30,7 +30,7 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
   return (
     <ScreenFrame
       ctx={ctx}
-      title="Learner profile — ISEP 2026/27"
+      title="Learner profile — Studies 2026/27"
       activeDestination="profile"
     >
       <ScrollArea className="min-h-0 flex-1">

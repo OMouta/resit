@@ -219,7 +219,7 @@ export const page: ExamplePage = {
             </DialogHeader>
             <div className="flex flex-col gap-1">
               {[
-                "ISEP 2026/27",
+                "Studies 2026/27",
                 "Curso Profissional — Informática",
                 "Sandbox",
               ].map((name) => (

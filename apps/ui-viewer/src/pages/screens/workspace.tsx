@@ -40,7 +40,7 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
   return (
     <ScreenFrame
       ctx={ctx}
-      title={`${note.title} — ISEP 2026/27`}
+      title={`${note.title} — Studies 2026/27`}
       activeResourceId={note.id}
       ai={{ open: ctx.state === "with-ai" }}
       toolbarEnd={

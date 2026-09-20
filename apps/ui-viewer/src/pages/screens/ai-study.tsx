@@ -54,7 +54,7 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
   return (
     <ScreenFrame
       ctx={ctx}
-      title="Worksheet 3 — ISEP 2026/27"
+      title="Worksheet 3 — Studies 2026/27"
       activeResourceId={pdf.id}
       ai={ai}
       sidebarOpen={false}

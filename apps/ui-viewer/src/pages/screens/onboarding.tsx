@@ -19,7 +19,7 @@ function Flow({ ctx }: { ctx: ExampleContext }) {
         onBack={() => setStep("welcome")}
         onChooseFolder={() => ctx.log("chooseFolder")}
         onFinish={(values) => ctx.log("finish", values)}
-        defaultFolder="D:/Study/ISEP 2026-27"
+        defaultFolder="D:/Studies 2026-27"
       />
     );
   return (

@@ -115,7 +115,7 @@ export const page: ExamplePage = {
                 Lecture 4 — Limits.pdf was not found
               </AlertDialogTitle>
               <AlertDialogDescription>
-                It was last seen at D:/Study/ISEP 2026-27/Mathematics/Lecture 4
+                It was last seen at D:/Studies 2026-27/Mathematics/Lecture 4
                 — Limits.pdf. If you moved or renamed it, pick the new location
                 and your 23 highlights and 6 notes will attach to it again. If
                 you deleted it, remove it from the workspace.

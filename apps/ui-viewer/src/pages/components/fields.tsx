@@ -83,7 +83,7 @@ export const page: ExamplePage = {
             <Input
               id="in-readonly"
               readOnly
-              defaultValue="D:/Study/ISEP 2026-27"
+              defaultValue="D:/Studies 2026-27"
             />
           </div>
           <div className="flex flex-col gap-1.5">

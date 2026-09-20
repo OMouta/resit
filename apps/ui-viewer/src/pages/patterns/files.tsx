@@ -98,7 +98,7 @@ function ExportExample({ ctx }: { ctx: ExampleContext }) {
     ctx.state === "exporting"
       ? { kind: "exporting", progress: 0.35 }
       : ctx.state === "done"
-        ? { kind: "done", path: "D:/Backups/ISEP 2026-27.resit" }
+        ? { kind: "done", path: "D:/Backups/Studies 2026-27.resit" }
         : ctx.state === "failed"
           ? {
               kind: "failed",
@@ -120,7 +120,7 @@ function ExportExample({ ctx }: { ctx: ExampleContext }) {
           () =>
             setStatus({
               kind: "done",
-              path: `${options.destination}/ISEP 2026-27.resit`,
+              path: `${options.destination}/Studies 2026-27.resit`,
             }),
           1200,
         );

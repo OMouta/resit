@@ -216,7 +216,7 @@ export function CreateWorkspaceStep({
               id="ws-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="ISEP 2026/27"
+              placeholder="Studies 2026/27"
               autoFocus
             />
           </div>
@@ -227,7 +227,7 @@ export function CreateWorkspaceStep({
                 id="ws-folder"
                 value={folder}
                 onChange={(event) => setFolder(event.target.value)}
-                placeholder="D:/Study/ISEP 2026-27"
+                placeholder="D:/Studies 2026-27"
                 className="font-mono text-xs"
               />
               <Button

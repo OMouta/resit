@@ -181,7 +181,7 @@ async function markCentre(): Promise<{ x: number; y: number } | null> {
 describe("desktop workspace", () => {
   it("creates a workspace from the start screen", async () => {
     await page.getByRole("button", { name: /Create workspace/ }).click();
-    await page.getByLabel("Workspace name").fill("ISEP 2026/27");
+    await page.getByLabel("Workspace name").fill("Studies 2026/27");
     await page.getByRole("button", { name: /Choose/ }).click();
     await expect
       .poll(() => page.getByLabel("Folder").inputValue())
@@ -191,7 +191,7 @@ describe("desktop workspace", () => {
     await page.getByRole("treeitem", { name: /Análise Matemática/ }).waitFor();
     expect(
       JSON.parse(await readFile(join(folder, "workspace.json"), "utf8")),
-    ).toMatchObject({ format: "resit-workspace", name: "ISEP 2026/27" });
+    ).toMatchObject({ format: "resit-workspace", name: "Studies 2026/27" });
   });
 
   it("saves typed notes as Markdown with math", async () => {

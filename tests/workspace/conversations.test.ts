@@ -32,8 +32,8 @@ let workspace: OpenWorkspace;
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "resit-chat-"));
   workspace = await createWorkspace({
-    folder: join(directory, "ISEP"),
-    name: "ISEP",
+    folder: join(directory, "Studies"),
+    name: "Studies",
     subject: { name: "Mathematics", color: "blue" },
   });
 });

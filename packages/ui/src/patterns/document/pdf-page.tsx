@@ -132,7 +132,7 @@ export function PdfPagePlaceholder({
         </p>
       ))}
       <p className="mt-auto text-right text-[0.8em] text-[#777]">
-        ISEP · Análise Matemática I
+        Análise Matemática I
       </p>
     </div>
   );

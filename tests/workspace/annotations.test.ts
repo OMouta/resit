@@ -36,8 +36,8 @@ const segments: AnnotationSegment[] = [
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "resit-annotations-"));
   workspace = await createWorkspace({
-    folder: join(directory, "ISEP"),
-    name: "ISEP 2026/27",
+    folder: join(directory, "Studies"),
+    name: "Studies 2026/27",
     subject: { name: "Mathematics", color: "blue" },
   });
   const source = join(directory, "Worksheet 1.pdf");

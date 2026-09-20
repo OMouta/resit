@@ -38,10 +38,10 @@ export interface ProjectFixture {
 
 export const workspace = {
   id: "ws_8f2c1d",
-  name: "ISEP 2026/27",
-  path: "D:/Study/ISEP 2026-27",
+  name: "Studies 2026/27",
+  path: "D:/Studies 2026-27",
   recent: [
-    { id: "ws_8f2c1d", name: "ISEP 2026/27", path: "D:/Study/ISEP 2026-27" },
+    { id: "ws_8f2c1d", name: "Studies 2026/27", path: "D:/Studies 2026-27" },
     {
       id: "ws_3a9e0b",
       name: "Curso Profissional — Informática",
@@ -212,8 +212,8 @@ export const resources: ResourceFixture[] = [
     id: "res_lib_cal",
     subjectId: null,
     kind: "pdf",
-    title: "ISEP academic calendar 2026/27",
-    path: "Library/ISEP academic calendar 2026-27.pdf",
+    title: "Academic calendar 2026/27",
+    path: "Library/Academic calendar 2026-27.pdf",
     modifiedAt: "2026-09-01T09:00:00Z",
     pages: 2,
     sizeBytes: 210_554,

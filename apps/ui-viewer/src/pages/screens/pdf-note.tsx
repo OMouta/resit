@@ -64,7 +64,7 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
   return (
     <ScreenFrame
       ctx={ctx}
-      title="Worksheet 3 · Resolution — ISEP 2026/27"
+      title="Worksheet 3 · Resolution — Studies 2026/27"
       activeResourceId={focused === "pdf" ? pdf.id : note.id}
       ai={{ open: ctx.state === "with-ai" }}
       sidebarOpen={ctx.state !== "with-ai"}

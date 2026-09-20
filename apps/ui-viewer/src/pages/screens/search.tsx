@@ -36,7 +36,7 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
   return (
     <ScreenFrame
       ctx={ctx}
-      title="Search — ISEP 2026/27"
+      title="Search — Studies 2026/27"
       activeDestination={undefined}
     >
       <SearchResults
