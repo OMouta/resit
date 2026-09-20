@@ -30,6 +30,13 @@ export interface ResourceFixture {
   missing?: boolean;
 }
 
+export interface FolderFixture {
+  subjectId: string;
+  path: string;
+  /** How the folder describes where its files come from. */
+  linked?: string;
+}
+
 export interface ProjectFixture {
   id: string;
   name: string;
@@ -114,8 +121,8 @@ export const resources: ResourceFixture[] = [
     subjectId: "sub_math",
     kind: "note",
     title: "Resolution — Worksheet 3",
-    path: "Mathematics/notes/Resolution — Worksheet 3.md",
-    folder: "Worksheets",
+    path: "Mathematics/notes/Worksheets/Solutions/Resolution — Worksheet 3.md",
+    folder: "Worksheets/Solutions",
     modifiedAt: "2026-09-16T21:05:00Z",
   },
   {
@@ -223,6 +230,20 @@ export const resources: ResourceFixture[] = [
   },
 ];
 
+export const folders: FolderFixture[] = [
+  { subjectId: "sub_math", path: "Worksheets" },
+  { subjectId: "sub_math", path: "Worksheets/Solutions" },
+  { subjectId: "sub_math", path: "Lectures" },
+  { subjectId: "sub_math", path: "Exam prep" },
+  { subjectId: "sub_prog", path: "Assignments" },
+  { subjectId: "sub_prog", path: "Worksheets" },
+  {
+    subjectId: "sub_num",
+    path: "Aulas teoricas",
+    linked: "filled from Moodle",
+  },
+];
+
 export const projects: ProjectFixture[] = [
   {
     id: "prj_numsim",
@@ -248,6 +269,10 @@ export function resourceById(id: string): ResourceFixture {
   const resource = resources.find((entry) => entry.id === id);
   if (!resource) throw new Error(`Unknown fixture resource ${id}`);
   return resource;
+}
+
+export function foldersForSubject(subjectId: string): FolderFixture[] {
+  return folders.filter((folder) => folder.subjectId === subjectId);
 }
 
 export function resourcesForSubject(

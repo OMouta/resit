@@ -3,6 +3,7 @@ import type { TreeSubject } from "@resit/ui/patterns/navigation/subject-tree";
 import type { SidebarProject } from "@resit/ui/patterns/navigation/workspace-sidebar";
 
 import {
+  foldersForSubject,
   projects,
   resourceById,
   resourcesForSubject,
@@ -23,6 +24,10 @@ export function toTreeSubjects(
       color: subject.color,
       ...(subject.archived ? { archived: true } : {}),
       ...(subject.linked ? { linked: subject.linked } : {}),
+      folders: foldersForSubject(subject.id).map((folder) => ({
+        path: folder.path,
+        ...(folder.linked ? { linked: folder.linked } : {}),
+      })),
       resources: resourcesForSubject(subject.id).map((resource) => ({
         id: resource.id,
         kind: resource.kind,

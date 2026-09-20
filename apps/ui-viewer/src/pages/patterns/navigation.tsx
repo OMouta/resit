@@ -37,7 +37,13 @@ function TreeExample({
   archived?: boolean;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(["sub_math", "sub_math/folder/Worksheets", "sub_num"]),
+    () =>
+      new Set([
+        "sub_math",
+        "sub_math/folder/Worksheets",
+        "sub_math/folder/Worksheets/Solutions",
+        "sub_num",
+      ]),
   );
   const [active, setActive] = useState<string | undefined>("res_ws3_note");
   const [drop, setDrop] = useState<string | undefined>(
@@ -68,6 +74,14 @@ function TreeExample({
       onMoveSubject={(id, direction) =>
         ctx.log("onMoveSubject", { id, direction })
       }
+      move={{
+        canDrop: (dragged, target) =>
+          target.kind !== "resource" &&
+          !(target.kind === "folder" && target.folder.linked) &&
+          dragged.id !== target.id,
+        onMove: (dragged, target) =>
+          ctx.log("onMove", { from: dragged.id, to: target.id }),
+      }}
       renderActions={() => (
         <Button
           variant="subtle"
@@ -164,7 +178,7 @@ export const page: ExamplePage = {
       id: "tree",
       title: "Subject tree",
       description:
-        "Arrow keys move, Right expands, Left collapses, Enter opens, typing jumps to a row, Alt+Up/Down reorders subjects. Dirty and missing rows are labelled, not just coloured.",
+        "Arrow keys move, Right expands, Left collapses, Enter opens, typing jumps to a row, Alt+Up/Down reorders subjects. Folders filled from Moodle carry its mark. Dirty and missing rows are labelled, not just coloured.",
       width: 260,
       height: 460,
       surface: "sidebar",

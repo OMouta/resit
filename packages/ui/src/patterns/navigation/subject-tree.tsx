@@ -3,6 +3,7 @@ import {
   ChevronRightIcon,
   FileTextIcon,
   FolderIcon,
+  GraduationCapIcon,
   ImageIcon,
   LinkIcon,
   PaperclipIcon,
@@ -11,6 +12,8 @@ import {
   useCallback,
   useRef,
   useState,
+  type ComponentProps,
+  type DragEvent,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
@@ -34,6 +37,13 @@ export interface TreeResource {
   missing?: boolean;
 }
 
+export interface TreeFolder {
+  /** Folder path inside the subject. Also its label. */
+  path: string;
+  /** Filled from a course elsewhere, such as Moodle: nothing is added by hand. */
+  linked?: string;
+}
+
 export interface TreeSubject {
   id: string;
   name: string;
@@ -41,8 +51,17 @@ export interface TreeSubject {
   archived?: boolean;
   /** Shows the subject follows a course somewhere else, such as Moodle. */
   linked?: string;
+  /** Folders to show, including empty ones. Folders holding resources are
+   * listed whether or not they appear here. */
+  folders?: TreeFolder[];
   resources: TreeResource[];
 }
+
+/** A row the caller can act on: what it is, and what it belongs to. */
+export type TreeRow =
+  | { kind: "subject"; id: string }
+  | { kind: "resource"; id: string }
+  | { kind: "folder"; id: string; subjectId: string; folder: TreeFolder };
 
 export interface SubjectTreeProps {
   subjects: TreeSubject[];
@@ -56,10 +75,15 @@ export interface SubjectTreeProps {
   onOpenResource: (resourceId: string) => void;
   onMoveSubject?: (subjectId: string, direction: -1 | 1) => void;
   /** Row actions shown on hover and focus. */
-  renderActions?: (row: {
-    kind: "subject" | "resource";
-    id: string;
-  }) => ReactNode;
+  renderActions?: (row: TreeRow) => ReactNode;
+  /**
+   * Dragging files and folders onto subjects and folders. Without it, rows
+   * do not pick up.
+   */
+  move?: {
+    canDrop: (dragged: TreeRow, target: TreeRow) => boolean;
+    onMove: (dragged: TreeRow, target: TreeRow) => void;
+  };
   /** Drop target id while dragging. Caller owns the drag state. */
   dropTargetId?: string | undefined;
   draggingId?: string | undefined;
@@ -73,19 +97,73 @@ const kindIcons: Record<TreeResourceKind, typeof FileTextIcon> = {
   attachment: PaperclipIcon,
 };
 
-function groupByFolder(resources: TreeResource[]) {
-  const roots: TreeResource[] = [];
-  const folders = new Map<string, TreeResource[]>();
-  for (const resource of resources) {
-    if (!resource.folder) roots.push(resource);
-    else
-      folders.set(resource.folder, [
-        ...(folders.get(resource.folder) ?? []),
-        resource,
-      ]);
-  }
-  return { roots, folders };
+interface FolderNode {
+  folder: TreeFolder;
+  items: TreeResource[];
+  children: FolderNode[];
+  /** Everything inside, counting what the folders below it hold. */
+  total: number;
 }
+
+/** The folder's own name, without the folders it sits in. */
+function folderLabel(path: string): string {
+  return path.slice(path.lastIndexOf("/") + 1);
+}
+
+/** Folders as a tree, with the loose resources of the subject beside it. */
+function groupByFolder(subject: TreeSubject) {
+  const nodes = new Map<string, FolderNode>();
+  const tree: FolderNode[] = [];
+
+  const ensure = (path: string): FolderNode => {
+    const existing = nodes.get(path);
+    if (existing) return existing;
+    const node: FolderNode = {
+      folder: { path },
+      items: [],
+      children: [],
+      total: 0,
+    };
+    nodes.set(path, node);
+    const at = path.lastIndexOf("/");
+    if (at === -1) tree.push(node);
+    else ensure(path.slice(0, at)).children.push(node);
+    return node;
+  };
+
+  for (const folder of subject.folders ?? [])
+    ensure(folder.path).folder = folder;
+  const roots: TreeResource[] = [];
+  for (const resource of subject.resources) {
+    if (resource.folder) ensure(resource.folder).items.push(resource);
+    else roots.push(resource);
+  }
+
+  const order = (nodes: FolderNode[]) =>
+    nodes.sort((a, b) =>
+      folderLabel(a.folder.path).localeCompare(folderLabel(b.folder.path)),
+    );
+  const count = (node: FolderNode): number => {
+    order(node.children);
+    node.total =
+      node.items.length +
+      node.children.reduce((total, child) => total + count(child), 0);
+    return node.total;
+  };
+  order(tree).forEach(count);
+  return { roots, tree };
+}
+
+/** What the tree puts on a row to make it draggable and droppable. */
+type DragHandlers = Pick<
+  ComponentProps<"div">,
+  | "draggable"
+  | "onDragStart"
+  | "onDragOver"
+  | "onDragLeave"
+  | "onDrop"
+  | "onDragEnd"
+>;
 
 interface RowProps {
   id: string;
@@ -99,6 +177,7 @@ interface RowProps {
   onActivate?: () => void;
   onToggle?: () => void;
   actions?: ReactNode;
+  drag?: DragHandlers | undefined;
   typeahead: string;
   children: ReactNode;
   className?: string;
@@ -117,6 +196,7 @@ function TreeRow({
   onActivate,
   onToggle,
   actions,
+  drag,
   typeahead,
   children,
   className,
@@ -127,6 +207,7 @@ function TreeRow({
       role="treeitem"
       data-tree-item
       data-id={id}
+      {...drag}
       data-typeahead={typeahead}
       aria-level={level}
       aria-selected={selected}
@@ -185,10 +266,24 @@ function TreeRow({
   );
 }
 
+/** Says a subject or folder has nothing in it, lined up with its rows. */
+function EmptyRow({ level, children }: { level: number; children: ReactNode }) {
+  return (
+    <div
+      role="none"
+      className="flex h-row items-center text-xs text-subtle-foreground"
+      style={{ paddingLeft: `${(level - 1) * 14 + 26}px` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * Sidebar tree of subjects, folders, and resources. One tab stop; arrows
  * move, Left/Right collapse/expand, Enter opens, typing jumps by title.
- * Alt+Up/Down reorders subjects when `onMoveSubject` is given.
+ * Alt+Up/Down reorders subjects when `onMoveSubject` is given. With `move`,
+ * files and folders drag onto subjects and folders.
  */
 export function SubjectTree({
   subjects,
@@ -200,6 +295,7 @@ export function SubjectTree({
   onOpenResource,
   onMoveSubject,
   renderActions,
+  move,
   dropTargetId,
   draggingId,
   className,
@@ -279,6 +375,48 @@ export function SubjectTree({
     }
   };
 
+  const [picked, setPicked] = useState<TreeRow | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const dragged = draggingId ?? picked?.id;
+  const target = dropTargetId ?? over;
+
+  /** Drag handlers for one row, or nothing when the tree cannot move rows. */
+  const dragging = (row: TreeRow): DragHandlers | undefined => {
+    if (!move) return undefined;
+    const allowed = (event: DragEvent<HTMLDivElement>) => {
+      if (!picked || picked.id === row.id) return false;
+      // A drop target needs the row it started on, which only React state
+      // carries: the drag data is not readable until the drop itself.
+      event.dataTransfer.dropEffect = "move";
+      return move.canDrop(picked, row);
+    };
+    return {
+      draggable: row.kind !== "subject",
+      onDragStart: (event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.id);
+        setPicked(row);
+      },
+      onDragOver: (event) => {
+        if (!allowed(event)) return;
+        event.preventDefault();
+        setOver(row.id);
+      },
+      onDragLeave: () =>
+        setOver((current) => (current === row.id ? null : current)),
+      onDrop: (event) => {
+        event.preventDefault();
+        if (picked && allowed(event)) move.onMove(picked, row);
+        setPicked(null);
+        setOver(null);
+      },
+      onDragEnd: () => {
+        setPicked(null);
+        setOver(null);
+      },
+    };
+  };
+
   return (
     <div
       ref={ref}
@@ -291,10 +429,11 @@ export function SubjectTree({
       {subjects.map((subject) => {
         const expanded = expandedIds.has(subject.id);
         const colors = subjectColorClasses[subject.color];
-        const { roots, folders } = groupByFolder(subject.resources);
+        const { roots, tree } = groupByFolder(subject);
         const count = subject.resources.length;
         const renderResource = (resource: TreeResource, level: number) => {
           const Icon = kindIcons[resource.kind];
+          const row: TreeRow = { kind: "resource", id: resource.id };
           return (
             <TreeRow
               key={resource.id}
@@ -302,12 +441,13 @@ export function SubjectTree({
               level={level}
               selected={current === resource.id}
               active={activeResourceId === resource.id}
-              dragging={draggingId === resource.id}
+              dragging={dragged === resource.id}
               onSelect={() => select(resource.id)}
               onActivate={() => onOpenResource(resource.id)}
               typeahead={resource.title}
               label={`${resource.title}${resource.missing ? ", missing" : ""}${resource.dirty ? ", unsaved changes" : ""}`}
-              actions={renderActions?.({ kind: "resource", id: resource.id })}
+              actions={renderActions?.(row)}
+              drag={dragging(row)}
               className={cn(resource.missing && "text-muted-foreground")}
             >
               {resource.missing ? (
@@ -338,6 +478,63 @@ export function SubjectTree({
           );
         };
 
+        const renderFolder = (node: FolderNode, level: number) => {
+          const id = `${subject.id}/folder/${node.folder.path}`;
+          const open = expandedIds.has(id);
+          const row: TreeRow = {
+            kind: "folder",
+            id,
+            subjectId: subject.id,
+            folder: node.folder,
+          };
+          const name = folderLabel(node.folder.path);
+          return (
+            <div key={id} role="group" className="flex flex-col gap-px">
+              <TreeRow
+                id={id}
+                level={level}
+                selected={current === id}
+                expanded={open}
+                dropTarget={target === id}
+                dragging={dragged === id}
+                onSelect={() => select(id)}
+                onToggle={() => onExpandedChange(id, !open)}
+                typeahead={name}
+                label={`${name} folder${node.folder.linked ? `, ${node.folder.linked}` : ""}, ${node.total} items`}
+                actions={renderActions?.(row)}
+                drag={dragging(row)}
+              >
+                <FolderIcon className="size-4 shrink-0 text-subtle-foreground" />
+                <span className="min-w-0 truncate" title={name}>
+                  {name}
+                </span>
+                {node.folder.linked ? (
+                  <GraduationCapIcon
+                    className="size-3.5 shrink-0 text-subtle-foreground"
+                    aria-hidden
+                  />
+                ) : null}
+                <span className="flex-1" />
+                <span className="shrink-0 text-2xs tabular-nums text-subtle-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
+                  {node.total}
+                </span>
+              </TreeRow>
+              {open ? (
+                node.children.length === 0 && node.items.length === 0 ? (
+                  <EmptyRow level={level + 1}>Nothing in here yet</EmptyRow>
+                ) : (
+                  <>
+                    {node.children.map((child) =>
+                      renderFolder(child, level + 1),
+                    )}
+                    {node.items.map((item) => renderResource(item, level + 1))}
+                  </>
+                )
+              ) : null}
+            </div>
+          );
+        };
+
         return (
           <div key={subject.id} role="group" className="flex flex-col gap-px">
             <TreeRow
@@ -345,13 +542,14 @@ export function SubjectTree({
               level={1}
               selected={current === subject.id}
               expanded={expanded}
-              dropTarget={dropTargetId === subject.id}
-              dragging={draggingId === subject.id}
+              dropTarget={target === subject.id}
+              dragging={dragged === subject.id}
               onSelect={() => select(subject.id)}
               onToggle={() => onExpandedChange(subject.id, !expanded)}
               typeahead={subject.name}
               label={`${subject.name}${subject.archived ? ", archived" : ""}${subject.linked ? `, ${subject.linked}` : ""}, ${count} resources`}
               actions={renderActions?.({ kind: "subject", id: subject.id })}
+              drag={dragging({ kind: "subject", id: subject.id })}
               className={cn(
                 "font-medium",
                 subject.archived && "text-muted-foreground",
@@ -382,47 +580,10 @@ export function SubjectTree({
             </TreeRow>
             {expanded ? (
               <>
-                {count === 0 ? (
-                  <div
-                    role="none"
-                    className="flex h-row items-center pl-[34px] text-xs text-subtle-foreground"
-                  >
-                    No resources yet
-                  </div>
+                {count === 0 && tree.length === 0 ? (
+                  <EmptyRow level={2}>No resources yet</EmptyRow>
                 ) : null}
-                {Array.from(folders.entries()).map(([folder, items]) => {
-                  const folderId = `${subject.id}/folder/${folder}`;
-                  const folderOpen = expandedIds.has(folderId);
-                  return (
-                    <div
-                      key={folderId}
-                      role="group"
-                      className="flex flex-col gap-px"
-                    >
-                      <TreeRow
-                        id={folderId}
-                        level={2}
-                        selected={current === folderId}
-                        expanded={folderOpen}
-                        onSelect={() => select(folderId)}
-                        onToggle={() => onExpandedChange(folderId, !folderOpen)}
-                        typeahead={folder}
-                        label={`${folder} folder, ${items.length} items`}
-                      >
-                        <FolderIcon className="size-4 shrink-0 text-subtle-foreground" />
-                        <span className="min-w-0 flex-1 truncate">
-                          {folder}
-                        </span>
-                        <span className="shrink-0 text-2xs tabular-nums text-subtle-foreground">
-                          {items.length}
-                        </span>
-                      </TreeRow>
-                      {folderOpen
-                        ? items.map((item) => renderResource(item, 3))
-                        : null}
-                    </div>
-                  );
-                })}
+                {tree.map((node) => renderFolder(node, 2))}
                 {roots.map((item) => renderResource(item, 2))}
               </>
             ) : null}
