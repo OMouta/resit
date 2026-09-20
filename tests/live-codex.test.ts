@@ -20,7 +20,8 @@ vi.mock("../apps/desktop/src/main/settings", () => ({
     }),
 }));
 
-import { runCodexTurn } from "../apps/desktop/src/main/agent/codex-turn";
+import { startTurn } from "../apps/desktop/src/main/agent/turns";
+import type { ChatMessage } from "../apps/desktop/src/shared/conversations";
 import { createConversation } from "../apps/desktop/src/main/conversations/store";
 import {
   createNote,
@@ -69,22 +70,24 @@ it.skipIf(!live)(
       "codex",
     );
 
+    // Through the same entry point the window uses, so the provider
+    // dispatch, the saved transcript, and the events are all exercised.
     const phases = new Set<string>();
-    const message = await runCodexTurn(
-      workspace,
-      (event) => {
-        if (event.type === "turn-progress") phases.add(event.phase);
-      },
-      "turn-1",
-      {
-        conversationId: conversation.id,
-        scope: { subjectIds: [subject.id], resourceIds: [] },
-        prompt:
-          "Use the study tools to find which worksheet exercise my note 'Limits' is about. Answer in one sentence naming the PDF and the exercise number.",
-        cancelled: () => false,
-        onStoppable: () => undefined,
-      },
-    );
+    const finished = new Promise<ChatMessage>((resolve) => {
+      void startTurn(
+        workspace,
+        (event) => {
+          if (event.type === "turn-progress") phases.add(event.phase);
+          if (event.type === "turn-finished") resolve(event.message);
+        },
+        {
+          conversationId: conversation.id,
+          text: "Use the study tools to find which worksheet exercise my note 'Limits' is about. Answer in one sentence naming the PDF and the exercise number.",
+          context: {},
+        },
+      );
+    });
+    const message = await finished;
 
     if (message.role !== "assistant") throw new Error("Expected a reply");
     console.log("STATUS:", message.status);
