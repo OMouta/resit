@@ -285,7 +285,8 @@ describe("desktop workspace", () => {
     await expect
       .poll(() => page.getByLabel("Page number").inputValue())
       .toBe("1");
-    await page.getByRole("button", { name: /Highlights/ }).click();
+    await page.getByRole("button", { name: "Side panel" }).click();
+    await page.getByRole("tab", { name: /Marks/ }).click();
     await page
       .locator('[role="option"][aria-selected="true"]')
       .first()

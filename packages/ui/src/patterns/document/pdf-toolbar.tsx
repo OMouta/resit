@@ -168,7 +168,7 @@ export function PdfToolbar({
     >
       {onToggleSidebar ? (
         <ToolbarButton
-          label="Thumbnails and outline"
+          label="Side panel"
           active={sidebarOpen}
           onClick={onToggleSidebar}
           disabled={disabled}

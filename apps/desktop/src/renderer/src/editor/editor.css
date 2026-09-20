@@ -164,3 +164,8 @@
   background: color-mix(in srgb, var(--ring) 32%, transparent);
   box-shadow: 0 0 0 1px var(--ring);
 }
+
+/* Dark theme: take the glare off a white page, but not off its highlights. */
+.dark .pdf-container[data-dim="true"] .pdfViewer .page canvas {
+  filter: brightness(0.82) contrast(1.04);
+}

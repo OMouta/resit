@@ -1,8 +1,10 @@
 import "pdfjs-dist/web/pdf_viewer.css";
 
 import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ColumnsIcon,
   ExternalLinkIcon,
-  HighlighterIcon,
   SearchIcon,
   XIcon,
 } from "lucide-react";
@@ -10,6 +12,7 @@ import {
   GlobalWorkerOptions,
   getDocument,
   type PDFDocumentLoadingTask,
+  type PDFDocumentProxy,
 } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -17,6 +20,7 @@ import {
   PDFFindController,
   PDFLinkService,
   PDFViewer,
+  SpreadMode,
 } from "pdfjs-dist/web/pdf_viewer.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -25,6 +29,7 @@ import { EmptyState } from "@resit/ui/components/empty-state";
 import { InlineMessage } from "@resit/ui/components/inline-message";
 import { Input } from "@resit/ui/components/input";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
 import { AnnotationActions } from "@resit/ui/patterns/document/annotation-actions";
 import { AnnotationRow } from "@resit/ui/patterns/document/annotation-row";
 import {
@@ -33,6 +38,7 @@ import {
 } from "@resit/ui/patterns/document/pdf-toolbar";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
 
+import type { PdfPanel, PdfZoomSetting } from "../../../shared/settings";
 import type {
   Annotation,
   AnnotationColorValue,
@@ -43,6 +49,7 @@ import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api, errorMessage } from "../lib/api";
 import { citationMarkdown } from "../lib/citations";
 import { useNotices } from "../lib/notices";
+import { useSettings } from "../lib/settings-context";
 import { useWidth } from "../lib/use-width";
 import {
   annotationAtPoint,
@@ -51,6 +58,7 @@ import {
   segmentsFromSelection,
 } from "./annotation-geometry";
 import { paintAnnotations } from "./annotation-layer";
+import { PdfOutline, PdfThumbnails } from "./pdf-panel";
 import {
   registerView,
   requestAsk,
@@ -80,6 +88,12 @@ function scaleValue(zoom: PdfZoom): string {
   return String(zoom);
 }
 
+/** The zoom a PDF opens at, from the setting's percentage or fit. */
+function settingZoom(setting: PdfZoomSetting): PdfZoom {
+  if (setting === "fit-width" || setting === "fit-page") return setting;
+  return Number(setting) / 100;
+}
+
 export interface PdfViewProps {
   resource: ResourceInfo;
   active: boolean;
@@ -90,22 +104,31 @@ export interface PdfViewProps {
 /** A PDF read with PDF.js, with the student's saved highlights drawn on it. */
 export function PdfView({ resource, active, onCite }: PdfViewProps) {
   const notices = useNotices();
+  const settings = useSettings();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<PDFViewer | null>(null);
   const eventBusRef = useRef<EventBus | null>(null);
+  const linkServiceRef = useRef<PDFLinkService | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | { error: string }>(
     "loading",
   );
+  const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-  const [zoom, setZoom] = useState<PdfZoom>("fit-width");
+  const [zoom, setZoom] = useState<PdfZoom>(() =>
+    settingZoom(settings.pdf.zoom),
+  );
+  const [spread, setSpread] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [foundMatches, setFoundMatches] = useState({ current: 0, total: 0 });
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [annotationError, setAnnotationError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [color, setColor] = useState<AnnotationColorValue>("yellow");
-  const [listOpen, setListOpen] = useState(false);
+  const [color, setColor] = useState<AnnotationColorValue>(
+    settings.pdf.highlightColor,
+  );
+  const [panel, setPanel] = useState<PdfPanel>(settings.pdf.panel);
   const [bar, setBar] = useState<ActionBar | null>(null);
   const [prompt, setPrompt] = useState<PromptRequest | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -154,6 +177,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     linkService.setViewer(viewer);
     viewerRef.current = viewer;
     eventBusRef.current = eventBus;
+    linkServiceRef.current = linkService;
 
     eventBus.on("pagesinit", () => {
       viewer.currentScaleValue = scaleValue(zoomRef.current);
@@ -166,6 +190,12 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     eventBus.on("pagechanging", (event: { pageNumber: number }) =>
       setPage(event.pageNumber),
     );
+    // How many matches the search found, and which one is showing.
+    const counted = (event: {
+      matchesCount?: { current: number; total: number };
+    }) => setFoundMatches(event.matchesCount ?? { current: 0, total: 0 });
+    eventBus.on("updatefindmatchescount", counted);
+    eventBus.on("updatefindcontrolstate", counted);
     for (const name of REPAINT_EVENTS) eventBus.on(name, repaint);
 
     void (async () => {
@@ -173,11 +203,12 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         const data = await api.readResourceBytes(resource.id);
         if (cancelled) return;
         loading = getDocument({ data, enableXfa: false });
-        const document = await loading.promise;
+        const opened = await loading.promise;
         if (cancelled) return;
-        viewer.setDocument(document);
-        linkService.setDocument(document);
-        setPageCount(document.numPages);
+        viewer.setDocument(opened);
+        linkService.setDocument(opened);
+        setPdfDocument(opened);
+        setPageCount(opened.numPages);
         setStatus("ready");
       } catch (reason) {
         if (!cancelled) setStatus({ error: errorMessage(reason) });
@@ -197,6 +228,8 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
       resize.disconnect();
       viewer.cleanup();
       viewerRef.current = null;
+      linkServiceRef.current = null;
+      setPdfDocument(null);
       void loading?.destroy();
     };
     // A new revision means the file itself changed, so the document reloads.
@@ -475,11 +508,11 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     if (viewer?.pdfDocument) viewer.currentScaleValue = scaleValue(next);
   };
 
-  const find = (findPrevious = false, again = true) => {
+  const find = (findPrevious = false, again = true, text = query) => {
     eventBusRef.current?.dispatch("find", {
       source: null,
       type: again ? "again" : "",
-      query,
+      query: text,
       caseSensitive: false,
       entireWord: false,
       highlightAll: true,
@@ -526,17 +559,33 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         }}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
+        sidebarOpen={panel !== "none"}
+        onToggleSidebar={() =>
+          setPanel((current) =>
+            current === "none"
+              ? settings.pdf.panel === "none"
+                ? "thumbnails"
+                : settings.pdf.panel
+              : "none",
+          )
+        }
         disabled={status !== "ready"}
         compact={compact}
         end={
           <>
             <ToolbarButton
-              label={`Highlights${annotations.length > 0 ? ` (${annotations.length})` : ""}`}
-              active={listOpen}
-              onClick={() => setListOpen((open) => !open)}
+              label={spread ? "One page at a time" : "Two pages side by side"}
+              active={spread}
               disabled={status !== "ready"}
+              onClick={() => {
+                const viewer = viewerRef.current;
+                const next = !spread;
+                setSpread(next);
+                if (viewer?.pdfDocument)
+                  viewer.spreadMode = next ? SpreadMode.ODD : SpreadMode.NONE;
+              }}
             >
-              <HighlighterIcon />
+              <ColumnsIcon />
             </ToolbarButton>
             <ToolbarButton
               label="Open in default app"
@@ -563,6 +612,8 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             placeholder="Search in this PDF"
             onChange={(event) => {
               setQuery(event.target.value);
+              // Search as it is typed, so the count follows along.
+              find(false, false, event.target.value);
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") setSearchOpen(false);
@@ -573,14 +624,33 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             }}
             className="h-8 max-w-80"
           />
-          <Button type="submit" size="sm" variant="secondary">
-            Find next
-          </Button>
+          <span className="w-24 shrink-0 text-xs tabular-nums text-muted-foreground">
+            {query.trim()
+              ? foundMatches.total > 0
+                ? `${foundMatches.current}/${foundMatches.total}`
+                : "No matches"
+              : ""}
+          </span>
+          <ToolbarButton
+            label="Previous match"
+            disabled={foundMatches.total === 0}
+            onClick={() => find(true)}
+          >
+            <ChevronUpIcon />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Next match"
+            disabled={foundMatches.total === 0}
+            onClick={() => find()}
+          >
+            <ChevronDownIcon />
+          </ToolbarButton>
           <Button
             type="button"
             size="icon-sm"
             variant="subtle"
             aria-label="Close search"
+            className="ml-auto"
             onClick={() => setSearchOpen(false)}
           >
             <XIcon />
@@ -593,60 +663,99 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         </InlineMessage>
       ) : null}
       <div className="flex min-h-0 flex-1">
-        {listOpen ? (
-          <div className="flex w-72 shrink-0 flex-col border-r">
-            <ScrollArea className="min-h-0 flex-1">
-              {annotations.length === 0 ? (
-                <p className="p-4 text-xs text-muted-foreground">
-                  Select text in the PDF to highlight it. Highlights are saved
-                  beside the file and never change the PDF itself.
-                </p>
-              ) : (
-                <div
-                  role="listbox"
-                  aria-label="Highlights"
-                  className="flex flex-col gap-1 p-2"
-                >
-                  {[...annotations]
-                    .sort(
-                      (a, b) =>
-                        annotationPage(a) - annotationPage(b) ||
-                        a.createdAt.localeCompare(b.createdAt),
-                    )
-                    .map((annotation) => (
-                      <AnnotationRow
-                        key={annotation.id}
-                        id={annotation.id}
-                        kind={annotation.type}
-                        color={annotation.color}
-                        page={annotationPage(annotation)}
-                        text={annotationText(annotation)}
-                        {...(annotation.comment
-                          ? { comment: annotation.comment }
-                          : {})}
-                        createdAt={annotation.createdAt}
-                        selected={annotation.id === selectedId}
-                        orphaned={
-                          annotation.documentRevision !== resource.revision
-                        }
-                        onSelect={() => {
-                          setSelectedId(annotation.id);
-                          goToPage(annotationPage(annotation));
-                        }}
-                        onGoToPage={goToPage}
-                        onEdit={() => comment(annotation)}
-                        onDelete={() => void remove(annotation)}
-                      />
-                    ))}
-                </div>
-              )}
-            </ScrollArea>
+        {panel !== "none" ? (
+          <div className="flex w-64 shrink-0 flex-col border-r bg-sidebar">
+            <div className="flex h-10 shrink-0 items-center border-b px-2">
+              <Tabs
+                value={panel}
+                onValueChange={(value) => setPanel(value as PdfPanel)}
+                className="w-full"
+              >
+                <TabsList aria-label="Side panel" className="w-full">
+                  <TabsTrigger value="thumbnails" className="flex-1 text-xs">
+                    Pages
+                  </TabsTrigger>
+                  <TabsTrigger value="outline" className="flex-1 text-xs">
+                    Contents
+                  </TabsTrigger>
+                  <TabsTrigger value="highlights" className="flex-1 text-xs">
+                    Marks
+                    {annotations.length > 0 ? ` ${annotations.length}` : ""}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            {panel === "thumbnails" ? (
+              <PdfThumbnails
+                document={pdfDocument}
+                pageCount={pageCount}
+                page={page}
+                onSelect={goToPage}
+              />
+            ) : null}
+            {panel === "outline" ? (
+              <PdfOutline
+                document={pdfDocument}
+                onGoTo={(destination) => {
+                  void linkServiceRef.current?.goToDestination(destination);
+                }}
+              />
+            ) : null}
+            {panel === "highlights" ? (
+              <ScrollArea className="min-h-0 flex-1">
+                {annotations.length === 0 ? (
+                  <p className="p-4 text-xs text-muted-foreground">
+                    Select text in the PDF to highlight it. Highlights are saved
+                    beside the file and never change the PDF itself.
+                  </p>
+                ) : (
+                  <div
+                    role="listbox"
+                    aria-label="Highlights"
+                    className="flex flex-col gap-1 p-2"
+                  >
+                    {[...annotations]
+                      .sort(
+                        (a, b) =>
+                          annotationPage(a) - annotationPage(b) ||
+                          a.createdAt.localeCompare(b.createdAt),
+                      )
+                      .map((annotation) => (
+                        <AnnotationRow
+                          key={annotation.id}
+                          id={annotation.id}
+                          kind={annotation.type}
+                          color={annotation.color}
+                          page={annotationPage(annotation)}
+                          text={annotationText(annotation)}
+                          {...(annotation.comment
+                            ? { comment: annotation.comment }
+                            : {})}
+                          createdAt={annotation.createdAt}
+                          selected={annotation.id === selectedId}
+                          orphaned={
+                            annotation.documentRevision !== resource.revision
+                          }
+                          onSelect={() => {
+                            setSelectedId(annotation.id);
+                            goToPage(annotationPage(annotation));
+                          }}
+                          onGoToPage={goToPage}
+                          onEdit={() => comment(annotation)}
+                          onDelete={() => void remove(annotation)}
+                        />
+                      ))}
+                  </div>
+                )}
+              </ScrollArea>
+            ) : null}
           </div>
         ) : null}
         <div className="relative min-h-0 min-w-0 flex-1 bg-canvas">
           <div
             ref={containerRef}
             className="pdf-container absolute inset-0 overflow-auto"
+            data-dim={settings.pdf.dimInDark}
             tabIndex={0}
             aria-label={`${resource.title}, PDF`}
             onMouseDown={() => setBar(null)}
