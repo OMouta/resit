@@ -1,6 +1,5 @@
 import {
   AlertCircleIcon,
-  CheckIcon,
   Loader2Icon,
   PlugZapIcon,
   SquareIcon,
@@ -26,7 +25,7 @@ export interface TurnStatusBarProps {
   className?: string;
 }
 
-/** Thin bar between transcript and composer. Always the same height so actions never jump. */
+/** Thin bar between transcript and composer. Idle turns show nothing. */
 export function TurnStatusBar({
   status,
   onStop,
@@ -38,14 +37,7 @@ export function TurnStatusBar({
   const base = "flex h-10 items-center gap-2 px-4 text-xs";
   switch (status.kind) {
     case "idle":
-      return (
-        <div
-          role="status"
-          className={cn(base, "text-subtle-foreground", className)}
-        >
-          <CheckIcon className="size-3.5" /> Ready
-        </div>
-      );
+      return null;
     case "streaming":
       return (
         <div

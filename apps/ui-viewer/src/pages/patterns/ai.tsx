@@ -162,6 +162,7 @@ const assistantTurn = turns[1]!.role === "assistant" ? turns[1]! : null;
 const reviewTurn = turns[3]!.role === "assistant" ? turns[3]! : null;
 
 const statusByState: Record<string, PanelStatus> = {
+  // Idle renders nothing: the bar only appears when it has something to say.
   idle: { kind: "idle" },
   streaming: { kind: "streaming", phase: "writing" },
   tools: { kind: "streaming", phase: "tools" },
