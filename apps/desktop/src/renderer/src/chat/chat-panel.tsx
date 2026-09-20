@@ -45,8 +45,10 @@ import type {
 } from "../../../shared/conversations";
 import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
+import { insertIntoNote } from "../lib/citations";
 import { useNotices } from "../lib/notices";
 import { flushAllViews, viewFor } from "../views/view-registry";
+
 import { activeTab, type Layout } from "../workspace/layout";
 import { ChatMarkdown } from "./markdown";
 
@@ -452,26 +454,12 @@ export function ChatPanel({
       ? focused
       : null;
 
-  const insertIntoNote = (text: string) => {
-    const noteTabs = layout.panes
-      .map((pane) => pane.tabs.find((entry) => entry.id === pane.activeTabId))
-      .filter((entry) => entry !== undefined)
-      .sort((a, b) => (a.id === tab?.id ? -1 : b.id === tab?.id ? 1 : 0));
-    for (const entry of noteTabs) {
-      const resource = resources.get(entry.resourceId);
-      if (resource?.kind !== "note") continue;
-      if (viewFor(resource.id)?.insertMarkdown?.(text)) {
-        notices.notify({
-          tone: "success",
-          title: `Added to ${resource.title}`,
-        });
-        return;
-      }
-    }
-    notices.notify({
-      tone: "info",
-      title: "Open a note to add this reply",
-    });
+  const insertReply = (text: string) => {
+    const note = insertIntoNote(layout, resources, text);
+    if (note)
+      notices.notify({ tone: "success", title: `Added to ${note.title}` });
+    else
+      notices.notify({ tone: "info", title: "Open a note to add this reply" });
   };
 
   const unscopedSubjects = [...subjects.values()].filter(
@@ -595,7 +583,7 @@ export function ChatPanel({
       {...(lastUser && lastUser.role === "user" && !busy
         ? { onRetry: () => void send(lastUser.text, lastUser.context) }
         : {})}
-      onInsert={insertIntoNote}
+      onInsert={insertReply}
       onCopy={(text) => {
         navigator.clipboard
           .writeText(text)

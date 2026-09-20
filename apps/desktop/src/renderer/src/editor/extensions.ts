@@ -63,7 +63,13 @@ function mathTyping(handlers: () => MathHandlers) {
 export function noteExtensions(handlers: () => MathHandlers): Extensions {
   return [
     StarterKit.configure({
-      link: { openOnClick: false, autolink: true },
+      // `resit:` links point at a page or highlight in this workspace, and
+      // the note view opens them itself.
+      link: {
+        openOnClick: false,
+        autolink: true,
+        protocols: [{ scheme: "resit", optionalSlashes: false }],
+      },
     }),
     TaskList,
     TaskItem.configure({ nested: true }),

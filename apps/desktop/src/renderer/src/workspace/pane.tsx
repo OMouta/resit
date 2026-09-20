@@ -16,6 +16,7 @@ import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { NoteView } from "../editor/note-view";
 import { AttachmentView, ImageView } from "../views/file-views";
 import { PdfView } from "../views/pdf-view";
+import type { DocumentTarget } from "../views/view-registry";
 import type { LayoutAction, Pane } from "./layout";
 
 export interface PaneProps {
@@ -27,6 +28,8 @@ export interface PaneProps {
   subjects: ReadonlyMap<string, SubjectInfo>;
   dispatch: Dispatch<LayoutAction>;
   onRename: (resourceId: string, title: string) => Promise<void>;
+  onOpenLink: (resourceId: string, target: DocumentTarget) => void;
+  onCite: (markdown: string) => void;
 }
 
 function ResourceView({
@@ -34,19 +37,28 @@ function ResourceView({
   subject,
   active,
   onRename,
+  onOpenLink,
+  onCite,
 }: {
   resource: ResourceInfo;
   subject: SubjectInfo | undefined;
   active: boolean;
   onRename: (title: string) => Promise<void>;
+  onOpenLink: (resourceId: string, target: DocumentTarget) => void;
+  onCite: (markdown: string) => void;
 }) {
   switch (resource.kind) {
     case "note":
       return (
-        <NoteView resource={resource} subject={subject} onRename={onRename} />
+        <NoteView
+          resource={resource}
+          subject={subject}
+          onRename={onRename}
+          onOpenLink={onOpenLink}
+        />
       );
     case "pdf":
-      return <PdfView resource={resource} active={active} />;
+      return <PdfView resource={resource} active={active} onCite={onCite} />;
     case "image":
       return <ImageView resource={resource} />;
     case "attachment":
@@ -64,6 +76,8 @@ export function WorkspacePane({
   subjects,
   dispatch,
   onRename,
+  onOpenLink,
+  onCite,
 }: PaneProps) {
   const items: DocumentTabItem[] = pane.tabs.map((tab) => {
     const resource = resources.get(tab.resourceId);
@@ -141,6 +155,8 @@ export function WorkspacePane({
                   subject={subjects.get(resource.subjectId)}
                   active={active}
                   onRename={(title) => onRename(resource.id, title)}
+                  onOpenLink={onOpenLink}
+                  onCite={onCite}
                 />
               ) : (
                 <EmptyState

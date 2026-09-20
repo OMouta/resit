@@ -2,6 +2,7 @@ import { Button } from "@resit/ui/components/button";
 import { MoreHorizontalIcon, StarIcon } from "lucide-react";
 import { useState } from "react";
 
+import { AnnotationActions } from "@resit/ui/patterns/document/annotation-actions";
 import { AnnotationRow } from "@resit/ui/patterns/document/annotation-row";
 import {
   CitationBlock,
@@ -182,6 +183,35 @@ function PageExample({ ctx }: { ctx: ExampleContext }) {
           title="Worksheet 3 — Limits and continuity"
         />
       </PdfPageFrame>
+    </div>
+  );
+}
+
+function AnnotationActionsExample({ ctx }: { ctx: ExampleContext }) {
+  const [color, setColor] = useState<AnnotationColor>("yellow");
+  const existing = ctx.state === "highlight";
+  return (
+    <div className="relative flex h-full items-end justify-center pb-2">
+      <p className="max-w-80 bg-highlight px-1 text-center text-sm">
+        Prove the following limits using the definition.
+      </p>
+      <AnnotationActions
+        at={{ x: 200, y: 90 }}
+        color={color}
+        existing={existing}
+        onColor={(next) => {
+          setColor(next);
+          ctx.log("onColor", next);
+        }}
+        {...(existing
+          ? {
+              onAsk: () => ctx.log("onAsk"),
+              onComment: () => ctx.log("onComment"),
+              onDelete: () => ctx.log("onDelete"),
+            }
+          : { onUnderline: () => ctx.log("onUnderline") })}
+        onCite={() => ctx.log("onCite")}
+      />
     </div>
   );
 }
@@ -367,6 +397,17 @@ export const page: ExamplePage = {
       surface: "muted",
       states: ["ready", "loading", "error"],
       render: (ctx) => <PageExample ctx={ctx} />,
+    },
+    {
+      id: "annotation-actions",
+      title: "Selection and highlight actions",
+      description:
+        "Over a selection it offers the colours to mark in; over a saved highlight it also quotes, asks, comments, and deletes.",
+      width: "full",
+      height: 140,
+      surface: "muted",
+      states: ["selection", "highlight"],
+      render: (ctx) => <AnnotationActionsExample ctx={ctx} />,
     },
     {
       id: "annotations",

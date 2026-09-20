@@ -25,8 +25,9 @@ import type { NoteDocument } from "../../../shared/ipc";
 import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api, errorMessage } from "../lib/api";
+import { parseResitLink } from "../lib/citations";
 import { useWidth } from "../lib/use-width";
-import { registerView } from "../views/view-registry";
+import { registerView, type DocumentTarget } from "../views/view-registry";
 import {
   noteExtensions,
   roundTripLosesText,
@@ -55,6 +56,8 @@ export interface NoteViewProps {
   resource: ResourceInfo;
   subject: SubjectInfo | undefined;
   onRename: (title: string) => Promise<void>;
+  /** Follows a link to another resource in this workspace. */
+  onOpenLink: (resourceId: string, target: DocumentTarget) => void;
 }
 
 /** Loads a note and remounts the editor whenever the text is replaced from disk. */
@@ -113,6 +116,7 @@ function NoteEditor({
   resource,
   subject,
   onRename,
+  onOpenLink,
   initial,
   onReplace,
 }: NoteEditorProps) {
@@ -211,6 +215,23 @@ function NoteEditor({
     onEdit: () => undefined,
     onInsert: () => undefined,
   });
+  const openLink = useRef(onOpenLink);
+  openLink.current = onOpenLink;
+
+  /** A citation or link in the note: go to its source instead of editing it. */
+  const followLink = (event: MouseEvent): boolean => {
+    const href = (event.target as HTMLElement | null)
+      ?.closest("a[href]")
+      ?.getAttribute("href");
+    if (!href) return false;
+    const link = parseResitLink(href);
+    if (link) openLink.current(link.resourceId, link.target);
+    else if (/^(https?|mailto):/i.test(href))
+      void api.openExternal(href).catch(() => undefined);
+    else return false;
+    event.preventDefault();
+    return true;
+  };
 
   const editor = useEditor(
     {
@@ -223,6 +244,7 @@ function NoteEditor({
           "aria-label": "Note text",
           spellcheck: "true",
         },
+        handleClick: (_view, _pos, event) => followLink(event),
       },
       onUpdate: () => markEdited(),
       onBlur: () => void saveRef.current(),

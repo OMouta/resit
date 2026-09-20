@@ -24,8 +24,15 @@ import type {
 } from "../../../shared/workspace";
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api } from "../lib/api";
+import { insertIntoNote } from "../lib/citations";
 import { useNotices } from "../lib/notices";
-import { flushAllViews, showPage, viewFor } from "../views/view-registry";
+import {
+  flushAllViews,
+  onAskRequest,
+  showTarget,
+  viewFor,
+  type DocumentTarget,
+} from "../views/view-registry";
 import {
   ConfirmDialog,
   SubjectDialog,
@@ -127,9 +134,27 @@ export function WorkspaceView({
       const resource = resources.get(resourceId);
       if (!resource) return;
       dispatch({ type: "open", resourceId, title: resource.title });
-      if (page && resource.kind === "pdf") showPage(resourceId, page);
+      if (page && resource.kind === "pdf") showTarget(resourceId, { page });
     },
     [resources],
+  );
+
+  /** Follows a `resit://` link from a note to its source page or highlight. */
+  const openLink = useCallback(
+    (resourceId: string, target: DocumentTarget) => {
+      const resource = resources.get(resourceId);
+      if (!resource) {
+        notices.notify({
+          tone: "info",
+          title: "That link points to a file that is no longer here",
+          detail: "It was renamed outside resit, or moved to the trash.",
+        });
+        return;
+      }
+      dispatch({ type: "open", resourceId, title: resource.title });
+      showTarget(resourceId, target);
+    },
+    [resources, notices],
   );
 
   const refresh = useCallback(
@@ -347,6 +372,28 @@ export function WorkspaceView({
   const subjectRef = useRef(currentSubjectId);
   subjectRef.current = currentSubjectId;
 
+  /** Puts a quoted highlight into the note the student is writing in. */
+  const cite = useCallback(
+    (markdown: string) => {
+      const note = insertIntoNote(layoutRef.current, resources, markdown);
+      if (note)
+        notices.notify({ tone: "success", title: `Quoted in ${note.title}` });
+      else
+        notices.notify({
+          tone: "info",
+          title: "Open a note to quote this highlight",
+          detail: "Split the pane with Ctrl+\\ to keep both open.",
+        });
+    },
+    [resources, notices],
+  );
+
+  // Asking about a highlight brings the AI panel out if it is collapsed.
+  useEffect(
+    () => onAskRequest(() => dispatch({ type: "set-ai-open", open: true })),
+    [],
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const mod = event.ctrlKey || event.metaKey;
@@ -406,6 +453,8 @@ export function WorkspaceView({
       subjects={subjects}
       dispatch={dispatch}
       onRename={renameResource}
+      onOpenLink={openLink}
+      onCite={cite}
     />
   ));
 

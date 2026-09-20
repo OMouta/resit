@@ -7,14 +7,21 @@ export interface ViewContext {
   pageCount?: number;
 }
 
+/** A place inside a document: a page, one of its highlights, or both. */
+export interface DocumentTarget {
+  /** One-based page number. */
+  page?: number;
+  annotationId?: string;
+}
+
 export interface ViewHandle {
   context(): ViewContext;
   /** Appends Markdown to a note. Returns false if the view cannot take it. */
   insertMarkdown?(markdown: string): boolean;
   /** Writes pending edits to disk. */
   flush?(): Promise<void>;
-  /** Scrolls a PDF to a one-based page. */
-  goToPage?(page: number): void;
+  /** Scrolls a PDF to a page or highlight and selects it. */
+  show?(target: DocumentTarget): void;
 }
 
 const handles = new Map<string, ViewHandle>();
@@ -40,17 +47,47 @@ export async function flushAllViews(): Promise<void> {
   );
 }
 
-const pendingPages = new Map<string, number>();
+const pendingTargets = new Map<string, DocumentTarget>();
 
-/** Shows a page now, or once the view for that resource has mounted. */
-export function showPage(resourceId: string, page: number): void {
+/** Goes there now, or once the view for that resource has mounted. */
+export function showTarget(resourceId: string, target: DocumentTarget): void {
   const handle = handles.get(resourceId);
-  if (handle?.goToPage) handle.goToPage(page);
-  else pendingPages.set(resourceId, page);
+  if (handle?.show) handle.show(target);
+  else pendingTargets.set(resourceId, target);
 }
 
-export function takePendingPage(resourceId: string): number | undefined {
-  const page = pendingPages.get(resourceId);
-  pendingPages.delete(resourceId);
-  return page;
+export function takePendingTarget(
+  resourceId: string,
+): DocumentTarget | undefined {
+  const target = pendingTargets.get(resourceId);
+  pendingTargets.delete(resourceId);
+  return target;
+}
+
+/** A highlight the student wants to ask the AI panel about. */
+export interface AskRequest {
+  resourceId: string;
+  annotation: {
+    id: string;
+    /** One-based page number. */
+    page: number;
+    text: string;
+    comment?: string;
+  };
+}
+
+const askListeners = new Set<(request: AskRequest) => void>();
+
+/** Attaches a highlight to the next message and opens the AI panel. */
+export function requestAsk(request: AskRequest): void {
+  for (const listener of askListeners) listener(request);
+}
+
+export function onAskRequest(
+  listener: (request: AskRequest) => void,
+): () => void {
+  askListeners.add(listener);
+  return () => {
+    askListeners.delete(listener);
+  };
 }

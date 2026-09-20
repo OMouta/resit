@@ -102,6 +102,82 @@ async function noteFile(): Promise<string> {
   return readFile(join(notes, note!), "utf8");
 }
 
+/** The highlights saved for the imported PDF, ignoring in-flight writes. */
+async function savedAnnotations(): Promise<Record<string, unknown>[]> {
+  const subjects = join(folder, "subjects");
+  const [subject] = await readdir(subjects);
+  const directory = join(subjects, subject!, "annotations");
+  const files = (await readdir(directory).catch(() => [])).filter(
+    (name) => !name.startsWith("."),
+  );
+  if (!files[0]) return [];
+  const file = JSON.parse(await readFile(join(directory, files[0]), "utf8"));
+  return file.annotations as Record<string, unknown>[];
+}
+
+/** Selects a run of text in the PDF text layer the way a drag would. */
+async function selectInPdf(needle: string): Promise<void> {
+  const selected = await page.evaluate((text: string) => {
+    for (const layer of Array.from(document.querySelectorAll(".textLayer"))) {
+      const target = Array.from(layer.querySelectorAll("span")).find((span) =>
+        span.textContent?.includes(text),
+      );
+      const selection = window.getSelection();
+      if (!target || !selection) continue;
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const box = target.getBoundingClientRect();
+      target.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          clientX: box.left + box.width / 2,
+          clientY: box.top + box.height / 2,
+        }),
+      );
+      return true;
+    }
+    return false;
+  }, needle);
+  expect(selected).toBe(true);
+}
+
+/** True when a drawn mark still sits over the text it was made on. */
+async function markCoversText(needle: string): Promise<boolean> {
+  return page.evaluate((text: string) => {
+    const span = Array.from(document.querySelectorAll(".textLayer span")).find(
+      (entry) => entry.textContent?.includes(text),
+    );
+    const marks = Array.from(
+      document.querySelectorAll(".resit-annotation-layer > div"),
+    );
+    if (!span || marks.length === 0) return false;
+    const over = span.getBoundingClientRect();
+    return marks.some((element) => {
+      const mark = element.getBoundingClientRect();
+      const width =
+        Math.min(over.right, mark.right) - Math.max(over.left, mark.left);
+      const height =
+        Math.min(over.bottom, mark.bottom) - Math.max(over.top, mark.top);
+      return (
+        width > 0.8 * Math.min(over.width, mark.width) &&
+        height > 0.5 * Math.min(over.height, mark.height)
+      );
+    });
+  }, needle);
+}
+
+/** Middle of a drawn mark, read in one go so a repaint cannot race it. */
+async function markCentre(): Promise<{ x: number; y: number } | null> {
+  return page.evaluate(() => {
+    const mark = document.querySelector(".resit-annotation-layer > div");
+    if (!mark) return null;
+    const box = mark.getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  });
+}
+
 describe("desktop workspace", () => {
   it("creates a workspace from the start screen", async () => {
     await page.getByRole("button", { name: /Create workspace/ }).click();
@@ -159,12 +235,72 @@ describe("desktop workspace", () => {
       .toBe("2");
   });
 
+  it("highlights a step and saves it beside the PDF", async () => {
+    await page.getByRole("button", { name: "First page" }).click();
+    await selectInPdf("Compute");
+    await page.getByRole("toolbar", { name: "Selection actions" }).waitFor();
+    await page.getByRole("button", { name: "Yellow highlight" }).click();
+
+    await expect.poll(savedAnnotations).toHaveLength(1);
+    expect((await savedAnnotations())[0]).toMatchObject({
+      type: "highlight",
+      color: "yellow",
+      segments: [{ pageIndex: 0 }],
+    });
+    await expect.poll(() => markCoversText("Compute")).toBe(true);
+  });
+
+  it("keeps the highlight on its text when the page is rotated", async () => {
+    await page.getByRole("button", { name: "Rotate" }).click();
+    await expect.poll(() => markCoversText("Compute")).toBe(true);
+    for (let turn = 0; turn < 3; turn += 1)
+      await page.getByRole("button", { name: "Rotate" }).click();
+    await expect.poll(() => markCoversText("Compute")).toBe(true);
+  });
+
+  it("quotes the highlight into the note beside it", async () => {
+    // Split so the worksheet and the note are both open.
+    await page.keyboard.press("Control+\\");
+    await page
+      .getByRole("tabpanel", { name: "Limites", exact: true })
+      .waitFor();
+    await expect.poll(() => markCoversText("Compute")).toBe(true);
+    const mark = await markCentre();
+    if (!mark) throw new Error("No highlight drawn");
+    await page.mouse.click(mark.x, mark.y);
+    await page.getByRole("toolbar", { name: "Highlight actions" }).waitFor();
+    await page.getByRole("button", { name: "Quote in note" }).click();
+
+    await expect.poll(noteFile).toContain("> 1. Compute sin(x)/x");
+    await expect.poll(noteFile).toMatch(/\]\(resit:\/\/resource\/[^)]+\)/);
+    await expect.poll(savedAnnotations).toHaveLength(1);
+  });
+
+  it("follows the citation back to the page it came from", async () => {
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expect
+      .poll(() => page.getByLabel("Page number").inputValue())
+      .toBe("2");
+    await page.locator(".note-content a").first().click();
+    await expect
+      .poll(() => page.getByLabel("Page number").inputValue())
+      .toBe("1");
+    await page.getByRole("button", { name: /Highlights/ }).click();
+    await page
+      .locator('[role="option"][aria-selected="true"]')
+      .first()
+      .waitFor();
+  });
+
   it("reopens the workspace with its tabs after a restart", async () => {
     await page.waitForTimeout(600);
     await close();
     await launch();
     await page.getByRole("tab", { name: "Limites", exact: true }).waitFor();
     await page.getByRole("tab", { name: /Folha 1/ }).waitFor();
+    await expect
+      .poll(() => page.locator(".resit-annotation-layer > div").count())
+      .toBeGreaterThan(0);
   });
 
   it("explains when Claude Code cannot be found", async () => {
@@ -174,6 +310,8 @@ describe("desktop workspace", () => {
       }),
     );
     await page.reload();
+    // The shortcut only works once the workspace has taken over the window.
+    await page.getByRole("treeitem", { name: /Análise Matemática/ }).waitFor();
     await page.keyboard.press("Control+j");
     await page
       .getByPlaceholder("Connect Claude Code in Settings to ask questions")
