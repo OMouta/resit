@@ -9,6 +9,10 @@ import type {
 } from "./conversations";
 import type { AppSettings, SettingsPatch } from "./settings";
 import type {
+  Annotation,
+  AnnotationColorValue,
+  AnnotationSegment,
+  AnnotationType,
   RecentWorkspace,
   ResourceInfo,
   SaveNoteResult,
@@ -96,6 +100,24 @@ export interface DesktopApi {
   renameResource(input: { id: string; title: string }): Promise<ResourceInfo>;
   deleteResource(id: string): Promise<WorkspaceSnapshot>;
   importFiles(subjectId: string): Promise<ResourceInfo[]>;
+
+  listAnnotations(documentId: string): Promise<Annotation[]>;
+  createAnnotation(input: {
+    documentId: string;
+    type: AnnotationType;
+    color: AnnotationColorValue;
+    segments: AnnotationSegment[];
+    comment?: string;
+  }): Promise<Annotation>;
+  /** An empty `comment` removes the comment. */
+  updateAnnotation(input: {
+    documentId: string;
+    id: string;
+    color?: AnnotationColorValue;
+    comment?: string;
+  }): Promise<Annotation>;
+  deleteAnnotation(input: { documentId: string; id: string }): Promise<void>;
+
   readResourceBytes(id: string): Promise<Uint8Array>;
   openResourceExternally(id: string): Promise<void>;
   search(query: string): Promise<SearchResult[]>;
@@ -142,6 +164,10 @@ export const CHANNELS = {
   renameResource: "resit:resource-rename",
   deleteResource: "resit:resource-delete",
   importFiles: "resit:resource-import",
+  listAnnotations: "resit:annotation-list",
+  createAnnotation: "resit:annotation-create",
+  updateAnnotation: "resit:annotation-update",
+  deleteAnnotation: "resit:annotation-delete",
   readResourceBytes: "resit:resource-bytes",
   openResourceExternally: "resit:resource-open-external",
   search: "resit:search",

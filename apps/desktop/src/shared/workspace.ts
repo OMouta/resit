@@ -113,3 +113,67 @@ export type SaveNoteResult =
   | { status: "saved"; revision: string; resource: ResourceInfo }
   | { status: "conflict"; currentRevision: string; currentBody: string }
   | { status: "missing" };
+
+export const ANNOTATION_TYPE_VALUES = ["highlight", "underline"] as const;
+export const ANNOTATION_COLOR_VALUES = [
+  "yellow",
+  "green",
+  "blue",
+  "pink",
+] as const;
+
+export const annotationTypeSchema = z.enum(ANNOTATION_TYPE_VALUES);
+export type AnnotationType = z.infer<typeof annotationTypeSchema>;
+export const annotationColorSchema = z.enum(ANNOTATION_COLOR_VALUES);
+export type AnnotationColorValue = z.infer<typeof annotationColorSchema>;
+
+const coordinate = z.number().finite();
+/** `[xMin, yMin, xMax, yMax]` in PDF user space. */
+const rect = z.tuple([coordinate, coordinate, coordinate, coordinate]);
+/**
+ * Corners of one selected line, in PDF user space, in the order PDF
+ * QuadPoints uses: top-left, top-right, bottom-left, bottom-right.
+ */
+const quad = z.tuple([
+  coordinate,
+  coordinate,
+  coordinate,
+  coordinate,
+  coordinate,
+  coordinate,
+  coordinate,
+  coordinate,
+]);
+export type AnnotationQuad = z.infer<typeof quad>;
+
+/** One page's worth of a selection. A selection may span several pages. */
+export const annotationSegmentSchema = z.looseObject({
+  pageIndex: z.number().int().nonnegative(),
+  cropBox: rect,
+  quads: z.array(quad).min(1),
+  text: z.string(),
+});
+export type AnnotationSegment = z.infer<typeof annotationSegmentSchema>;
+
+export const annotationSchema = z.looseObject({
+  id: z.string().min(1),
+  documentId: z.string().min(1),
+  /** The PDF's revision when the annotation was made. */
+  documentRevision: z.string(),
+  type: annotationTypeSchema,
+  color: annotationColorSchema.catch("yellow"),
+  segments: z.array(annotationSegmentSchema).min(1),
+  comment: z.string().optional(),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+});
+export type Annotation = z.infer<typeof annotationSchema>;
+
+/** `subjects/<folder>/annotations/<documentId>.json`. */
+export const annotationFileSchema = z.looseObject({
+  format: z.literal("resit-annotations"),
+  formatVersion: z.number().int().positive(),
+  documentId: z.string().min(1),
+  annotations: z.array(annotationSchema),
+});
+export type AnnotationFile = z.infer<typeof annotationFileSchema>;

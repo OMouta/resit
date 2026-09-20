@@ -84,7 +84,7 @@ async function hashFile(path: string): Promise<string> {
 }
 
 /** Runs mutations of one resource one at a time. */
-function withLock<T>(
+export function withLock<T>(
   workspace: OpenWorkspace,
   key: string,
   task: () => Promise<T>,
@@ -669,7 +669,11 @@ export function deleteResource(
     const entry = resourceEntry(workspace, id);
     await moveToTrash(
       workspace,
-      [entry.absPath, ...(entry.sidecarPath ? [entry.sidecarPath] : [])],
+      [
+        entry.absPath,
+        ...(entry.sidecarPath ? [entry.sidecarPath] : []),
+        ...(entry.info.kind === "pdf" ? [annotationsPath(workspace, id)] : []),
+      ],
       { kind: entry.info.kind, id, title: entry.info.title },
     );
     workspace.resources.delete(id);
@@ -755,4 +759,34 @@ export async function readResourceBytes(
 
 export function resourcePath(workspace: OpenWorkspace, id: string): string {
   return resourceEntry(workspace, id).absPath;
+}
+
+export function resourceInfo(
+  workspace: OpenWorkspace,
+  id: string,
+): ResourceInfo {
+  return resourceEntry(workspace, id).info;
+}
+
+/**
+ * Annotation files are named after the document's ID. An ID adopted from a
+ * sidecar written outside resit is not necessarily a safe filename.
+ */
+function annotationFilename(documentId: string): string {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/.test(documentId)
+    ? `${documentId}.json`
+    : `${sha256(documentId).slice("sha256:".length, "sha256:".length + 32)}.json`;
+}
+
+/** Where one document's annotations live, whether or not the file exists. */
+export function annotationsPath(
+  workspace: OpenWorkspace,
+  documentId: string,
+): string {
+  const entry = resourceEntry(workspace, documentId);
+  return join(
+    subjectEntry(workspace, entry.info.subjectId).dir,
+    "annotations",
+    annotationFilename(documentId),
+  );
 }

@@ -5,8 +5,19 @@ import { z } from "zod";
 import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
 import { settingsPatchSchema } from "../shared/settings";
-import { subjectColorSchema } from "../shared/workspace";
+import {
+  annotationColorSchema,
+  annotationSegmentSchema,
+  annotationTypeSchema,
+  subjectColorSchema,
+} from "../shared/workspace";
 import { startTurn, stopTurn } from "./agent/turns";
+import {
+  createAnnotation,
+  deleteAnnotation,
+  listAnnotations,
+  updateAnnotation,
+} from "./workspace/annotations";
 import {
   createConversation,
   deleteConversation,
@@ -48,6 +59,18 @@ import {
 const path = z.string().min(1).max(4096);
 const MAX_LAYOUT_BYTES = 256 * 1024;
 const MAX_NOTE_BYTES = 20 * 1024 * 1024;
+const MAX_COMMENT_CHARS = 4000;
+
+/** One selection: its pages, the lines on each, and the text they cover. */
+const segments = z
+  .array(
+    annotationSegmentSchema.extend({
+      quads: annotationSegmentSchema.shape.quads.max(600),
+      text: z.string().max(20_000),
+    }),
+  )
+  .min(1)
+  .max(50);
 
 /** Extensions opened with "show in folder" instead of the default app. */
 const NEVER_LAUNCH = new Set([
@@ -223,6 +246,43 @@ export function registerHandlers(
       imported.push(await importFile(workspace, { subjectId, sourcePath }));
     return imported;
   });
+
+  handle(CHANNELS.listAnnotations, z.tuple([id]), (documentId) =>
+    listAnnotations(currentWorkspace(), documentId),
+  );
+
+  handle(
+    CHANNELS.createAnnotation,
+    z.tuple([
+      z.object({
+        documentId: id,
+        type: annotationTypeSchema,
+        color: annotationColorSchema,
+        segments,
+        comment: z.string().max(MAX_COMMENT_CHARS).optional(),
+      }),
+    ]),
+    (input) => createAnnotation(currentWorkspace(), input),
+  );
+
+  handle(
+    CHANNELS.updateAnnotation,
+    z.tuple([
+      z.object({
+        documentId: id,
+        id,
+        color: annotationColorSchema.optional(),
+        comment: z.string().max(MAX_COMMENT_CHARS).optional(),
+      }),
+    ]),
+    (input) => updateAnnotation(currentWorkspace(), input),
+  );
+
+  handle(
+    CHANNELS.deleteAnnotation,
+    z.tuple([z.object({ documentId: id, id })]),
+    (input) => deleteAnnotation(currentWorkspace(), input),
+  );
 
   handle(CHANNELS.readResourceBytes, z.tuple([id]), (resourceId) =>
     readResourceBytes(currentWorkspace(), resourceId),
