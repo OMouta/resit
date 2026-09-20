@@ -82,14 +82,14 @@ export interface ConversationDetail {
   messages: ChatMessage[];
 }
 
-/** A model the installed Claude Code offers. */
+/** A model a connected provider offers. */
 export interface ModelOption {
-  /** Value passed to Claude Code, such as "sonnet" or "opus[1m]". */
+  /** Value passed to the provider, such as "sonnet" or "gpt-6-astra". */
   id: string;
   /** The model itself, such as "Sonnet 5". */
   name: string;
   description: string;
-  /** Claude Code uses this model when none is chosen. */
+  /** The provider uses this model when none is chosen. */
   isDefault: boolean;
 }
 

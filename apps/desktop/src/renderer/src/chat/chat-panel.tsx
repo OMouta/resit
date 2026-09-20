@@ -196,7 +196,7 @@ function inScope(scope: ConversationScope, resource: ResourceInfo): boolean {
   );
 }
 
-/** The AI panel for the open workspace: conversations with Claude Code. */
+/** The AI panel for the open workspace: conversations with a provider. */
 export function ChatPanel({
   layout,
   resources,

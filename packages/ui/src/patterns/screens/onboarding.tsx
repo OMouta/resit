@@ -150,7 +150,7 @@ export function Onboarding({
           </section>
         ) : null}
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <SparklesIcon className="size-3.5" /> For AI chat, connect Claude Code
+          <SparklesIcon className="size-3.5" /> For AI chat, connect a provider
           in Settings.
         </p>
       </div>
