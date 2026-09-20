@@ -110,11 +110,16 @@ export async function activateWorkspace(
   stopWatching();
   abortAllTurns();
   current = workspace;
-  await rememberWorkspace({
-    id: workspace.file.id,
-    name: workspace.file.name,
-    path: workspace.root,
-  });
+  try {
+    await rememberWorkspace({
+      id: workspace.file.id,
+      name: workspace.file.name,
+      path: workspace.root,
+    });
+  } catch (error) {
+    // The workspace is open either way; only the recent list is behind.
+    console.error("Unable to save the recent workspaces", error);
+  }
   startWatching(workspace);
 }
 
@@ -139,8 +144,7 @@ export async function appState(extra?: {
   };
 }
 
-/** Reopens the last workspace on launch. Failure leaves the start screen. */
-export async function reopenLastWorkspace(): Promise<string | undefined> {
+async function openLastWorkspace(): Promise<string | undefined> {
   if (current) return undefined;
   const settings = await loadSettings();
   if (!settings.lastWorkspacePath) return undefined;
@@ -148,7 +152,18 @@ export async function reopenLastWorkspace(): Promise<string | undefined> {
     await activateWorkspace(await openWorkspace(settings.lastWorkspacePath));
     return undefined;
   } catch (error) {
-    await forgetLastWorkspace();
+    await forgetLastWorkspace().catch(() => undefined);
     return error instanceof Error ? error.message : String(error);
   }
+}
+
+let reopening: Promise<string | undefined> | null = null;
+
+/**
+ * Reopens the last workspace on launch, once however often it is asked for:
+ * the renderer mounts twice in development. Failure leaves the start screen.
+ */
+export function reopenLastWorkspace(): Promise<string | undefined> {
+  reopening ??= openLastWorkspace();
+  return reopening;
 }

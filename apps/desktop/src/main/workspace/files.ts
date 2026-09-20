@@ -18,9 +18,30 @@ import {
   relative,
   sep,
 } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 export function sha256(data: string | Uint8Array): string {
   return `sha256:${createHash("sha256").update(data).digest("hex")}`;
+}
+
+/** Windows errors a rename while another process still holds the file. */
+const LOCKED = new Set(["EPERM", "EACCES", "EBUSY"]);
+
+/**
+ * A virus scanner reading the file resit just wrote, or a second write of the
+ * same file, holds it for a few milliseconds. Waiting beats failing the write.
+ */
+async function renameWhenFree(from: string, to: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const { code } = error as NodeJS.ErrnoException;
+      if (attempt === 4 || !code || !LOCKED.has(code)) throw error;
+      await delay(20 * (attempt + 1));
+    }
+  }
 }
 
 /**
@@ -47,7 +68,7 @@ export async function writeFileAtomic(
   }
   await handle.close();
   try {
-    await rename(temporary, path);
+    await renameWhenFree(temporary, path);
   } catch (error) {
     await rm(temporary, { force: true });
     throw error;

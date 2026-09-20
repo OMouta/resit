@@ -126,13 +126,10 @@ export function registerHandlers(
   window: () => BrowserWindow | null,
   onConfirmClose: () => void,
 ): void {
-  let firstLoad = true;
-
   handle(HEALTH_CHECK_CHANNEL, z.tuple([]), () => checkHealth());
 
   handle(CHANNELS.getAppState, z.tuple([]), async () => {
-    const reopenError = firstLoad ? await reopenLastWorkspace() : undefined;
-    firstLoad = false;
+    const reopenError = await reopenLastWorkspace();
     return appState(reopenError ? { reopenError } : undefined);
   });
 
