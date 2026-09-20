@@ -199,6 +199,8 @@ export const annotationSchema = z.looseObject({
   color: annotationColorSchema.catch("yellow"),
   segments: z.array(annotationSegmentSchema).min(1),
   comment: z.string().optional(),
+  /** Absent on the student's own highlights. */
+  author: z.literal("assistant").optional().catch(undefined),
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -212,3 +214,19 @@ export const annotationFileSchema = z.looseObject({
   annotations: z.array(annotationSchema),
 });
 export type AnnotationFile = z.infer<typeof annotationFileSchema>;
+
+/** Why resit kept a copy of a note before changing it. */
+export const REVISION_CAUSES = ["edit", "assistant", "restore"] as const;
+export type RevisionCause = (typeof REVISION_CAUSES)[number];
+
+/** One kept copy of a note's text, taken before the change its cause names. */
+export interface NoteRevision {
+  id: string;
+  at: string;
+  cause: RevisionCause;
+  size: number;
+}
+
+export interface NoteRevisionContent extends NoteRevision {
+  body: string;
+}
