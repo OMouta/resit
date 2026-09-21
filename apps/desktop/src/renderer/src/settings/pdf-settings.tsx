@@ -8,6 +8,8 @@ import {
 } from "@resit/ui/components/select";
 import { annotationColorClasses } from "@resit/ui/patterns/document/pdf-toolbar";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 import type {
   AppSettings,
@@ -23,24 +25,24 @@ import {
 import { SettingRow, SettingsSection } from "./settings-dialog";
 
 const ZOOMS: { value: PdfZoomSetting; label: string }[] = [
-  { value: "fit-width", label: "Fit width" },
-  { value: "fit-page", label: "Fit page" },
+  { value: "fit-width", label: msg("Fit width") },
+  { value: "fit-page", label: msg("Fit page") },
   { value: "100", label: "100%" },
   { value: "125", label: "125%" },
   { value: "150", label: "150%" },
 ];
 
 const OCR_LANGUAGES: { value: string; label: string }[] = [
-  { value: "eng", label: "English" },
-  { value: "por", label: "Portuguese" },
-  { value: "eng+por", label: "English and Portuguese" },
+  { value: "eng", label: msg("English") },
+  { value: "por", label: msg("Portuguese") },
+  { value: "eng+por", label: msg("English and Portuguese") },
 ];
 
 const PANELS: { value: PdfPanel; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "thumbnails", label: "Pages" },
-  { value: "outline", label: "Contents" },
-  { value: "highlights", label: "Highlights" },
+  { value: "none", label: msg("None") },
+  { value: "thumbnails", label: msg("Pages") },
+  { value: "outline", label: msg("Contents") },
+  { value: "highlights", label: msg("Highlights") },
 ];
 
 /** How PDFs open and what a new highlight looks like. */
@@ -51,31 +53,34 @@ export function PdfSettings({
   settings: AppSettings;
   onChange: (patch: SettingsPatch) => void;
 }) {
+  const { t } = useLocale();
   return (
     <>
-      <SettingsSection title="Opening a PDF">
-        <SettingRow label="Zoom">
+      <SettingsSection title={t("Opening a PDF")}>
+        <SettingRow label={t("Zoom")}>
           <Select
             value={settings.pdf.zoom}
             onValueChange={(value) =>
               onChange({ pdf: { zoom: value as PdfZoomSetting } })
             }
           >
-            <SelectTrigger aria-label="Zoom" className="w-36">
+            <SelectTrigger aria-label={t("Zoom")} className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {ZOOMS.map((zoom) => (
                 <SelectItem key={zoom.value} value={zoom.value}>
-                  {zoom.label}
+                  {t(zoom.label)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </SettingRow>
         <SettingRow
-          label="Side panel"
-          description="Page thumbnails, the document's contents, or your highlights."
+          label={t("Side panel")}
+          description={t(
+            "Page thumbnails, the document's contents, or your highlights.",
+          )}
         >
           <Select
             value={settings.pdf.panel}
@@ -83,21 +88,21 @@ export function PdfSettings({
               onChange({ pdf: { panel: value as PdfPanel } })
             }
           >
-            <SelectTrigger aria-label="Side panel" className="w-36">
+            <SelectTrigger aria-label={t("Side panel")} className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PANELS.map((panel) => (
                 <SelectItem key={panel.value} value={panel.value}>
-                  {panel.label}
+                  {t(panel.label)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </SettingRow>
         <SettingRow
-          label="Dim pages in the dark theme"
-          description="Takes the glare off a white page at night."
+          label={t("Dim pages in the dark theme")}
+          description={t("Takes the glare off a white page at night.")}
           htmlFor="pdf-dim"
         >
           <Switch
@@ -111,10 +116,12 @@ export function PdfSettings({
       </SettingsSection>
 
       <SettingsSection
-        title="Text recognition"
-        description="Reads the text on scanned pages so search and the assistant can find it. It runs on this computer and downloads each language once."
+        title={t("Text recognition")}
+        description={t(
+          "Reads the text on scanned pages so search and the assistant can find it. It runs on this computer and downloads each language once.",
+        )}
       >
-        <SettingRow label="Languages">
+        <SettingRow label={t("Languages")}>
           <Select
             value={settings.pdf.ocrLanguages.join("+")}
             onValueChange={(value) =>
@@ -124,7 +131,7 @@ export function PdfSettings({
             }
           >
             <SelectTrigger
-              aria-label="Text recognition languages"
+              aria-label={t("Text recognition languages")}
               className="w-56"
             >
               <SelectValue />
@@ -132,7 +139,7 @@ export function PdfSettings({
             <SelectContent>
               {OCR_LANGUAGES.map((language) => (
                 <SelectItem key={language.value} value={language.value}>
-                  {language.label}
+                  {t(language.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -141,13 +148,15 @@ export function PdfSettings({
       </SettingsSection>
 
       <SettingsSection
-        title="Highlights"
-        description="Highlights are saved beside the file. The PDF itself never changes."
+        title={t("Highlights")}
+        description={t(
+          "Highlights are saved beside the file. The PDF itself never changes.",
+        )}
       >
-        <SettingRow label="Colour to start with">
+        <SettingRow label={t("Colour to start with")}>
           <div
             role="radiogroup"
-            aria-label="Highlight colour"
+            aria-label={t("Highlight colour")}
             className="flex gap-1.5"
           >
             {ANNOTATION_COLOR_VALUES.map((color: AnnotationColorValue) => (
@@ -156,8 +165,8 @@ export function PdfSettings({
                 type="button"
                 role="radio"
                 aria-checked={settings.pdf.highlightColor === color}
-                aria-label={annotationColorClasses[color].label}
-                title={annotationColorClasses[color].label}
+                aria-label={t(annotationColorClasses[color].label)}
+                title={t(annotationColorClasses[color].label)}
                 onClick={() => onChange({ pdf: { highlightColor: color } })}
                 className={cn(
                   "flex size-7 items-center justify-center rounded-md",

@@ -1,5 +1,6 @@
 import { Switch } from "@resit/ui/components/switch";
 import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type {
   AppSettings,
@@ -16,28 +17,33 @@ export function EditorSettings({
   settings: AppSettings;
   onChange: (patch: SettingsPatch) => void;
 }) {
+  const { t } = useLocale();
   return (
     <>
       <SettingsSection
-        title="Opening a note"
-        description="Notes whose Markdown the rich editor would change always open as Markdown."
+        title={t("Opening a note")}
+        description={t(
+          "Notes whose Markdown the rich editor would change always open as Markdown.",
+        )}
       >
-        <SettingRow label="Editor">
+        <SettingRow label={t("Editor")}>
           <Tabs
             value={settings.editor.mode}
             onValueChange={(value) =>
               onChange({ editor: { mode: value as EditorMode } })
             }
           >
-            <TabsList aria-label="Default editor">
-              <TabsTrigger value="rich">Rich text</TabsTrigger>
-              <TabsTrigger value="source">Markdown</TabsTrigger>
+            <TabsList aria-label={t("Default editor")}>
+              <TabsTrigger value="rich">{t("Rich text")}</TabsTrigger>
+              <TabsTrigger value="source">{t("Markdown")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </SettingRow>
         <SettingRow
-          label="Show the outline"
-          description="Lists the note's headings beside it. Toggle it per note with Ctrl+Shift+O."
+          label={t("Show the outline")}
+          description={t(
+            "Lists the note's headings beside it. Toggle it per note with Ctrl+Shift+O.",
+          )}
           htmlFor="editor-outline"
         >
           <Switch
@@ -50,10 +56,10 @@ export function EditorSettings({
         </SettingRow>
       </SettingsSection>
 
-      <SettingsSection title="Writing">
+      <SettingsSection title={t("Writing")}>
         <SettingRow
-          label="Check spelling"
-          description="Uses the languages your system is set up for."
+          label={t("Check spelling")}
+          description={t("Uses the languages your system is set up for.")}
           htmlFor="editor-spellcheck"
         >
           <Switch

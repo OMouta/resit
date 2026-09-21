@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@resit/ui/components/button";
 import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection } from "../../../shared/moodle";
 import { SettingsSection } from "./settings-dialog";
@@ -28,6 +29,7 @@ export function MoodleSettings({
   onDisconnect,
   onRefresh,
 }: MoodleSettingsProps) {
+  const { t } = useLocale();
   const [siteUrl, setSiteUrl] = useState(
     connection.status === "disconnected" ? "" : connection.siteUrl,
   );
@@ -53,8 +55,10 @@ export function MoodleSettings({
 
   return (
     <SettingsSection
-      title="Account"
-      description="Follow your Moodle courses and download their files into subjects."
+      title={t("Account")}
+      description={t(
+        "Follow your Moodle courses and download their files into subjects.",
+      )}
     >
       {connection.status === "connected" ? (
         <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2.5">
@@ -63,7 +67,10 @@ export function MoodleSettings({
               {connection.fullName || connection.username}
             </p>
             <p className="text-xs break-words text-muted-foreground">
-              {connection.username} at {connection.siteName}
+              {t("{user} at {site}", {
+                user: connection.username,
+                site: connection.siteName,
+              })}
             </p>
           </div>
           <Button
@@ -72,10 +79,10 @@ export function MoodleSettings({
             onClick={onRefresh}
             disabled={checking}
           >
-            <RefreshCwIcon /> {checking ? "Checking…" : "Check again"}
+            <RefreshCwIcon /> {checking ? t("Checking…") : t("Check again")}
           </Button>
           <Button size="sm" variant="subtle" onClick={onDisconnect}>
-            Disconnect
+            {t("Disconnect")}
           </Button>
         </div>
       ) : (
@@ -86,7 +93,7 @@ export function MoodleSettings({
             </p>
           ) : null}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="moodle-site">Moodle address</Label>
+            <Label htmlFor="moodle-site">{t("Moodle address")}</Label>
             <Input
               id="moodle-site"
               value={siteUrl}
@@ -97,7 +104,7 @@ export function MoodleSettings({
           </div>
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="moodle-user">Username</Label>
+              <Label htmlFor="moodle-user">{t("Username")}</Label>
               <Input
                 id="moodle-user"
                 value={username}
@@ -106,7 +113,7 @@ export function MoodleSettings({
               />
             </div>
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="moodle-password">Password</Label>
+              <Label htmlFor="moodle-password">{t("Password")}</Label>
               <Input
                 id="moodle-password"
                 type="password"
@@ -127,7 +134,7 @@ export function MoodleSettings({
                 busy || !siteUrl.trim() || !username.trim() || !password
               }
             >
-              {busy ? "Connecting…" : "Connect"}
+              {busy ? t("Connecting…") : t("Connect")}
             </Button>
           </div>
         </form>

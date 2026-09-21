@@ -18,13 +18,15 @@ import {
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { useRovingFocus } from "@resit/ui/hooks/use-roving-focus";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 export const SETTINGS_TOPICS = [
-  { id: "general", label: "General", icon: SlidersHorizontalIcon },
-  { id: "editor", label: "Editor", icon: PenLineIcon },
-  { id: "pdf", label: "PDFs", icon: FileTextIcon },
-  { id: "providers", label: "AI providers", icon: SparklesIcon },
-  { id: "moodle", label: "Moodle", icon: GraduationCapIcon },
+  { id: "general", label: msg("General"), icon: SlidersHorizontalIcon },
+  { id: "editor", label: msg("Editor"), icon: PenLineIcon },
+  { id: "pdf", label: msg("PDFs"), icon: FileTextIcon },
+  { id: "providers", label: msg("AI providers"), icon: SparklesIcon },
+  { id: "moodle", label: msg("Moodle"), icon: GraduationCapIcon },
 ] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[];
 
 export type SettingsTopic = (typeof SETTINGS_TOPICS)[number]["id"];
@@ -101,6 +103,7 @@ export function SettingsDialog({
   /** The open topic's settings. */
   children?: ReactNode;
 }) {
+  const { t } = useLocale();
   const list = useRef<HTMLDivElement>(null);
   const { onKeyDown } = useRovingFocus(list, {
     itemSelector: "[role=tab]",
@@ -116,16 +119,16 @@ export function SettingsDialog({
           <nav className="flex w-56 shrink-0 flex-col border-r bg-sidebar p-2">
             <DialogHeader className="gap-0.5 px-2 pt-1.5 pb-2.5 text-left">
               <DialogTitle className="text-sm font-semibold">
-                Settings
+                {t("Settings")}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                These apply to this computer only.
+                {t("These apply to this computer only.")}
               </DialogDescription>
             </DialogHeader>
             <div
               ref={list}
               role="tablist"
-              aria-label="Settings"
+              aria-label={t("Settings")}
               aria-orientation="vertical"
               onKeyDown={onKeyDown}
               className="flex flex-col gap-px"
@@ -154,7 +157,7 @@ export function SettingsDialog({
                   >
                     <Icon className="size-4 shrink-0 text-subtle-foreground" />
                     <span className="min-w-0 flex-1 truncate">
-                      {entry.label}
+                      {t(entry.label)}
                     </span>
                   </button>
                 );
@@ -163,7 +166,7 @@ export function SettingsDialog({
           </nav>
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="flex h-toolbar shrink-0 items-center border-b px-5">
-              <h2 className="text-sm font-medium">{current.label}</h2>
+              <h2 className="text-sm font-medium">{t(current.label)}</h2>
             </header>
             <ScrollArea className="min-h-0 flex-1">
               <div
