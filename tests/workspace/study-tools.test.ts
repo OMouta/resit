@@ -11,6 +11,16 @@ import {
   createAnnotation,
   listAnnotations,
 } from "../../apps/desktop/src/main/workspace/annotations";
+import { setPersonalization } from "../../apps/desktop/src/main/learner/store";
+import {
+  readPlan,
+  saveSession,
+} from "../../apps/desktop/src/main/planning/store";
+import {
+  listPractice,
+  startAttempt,
+  submitAttempt,
+} from "../../apps/desktop/src/main/practice/store";
 import { listNoteRevisions } from "../../apps/desktop/src/main/workspace/history";
 import {
   activitiesPath,
@@ -402,5 +412,199 @@ describe("study read tools", () => {
 
     const refused = await run("study_read_activity", { activityId: "302" });
     expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+  });
+});
+
+describe("practice tools", () => {
+  it("suggests cards that wait for the student, and refuses another subject", async () => {
+    const made = await run("study_create_flashcards", {
+      subjectId: mathematicsId,
+      cards: [
+        {
+          kind: "basic",
+          front: "What is 2 + 2?",
+          back: "4",
+          topic: "Arithmetic",
+        },
+        {
+          kind: "cloze",
+          front: "The derivative of x^2 is {{c1::2x}}.",
+          back: "",
+          source: { resourceId: pdfId, page: 2 },
+        },
+      ],
+    });
+    expect(made.failed).toBe(false);
+    expect(made.data.suggested).toBe(2);
+    const { subjects } = await listPractice(workspace);
+    const cards = subjects.find(
+      (entry) => entry.subjectId === mathematicsId,
+    )!.cards;
+    expect(cards.every((card) => card.status === "suggested")).toBe(true);
+    expect(cards[1]!.source).toEqual({ resourceId: pdfId, page: 2 });
+
+    const refused = await run("study_create_flashcards", {
+      subjectId: physicsId,
+      cards: [{ kind: "basic", front: "F?", back: "ma" }],
+    });
+    expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+  });
+
+  it("makes a quiz, requires solutions to worked questions, and reads back the student's answers", async () => {
+    const missing = await run("study_create_quiz", {
+      subjectId: mathematicsId,
+      title: "Limits",
+      questions: [{ kind: "worked", prompt: "Prove it." }],
+    });
+    expect(errorCode(missing.data)).toBe("INVALID_INPUT");
+
+    const made = await run("study_create_quiz", {
+      subjectId: mathematicsId,
+      title: "Limits",
+      topic: "Limits",
+      questions: [
+        { kind: "short", prompt: "2 + 3?", answer: "5" },
+        { kind: "worked", prompt: "Prove it.", solution: "Because." },
+      ],
+    });
+    expect(made.failed).toBe(false);
+    const quizId = made.data.quizId as string;
+    const attempt = await startAttempt(workspace, mathematicsId, quizId);
+    await submitAttempt(workspace, mathematicsId, quizId, attempt.id, {
+      [attempt.questions[0]!.id]: { answer: "6" },
+    });
+
+    const read = await run("study_read_quiz", {
+      subjectId: mathematicsId,
+      quizId,
+    });
+    const [last] = read.data.attempts as {
+      answers: { answer: string; mark: string }[];
+    }[];
+    expect(last!.answers[0]).toMatchObject({ answer: "6", mark: "incorrect" });
+    expect(last!.answers[1]!.mark).toBe("not marked yet");
+
+    const listed = await run("study_list_practice", {});
+    const [subject] = listed.data.subjects as {
+      quizzes: { title: string; lastScore: { correct: number } | null }[];
+    }[];
+    expect(subject!.quizzes[0]).toMatchObject({
+      title: "Limits",
+      lastScore: { correct: 0 },
+    });
+  });
+});
+
+describe("planning tools", () => {
+  /** A date a week from now, so suggestions are never in the past. */
+  const nextWeek = () => {
+    const day = new Date();
+    day.setDate(day.getDate() + 7);
+    return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  };
+
+  it("suggests sessions, refuses overlaps, and shows other subjects only as busy time", async () => {
+    const date = nextWeek();
+    await saveSession(workspace, {
+      title: "Kinematics problems",
+      subjectId: physicsId,
+      kind: "exercises",
+      date,
+      start: "18:00",
+      end: "19:00",
+    });
+    const clash = await run("study_propose_sessions", {
+      sessions: [
+        {
+          title: "Limits",
+          subjectId: mathematicsId,
+          kind: "reading",
+          date,
+          start: "18:30",
+          end: "19:30",
+        },
+      ],
+    });
+    expect(errorCode(clash.data)).toBe("CONFLICT");
+
+    const made = await run("study_propose_sessions", {
+      sessions: [
+        {
+          title: "Limits",
+          subjectId: mathematicsId,
+          kind: "reading",
+          date,
+          start: "19:00",
+          end: "20:00",
+          opens: { resourceId: pdfId },
+          reason: "Test on Friday",
+        },
+      ],
+    });
+    expect(made.failed).toBe(false);
+    const plan = await readPlan(workspace);
+    const suggestion = plan.sessions.find(
+      (session) => session.title === "Limits",
+    );
+    expect(suggestion?.proposal).toEqual({ reason: "Test on Friday" });
+    expect(suggestion?.target).toEqual({ type: "resource", resourceId: pdfId });
+
+    const read = await run("study_get_plan", { from: date, days: 1 });
+    const sessions = read.data.sessions as Record<string, unknown>[];
+    expect(sessions[0]).toEqual({
+      busy: true,
+      date,
+      start: "18:00",
+      end: "19:00",
+    });
+    expect(sessions[1]).toMatchObject({
+      title: "Limits",
+      waitingForTheStudent: true,
+    });
+  });
+
+  it("adds an assessment only to a subject in scope", async () => {
+    const added = await run("study_add_assessment", {
+      title: "Test 1",
+      subjectId: mathematicsId,
+      date: nextWeek(),
+      time: "09:00",
+    });
+    expect(added.failed).toBe(false);
+    const refused = await run("study_add_assessment", {
+      title: "Physics exam",
+      subjectId: physicsId,
+      date: nextWeek(),
+    });
+    expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+    expect((await readPlan(workspace)).assessments).toHaveLength(1);
+  });
+});
+
+describe("learner tools", () => {
+  it("suggests a topic for the student to accept, and reads only subjects in scope", async () => {
+    const suggested = await run("study_propose_topic", {
+      name: "Limits",
+      subjectId: mathematicsId,
+      level: "gap",
+      reason: "Forgot most cards on it this week",
+    });
+    expect(suggested.failed).toBe(false);
+    const refused = await run("study_propose_topic", {
+      name: "Kinematics",
+      subjectId: physicsId,
+      level: "gap",
+      reason: "Wrong twice",
+    });
+    expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+
+    const profile = await run("study_get_learner_profile", {});
+    expect(profile.data.waitingForTheStudent).toEqual([
+      { name: "Limits", level: "gap" },
+    ]);
+
+    await setPersonalization(workspace, false);
+    const off = await run("study_get_learner_profile", {});
+    expect(off.data.personalization).toBe(false);
   });
 });

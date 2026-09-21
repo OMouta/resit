@@ -10,13 +10,38 @@ import type {
 } from "../../shared/conversations";
 import type { LiveContext } from "../../shared/context";
 import type { RenderedPage } from "../../shared/ipc";
+import { TOPIC_LEVEL_VALUES } from "../../shared/learner";
+import {
+  isOverdue,
+  isoWeekday,
+  localDate,
+  localInstant,
+  SESSION_KIND_VALUES,
+  type SessionTarget,
+} from "../../shared/planning";
+import {
+  attemptScore,
+  CARD_KIND_VALUES,
+  QUESTION_KIND_VALUES,
+  type PracticeSource,
+} from "../../shared/practice";
 import {
   ANNOTATION_COLOR_VALUES,
   ANNOTATION_TYPE_VALUES,
   type Annotation,
   type ResourceInfo,
 } from "../../shared/workspace";
+import { proposeTopic, readLearner, topicEvidence } from "../learner/store";
 import { listActivities } from "../moodle/sync";
+import { proposeChanges, readPlan, saveAssessment } from "../planning/store";
+import {
+  cardReviews,
+  createCards,
+  listPractice,
+  readQuiz,
+  saveQuiz,
+  subjectCards,
+} from "../practice/store";
 import {
   createAnnotation,
   deleteAnnotation,
@@ -37,6 +62,16 @@ import {
 } from "../workspace/workspace";
 
 export const STUDY_SERVER = "study";
+
+const WEEKDAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const MAX_NOTE_CHARS = 60_000;
 const MAX_PAGE_CHARS = 20_000;
@@ -106,7 +141,10 @@ export interface StudyTool {
 /** Something a write tool changed, so the window can show it. */
 export type StudyChange =
   | { kind: "note"; resourceId: string }
-  | { kind: "annotations"; documentId: string };
+  | { kind: "annotations"; documentId: string }
+  | { kind: "practice"; subjectId: string }
+  | { kind: "plan" }
+  | { kind: "learner" };
 
 /** What one turn may read, write, and see. */
 export interface TurnGrant {
@@ -185,6 +223,32 @@ export function describeToolCall(
       return `Changed a highlight in ${title("documentId")}`;
     case "study_delete_highlight":
       return `Removed a highlight from ${title("documentId")}`;
+    case "study_list_practice":
+      return "Checked your flashcards and quizzes";
+    case "study_read_flashcards":
+      return "Read your flashcards";
+    case "study_read_quiz":
+      return "Read a quiz and your answers";
+    case "study_create_flashcards": {
+      const count = Array.isArray(input.cards) ? input.cards.length : 0;
+      return `Suggested ${count} ${count === 1 ? "flashcard" : "flashcards"}`;
+    }
+    case "study_create_quiz":
+      return `Made the quiz “${String(input.title ?? "")}”`;
+    case "study_get_plan":
+      return "Read your study plan";
+    case "study_propose_sessions": {
+      const count =
+        (Array.isArray(input.sessions) ? input.sessions.length : 0) +
+        (Array.isArray(input.moves) ? input.moves.length : 0);
+      return `Suggested ${count} ${count === 1 ? "change" : "changes"} to your plan`;
+    }
+    case "study_add_assessment":
+      return `Added “${String(input.title ?? "")}” to your plan`;
+    case "study_get_learner_profile":
+      return "Read your learner profile";
+    case "study_propose_topic":
+      return `Suggested “${String(input.name ?? "")}” for your profile`;
     default:
       return short;
   }
@@ -333,6 +397,40 @@ export function studyTools(
     ...(info.folder ? { folder: info.folder } : {}),
   });
   const changed = (change: StudyChange) => grant.onChange?.(change);
+  /** A subject the turn may read and write, or why it may not. */
+  const subjectFor = (subjectId: string): ToolResult | null => {
+    if (!workspace.subjects.has(subjectId))
+      return failure("NOT_FOUND", `No subject has the ID ${subjectId}.`);
+    if (!scope.subjectIds.includes(subjectId))
+      return failure(
+        "OUT_OF_SCOPE",
+        "That subject is not in this conversation. Ask the student to add it.",
+      );
+    return null;
+  };
+  /** A card or question's source, checked against the scope. */
+  const practiceSource = (
+    source: { resourceId: string; page?: number | undefined } | undefined,
+  ): PracticeSource | ToolResult | undefined => {
+    if (!source) return undefined;
+    const info = resource(source.resourceId);
+    if ("content" in info) return info;
+    return {
+      resourceId: info.id,
+      ...(source.page && info.kind === "pdf" ? { page: source.page } : {}),
+    };
+  };
+  const sourceShape = z
+    .object({
+      resourceId: z.string().describe("The note or PDF it comes from"),
+      page: z.number().int().positive().optional().describe("PDF page"),
+    })
+    .optional();
+  const topicShape = z
+    .string()
+    .max(100)
+    .optional()
+    .describe("A topic name. Reuse the names study_list_practice shows.");
 
   /** Builds a tool whose input is parsed once, here, for every transport. */
   const define = <Shape extends z.ZodRawShape>(
@@ -742,6 +840,655 @@ export function studyTools(
       },
     ),
     define(
+      "study_list_practice",
+      "List the flashcards and quizzes in the subjects in scope: card counts by topic, what is due, how the last two weeks of reviews went, and each quiz with its last score.",
+      {
+        subjectId: z
+          .string()
+          .optional()
+          .describe("Only list one subject's practice"),
+      },
+      async ({ subjectId }) => {
+        const since = Date.now() - 14 * 86_400_000;
+        const at = Date.now();
+        const overview = await listPractice(workspace);
+        const subjects = [];
+        for (const record of overview.subjects) {
+          if (!scope.subjectIds.includes(record.subjectId)) continue;
+          if (subjectId && record.subjectId !== subjectId) continue;
+          const topics = new Map<
+            string,
+            {
+              cards: number;
+              due: number;
+              lapses: number;
+              reviews: number;
+              forgotten: number;
+            }
+          >();
+          const topicOf = (topic: string | undefined) => {
+            const key = topic ?? "";
+            let entry = topics.get(key);
+            if (!entry) {
+              entry = { cards: 0, due: 0, lapses: 0, reviews: 0, forgotten: 0 };
+              topics.set(key, entry);
+            }
+            return entry;
+          };
+          const byId = new Map(record.cards.map((card) => [card.id, card]));
+          for (const card of record.cards) {
+            if (card.status === "suggested") continue;
+            const entry = topicOf(card.topic);
+            entry.cards += 1;
+            entry.lapses += card.schedule.lapses;
+            if (
+              card.status === "active" &&
+              card.schedule.state !== "new" &&
+              Date.parse(card.schedule.due) <= at
+            )
+              entry.due += 1;
+          }
+          for (const review of await cardReviews(workspace, record.subjectId)) {
+            if (Date.parse(review.at) < since) continue;
+            const entry = topicOf(byId.get(review.cardId)?.topic);
+            entry.reviews += 1;
+            if (review.rating === "again") entry.forgotten += 1;
+          }
+          subjects.push({
+            subjectId: record.subjectId,
+            subject: subjectNames.get(record.subjectId) ?? null,
+            cards: {
+              total: record.cards.length,
+              waitingForTheStudent: record.cards.filter(
+                (card) => card.status === "suggested",
+              ).length,
+              new: record.cards.filter(
+                (card) =>
+                  card.status === "active" && card.schedule.state === "new",
+              ).length,
+              byTopic: [...topics].map(([topic, entry]) => ({
+                topic: topic || null,
+                ...entry,
+              })),
+            },
+            reviewedToday: record.reviewedToday,
+            quizzes: record.quizzes.map((quiz) => ({
+              quizId: quiz.id,
+              title: quiz.title,
+              topic: quiz.topic ?? null,
+              questions: quiz.questionCount,
+              lastScore: quiz.last ?? null,
+              inProgress: quiz.unfinished ?? false,
+            })),
+          });
+        }
+        return ok({
+          subjects,
+          note: "reviews and forgotten cover the last 14 days. A forgotten card is one rated Again.",
+        });
+      },
+    ),
+    define(
+      "study_read_flashcards",
+      "Read the flashcards in one subject, to see what is already covered before making more.",
+      {
+        subjectId: z.string(),
+        topic: z.string().optional().describe("Only this topic's cards"),
+      },
+      async ({ subjectId, topic }) => {
+        const refused = subjectFor(subjectId);
+        if (refused) return refused;
+        const cards = (await subjectCards(workspace, subjectId))
+          .filter((card) => !topic || card.topic === topic)
+          .slice(0, 300)
+          .map((card) => ({
+            kind: card.kind,
+            front: card.front,
+            back: card.back,
+            topic: card.topic ?? null,
+            status: card.status,
+            reviews: card.schedule.reps,
+            forgotten: card.schedule.lapses,
+          }));
+        return ok({ subject: subjectNames.get(subjectId) ?? null, cards });
+      },
+    ),
+    define(
+      "study_read_quiz",
+      "Read a quiz: its questions with answers and solutions, and the student's recent attempts with what they answered and how each answer was marked.",
+      { subjectId: z.string(), quizId: z.string() },
+      async ({ subjectId, quizId }) => {
+        const refused = subjectFor(subjectId);
+        if (refused) return refused;
+        let quiz;
+        try {
+          quiz = await readQuiz(workspace, subjectId, quizId);
+        } catch (error) {
+          return failure(
+            "NOT_FOUND",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+        const attempts = quiz.attempts
+          .filter((attempt) => attempt.submittedAt)
+          .sort((a, b) =>
+            (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""),
+          )
+          .slice(0, 5)
+          .map((attempt) => ({
+            submittedAt: attempt.submittedAt,
+            score: attemptScore(attempt),
+            answers: attempt.questions.map((question) => {
+              const response = attempt.responses[question.id];
+              return {
+                question: question.prompt,
+                answer: response?.answer ?? "",
+                mark: response?.mark?.outcome ?? "not marked yet",
+                markedBy: response?.mark?.by ?? null,
+                usedHint: response?.hintShown ?? false,
+              };
+            }),
+          }));
+        return ok({
+          quizId: quiz.id,
+          title: quiz.title,
+          topic: quiz.topic ?? null,
+          questions: quiz.questions.map(({ id: _id, ...question }) => question),
+          attempts,
+        });
+      },
+    ),
+    define(
+      "study_create_flashcards",
+      "Suggest flashcards for one subject. They wait in the student's Practice tab until the student keeps them, so write them ready to use: one fact per card, math in $...$.",
+      {
+        subjectId: z.string(),
+        cards: z
+          .array(
+            z.object({
+              kind: z
+                .enum(CARD_KIND_VALUES)
+                .describe(
+                  "basic: a question and an answer. cloze: text with hidden parts written {{c1::like this}}.",
+                ),
+              front: z
+                .string()
+                .min(1)
+                .max(4000)
+                .describe("The question, or the cloze text"),
+              back: z
+                .string()
+                .max(4000)
+                .describe("The answer. For a cloze card, optional extra text."),
+              topic: topicShape,
+              source: sourceShape,
+            }),
+          )
+          .min(1)
+          .max(50),
+      },
+      async ({ subjectId, cards }) => {
+        const refused = subjectFor(subjectId);
+        if (refused) return refused;
+        const inputs = [];
+        for (const card of cards) {
+          const source = practiceSource(card.source);
+          if (source && "content" in source) return source;
+          inputs.push({
+            kind: card.kind,
+            front: card.front,
+            back: card.back,
+            topic: card.topic,
+            source,
+          });
+        }
+        try {
+          const created = await createCards(workspace, subjectId, inputs, {
+            author: "assistant",
+          });
+          changed({ kind: "practice", subjectId });
+          return ok({
+            suggested: created.length,
+            note: "The cards are in the Practice tab, waiting for the student to keep or discard them.",
+          });
+        } catch (error) {
+          return failure(
+            "INVALID_INPUT",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
+      "study_create_quiz",
+      "Make a quiz in one subject. It is saved straight away and the student takes it in resit, which marks multiple-choice and short answers itself. Worked answers are marked by the student against your solution, so give every worked question a full solution.",
+      {
+        subjectId: z.string(),
+        title: z.string().min(1).max(200),
+        topic: topicShape,
+        questions: z
+          .array(
+            z.object({
+              kind: z
+                .enum(QUESTION_KIND_VALUES)
+                .describe(
+                  "choice: multiple choice. short: a short answer resit compares. worked: a problem the student works through.",
+                ),
+              prompt: z.string().min(1).max(8000),
+              options: z
+                .array(z.string().min(1).max(1000))
+                .min(2)
+                .max(8)
+                .optional()
+                .describe("Multiple choice only"),
+              answer: z
+                .string()
+                .max(4000)
+                .optional()
+                .describe(
+                  "choice: the right option, copied exactly. short: the expected answer. worked: the final result, if there is one.",
+                ),
+              accept: z
+                .array(z.string().max(1000))
+                .max(10)
+                .optional()
+                .describe("Other short answers that count as right"),
+              hint: z.string().max(4000).optional(),
+              solution: z
+                .string()
+                .max(20_000)
+                .optional()
+                .describe("The worked solution or explanation, as Markdown"),
+              topic: topicShape,
+              source: sourceShape,
+            }),
+          )
+          .min(1)
+          .max(30),
+      },
+      async ({ subjectId, title, topic, questions }) => {
+        const refused = subjectFor(subjectId);
+        if (refused) return refused;
+        const inputs = [];
+        for (const [index, question] of questions.entries()) {
+          if (question.kind === "worked" && !question.solution?.trim())
+            return failure(
+              "INVALID_INPUT",
+              `Question ${index + 1} is a worked question without a solution. The student marks it against the solution, so write one.`,
+            );
+          const source = practiceSource(question.source);
+          if (source && "content" in source) return source;
+          inputs.push({ ...question, source });
+        }
+        try {
+          const quiz = await saveQuiz(workspace, subjectId, {
+            title,
+            topic,
+            questions: inputs,
+            author: "assistant",
+          });
+          changed({ kind: "practice", subjectId });
+          return ok({
+            quizId: quiz.id,
+            title: quiz.title,
+            questions: quiz.questions.length,
+            note: "The quiz is in the Practice tab under its subject.",
+          });
+        } catch (error) {
+          return failure(
+            "INVALID_INPUT",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
+      "study_get_plan",
+      "Read the student's study plan: their weekly study times, sessions with their status, assessments, and Moodle deadlines, for a range of days. Sessions of subjects outside this conversation appear only as busy time.",
+      {
+        from: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional()
+          .describe("First day, YYYY-MM-DD. Defaults to today."),
+        days: z
+          .number()
+          .int()
+          .min(1)
+          .max(62)
+          .optional()
+          .describe("How many days. Defaults to 14."),
+      },
+      async ({ from, days }) => {
+        const at = new Date();
+        const first = from ?? localDate(at);
+        const end = localInstant(first, "12:00");
+        end.setDate(end.getDate() + (days ?? 14) - 1);
+        const last = localDate(end);
+        const inRange = (date: string) => date >= first && date <= last;
+        const visible = (subjectId: string | undefined) =>
+          !subjectId || scope.subjectIds.includes(subjectId);
+        const plan = await readPlan(workspace);
+        const sessions = plan.sessions
+          .filter(
+            (session) =>
+              inRange(session.date) ||
+              (session.move !== undefined && inRange(session.move.date)),
+          )
+          .sort((a, b) =>
+            `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`),
+          )
+          .map((session) =>
+            visible(session.subjectId)
+              ? {
+                  sessionId: session.id,
+                  title: session.title,
+                  subject: session.subjectId
+                    ? (subjectNames.get(session.subjectId) ?? null)
+                    : null,
+                  kind: session.kind,
+                  date: session.date,
+                  start: session.start,
+                  end: session.end,
+                  status: isOverdue(session, at) ? "missed" : session.status,
+                  ...(session.proposal ? { waitingForTheStudent: true } : {}),
+                  ...(session.move ? { suggestedMove: session.move } : {}),
+                }
+              : {
+                  busy: true,
+                  date: session.date,
+                  start: session.start,
+                  end: session.end,
+                },
+          );
+        const moodle = [];
+        for (const record of await listActivities(workspace)) {
+          if (!scope.subjectIds.includes(record.subjectId)) continue;
+          for (const activity of record.activities)
+            for (const date of activity.dates) {
+              const when = new Date(date.at);
+              if (!inRange(localDate(when))) continue;
+              moodle.push({
+                subject: subjectNames.get(record.subjectId) ?? null,
+                activity: activity.name,
+                type: date.type,
+                date: localDate(when),
+                time: `${String(when.getHours()).padStart(2, "0")}:${String(when.getMinutes()).padStart(2, "0")}`,
+              });
+            }
+        }
+        return ok({
+          today: localDate(at),
+          weekday: WEEKDAYS[isoWeekday(localDate(at)) - 1],
+          studyTimes: plan.availability.map((slot) => ({
+            weekday: WEEKDAYS[slot.weekday - 1],
+            start: slot.start,
+            end: slot.end,
+          })),
+          sessions,
+          assessments: plan.assessments
+            .filter(
+              (assessment) =>
+                assessment.date >= localDate(at) &&
+                visible(assessment.subjectId),
+            )
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((assessment) => ({
+              title: assessment.title,
+              subject: assessment.subjectId
+                ? (subjectNames.get(assessment.subjectId) ?? null)
+                : null,
+              date: assessment.date,
+              ...(assessment.time ? { time: assessment.time } : {}),
+              ...(assessment.notes ? { notes: assessment.notes } : {}),
+            })),
+          moodleDeadlines: moodle,
+        });
+      },
+    ),
+    define(
+      "study_propose_sessions",
+      "Suggest study sessions, or new times for sessions already planned. They wait in the Schedule tab until the student accepts them. resit refuses the whole set if any of them overlaps another session, falls outside the student's study times, or starts in the past, and says why; change those and try again.",
+      {
+        sessions: z
+          .array(
+            z.object({
+              title: z.string().min(1).max(200),
+              subjectId: z.string(),
+              kind: z.enum(SESSION_KIND_VALUES),
+              date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+              start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+              end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+              opens: z
+                .object({
+                  resourceId: z.string().optional(),
+                  quizId: z.string().optional(),
+                  flashcards: z.boolean().optional(),
+                })
+                .optional()
+                .describe(
+                  "What the session opens: a note or PDF, a quiz in the same subject, or the subject's due flashcards",
+                ),
+              reason: z
+                .string()
+                .max(300)
+                .optional()
+                .describe(
+                  "One short line the student sees, such as 'Test 1 on Friday'",
+                ),
+            }),
+          )
+          .max(40)
+          .optional(),
+        moves: z
+          .array(
+            z.object({
+              sessionId: z.string(),
+              date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+              start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+              end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+              reason: z.string().max(300).optional(),
+            }),
+          )
+          .max(40)
+          .optional(),
+      },
+      async ({ sessions = [], moves = [] }) => {
+        if (sessions.length === 0 && moves.length === 0)
+          return failure("INVALID_INPUT", "Give at least one session or move.");
+        const proposed = [];
+        for (const session of sessions) {
+          const refused = subjectFor(session.subjectId);
+          if (refused) return refused;
+          let target: SessionTarget | undefined;
+          if (session.opens?.resourceId) {
+            const info = resource(session.opens.resourceId);
+            if ("content" in info) return info;
+            target = { type: "resource", resourceId: info.id };
+          } else if (session.opens?.quizId) {
+            try {
+              await readQuiz(
+                workspace,
+                session.subjectId,
+                session.opens.quizId,
+              );
+            } catch {
+              return failure(
+                "NOT_FOUND",
+                `The subject has no quiz with the ID ${session.opens.quizId}.`,
+              );
+            }
+            target = {
+              type: "quiz",
+              subjectId: session.subjectId,
+              quizId: session.opens.quizId,
+            };
+          } else if (session.opens?.flashcards)
+            target = { type: "cards", subjectId: session.subjectId };
+          const { opens: _opens, ...rest } = session;
+          proposed.push({ ...rest, ...(target ? { target } : {}) });
+        }
+        const plan = await readPlan(workspace);
+        for (const move of moves) {
+          const session = plan.sessions.find(
+            (entry) => entry.id === move.sessionId,
+          );
+          if (
+            session?.subjectId &&
+            !scope.subjectIds.includes(session.subjectId)
+          )
+            return failure(
+              "OUT_OF_SCOPE",
+              "That session's subject is not in this conversation.",
+            );
+        }
+        const result = await proposeChanges(workspace, {
+          sessions: proposed,
+          moves,
+        });
+        if (result.problems.length > 0)
+          return failure(
+            "CONFLICT",
+            `Nothing was saved.\n${result.problems.join("\n")}`,
+          );
+        changed({ kind: "plan" });
+        return ok({
+          suggested: result.sessionIds.length,
+          note: "The student accepts or declines them in the Schedule tab.",
+        });
+      },
+    ),
+    define(
+      "study_add_assessment",
+      "Add an exam, test, or hand-in the student told you about, with its date. It goes straight into their plan.",
+      {
+        title: z.string().min(1).max(200),
+        subjectId: z.string().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        time: z
+          .string()
+          .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+          .optional(),
+        notes: z.string().max(2000).optional(),
+      },
+      async ({ subjectId, ...input }) => {
+        if (subjectId) {
+          const refused = subjectFor(subjectId);
+          if (refused) return refused;
+        }
+        try {
+          const assessment = await saveAssessment(workspace, {
+            ...input,
+            ...(subjectId ? { subjectId } : {}),
+          });
+          changed({ kind: "plan" });
+          return ok({ added: assessment.title, date: assessment.date });
+        } catch (error) {
+          return failure(
+            "INVALID_INPUT",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
+      "study_get_learner_profile",
+      "Read what the student accepted about how they learn: their preferences, their topics and how well they know each, and what their practice on each topic shows over the last 30 days.",
+      {},
+      async () => {
+        const file = await readLearner(workspace);
+        if (!file.personalization)
+          return ok({
+            personalization: false,
+            note: "The student turned personalization off. Do not suggest profile changes.",
+          });
+        const visible = (subjectId: string | undefined) =>
+          !subjectId || scope.subjectIds.includes(subjectId);
+        const evidence = await topicEvidence(
+          workspace,
+          scope.subjectIds.filter((id) => workspace.subjects.has(id)),
+        );
+        return ok({
+          personalization: true,
+          preferences: file.preferences,
+          topics: file.topics
+            .filter((topic) => visible(topic.subjectId))
+            .map((topic) => ({
+              name: topic.name,
+              subject: topic.subjectId
+                ? (subjectNames.get(topic.subjectId) ?? null)
+                : null,
+              level: topic.level,
+              ...(topic.note ? { note: topic.note } : {}),
+            })),
+          waitingForTheStudent: file.proposals
+            .filter(
+              (proposal) =>
+                proposal.status === "proposed" && visible(proposal.subjectId),
+            )
+            .map((proposal) => ({
+              name: proposal.name,
+              level: proposal.level,
+            })),
+          practice: evidence.map((entry) => ({
+            subject: subjectNames.get(entry.subjectId) ?? null,
+            topic: entry.topic,
+            cards: entry.cards,
+            reviews: entry.reviews,
+            forgotten: entry.forgotten,
+            quizAnswers: entry.answered,
+            right: entry.right,
+          })),
+        });
+      },
+    ),
+    define(
+      "study_propose_topic",
+      "Suggest adding a topic to the student's profile, or changing how well the profile says they know it. The student accepts, corrects, or rejects it. Only suggest what their practice or several of their messages show; one confused message is not enough.",
+      {
+        name: z
+          .string()
+          .min(1)
+          .max(100)
+          .describe("The topic, named the way their cards and quizzes name it"),
+        subjectId: z.string().optional(),
+        level: z
+          .enum(TOPIC_LEVEL_VALUES)
+          .describe(
+            "gap: they cannot do it yet. developing: they get it right some of the time. secure: they get it right reliably.",
+          ),
+        reason: z
+          .string()
+          .min(1)
+          .max(300)
+          .describe(
+            "The evidence in one line the student reads, such as 'Forgot 6 of 9 cards on it this week'",
+          ),
+      },
+      async ({ subjectId, ...input }) => {
+        if (subjectId) {
+          const refused = subjectFor(subjectId);
+          if (refused) return refused;
+        }
+        try {
+          await proposeTopic(workspace, {
+            ...input,
+            ...(subjectId ? { subjectId } : {}),
+          });
+          changed({ kind: "learner" });
+          return ok({
+            suggested: input.name,
+            note: "It waits in the student's Learner profile tab.",
+          });
+        } catch (error) {
+          return failure(
+            "REFUSED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
       "study_create_note",
       "Create a note in one of the student's subjects and write Markdown into it. Use it for summaries, worked solutions, and study sheets they asked for.",
       {
@@ -1025,4 +1772,14 @@ export const STUDY_TOOLS = [
   "study_highlight_pdf",
   "study_update_highlight",
   "study_delete_highlight",
+  "study_list_practice",
+  "study_read_flashcards",
+  "study_read_quiz",
+  "study_create_flashcards",
+  "study_create_quiz",
+  "study_get_plan",
+  "study_propose_sessions",
+  "study_add_assessment",
+  "study_get_learner_profile",
+  "study_propose_topic",
 ] as const;

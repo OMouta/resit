@@ -23,6 +23,7 @@ import {
   readConversation,
 } from "../conversations/store";
 import { liveContext } from "../context";
+import { learnerContext } from "../learner/store";
 import { claudeStatus } from "../providers/claude";
 import { codexStatus } from "../providers/codex";
 import { loadSettings } from "../settings";
@@ -184,12 +185,15 @@ function turnGrant(
         page,
         maxWidth: PAGE_IMAGE_WIDTH,
       }),
-    onChange: (change: StudyChange) =>
-      emit(
-        change.kind === "annotations"
-          ? { type: "annotations-changed", documentId: change.documentId }
-          : { type: "workspace-changed", snapshot: snapshot(workspace) },
-      ),
+    onChange: (change: StudyChange) => {
+      if (change.kind === "annotations")
+        emit({ type: "annotations-changed", documentId: change.documentId });
+      else if (change.kind === "practice")
+        emit({ type: "practice-changed", subjectId: change.subjectId });
+      else if (change.kind === "plan") emit({ type: "plan-changed" });
+      else if (change.kind === "learner") emit({ type: "learner-changed" });
+      else emit({ type: "workspace-changed", snapshot: snapshot(workspace) });
+    },
   };
 }
 
@@ -234,7 +238,9 @@ export async function startTurn(
     message,
     meta,
   });
-  const prompt = `${composeContext(workspace, meta.scope, input.context)}\n\n${input.text}`;
+  // A profile that cannot be read leaves the message without it.
+  const profile = await learnerContext(workspace, meta.scope).catch(() => null);
+  const prompt = `${composeContext(workspace, meta.scope, input.context)}${profile ? `\n${profile}` : ""}\n\n${input.text}`;
   const grant = turnGrant(workspace, emit, {
     scope: meta.scope,
     context: input.context,
