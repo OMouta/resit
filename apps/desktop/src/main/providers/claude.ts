@@ -6,6 +6,7 @@ import { delimiter, join } from "node:path";
 import type { ModelOption, ProviderState } from "../../shared/conversations";
 import { loadSettings } from "../settings";
 import { exists } from "../workspace/files";
+import { t } from "../i18n";
 
 const windows = process.platform === "win32";
 const PROBE_TIMEOUT_MS = 15_000;
@@ -178,8 +179,8 @@ async function probe(): Promise<ProviderState> {
     return {
       status: "not-installed",
       message: (await loadSettings()).claude.executablePath
-        ? "No file exists at the Claude Code path set in Settings."
-        : "Claude Code is not installed, or resit cannot find it.",
+        ? t("No file exists at the Claude Code path set in Settings.")
+        : t("Claude Code is not installed, or resit cannot find it."),
     };
   let version: string;
   try {
@@ -189,7 +190,9 @@ async function probe(): Promise<ProviderState> {
     return {
       status: "failed",
       path,
-      message: `Claude Code did not start: ${error instanceof Error ? error.message : String(error)}`,
+      message: t("Claude Code did not start: {problem}", {
+        problem: error instanceof Error ? error.message : String(error),
+      }),
     };
   }
   try {

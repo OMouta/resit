@@ -109,6 +109,9 @@ const PROVIDER_NAMES: Record<ProviderId, string> = {
   codex: "Codex",
 };
 
+/** The title a conversation has until its first message names it. */
+const UNTITLED = "New conversation";
+
 const renderMarkdown = (text: string) => <ChatMarkdown text={text} />;
 
 function providerBadge(state: ProviderState): ProviderStatus {
@@ -639,7 +642,11 @@ export function ChatPanel({
 
   return (
     <AiPanel
-      title={current?.meta.title ?? t("New conversation")}
+      title={
+        current && current.meta.title !== UNTITLED
+          ? current.meta.title
+          : t("New conversation")
+      }
       provider={{
         providers: (["claude", "codex"] as const).map((id) => {
           const state = providers[id];
@@ -909,7 +916,11 @@ export function ChatPanel({
                       {meta.id === currentId ? <CheckIcon /> : null}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate">{meta.title}</span>
+                      <span className="truncate">
+                        {meta.title === UNTITLED
+                          ? t("New conversation")
+                          : meta.title}
+                      </span>
                       <span className="flex items-center gap-1 text-2xs text-subtle-foreground">
                         {subject ? (
                           <>

@@ -289,7 +289,7 @@ async function packageTask<T>(
   ) => Promise<T>,
 ): Promise<T> {
   if (packageJob)
-    throw new Error("An export or an archive is being written already.");
+    throw new Error(t("An export or an archive is being written already."));
   const controller = new AbortController();
   packageJob = controller;
   let last = 0;
@@ -409,9 +409,9 @@ export function registerHandlers(
       const workspace = currentWorkspace();
       const owner = window();
       const dialogOptions: Electron.SaveDialogOptions = {
-        title: "Export the workspace",
-        defaultPath: `${fileName(workspace.file.name, "Workspace")}.resit`,
-        filters: [{ name: "resit workspace", extensions: ["resit"] }],
+        title: t("Export the workspace"),
+        defaultPath: `${fileName(workspace.file.name, t("Workspace"))}.resit`,
+        filters: [{ name: t("resit workspace"), extensions: ["resit"] }],
       };
       const result = owner
         ? await dialog.showSaveDialog(owner, dialogOptions)
@@ -428,11 +428,11 @@ export function registerHandlers(
   handle(CHANNELS.chooseArchive, z.tuple([]), async () => {
     const owner = window();
     const options: Electron.OpenDialogOptions = {
-      title: "Open a .resit archive",
+      title: t("Open a .resit archive"),
       properties: ["openFile"],
       filters: [
-        { name: "resit workspace", extensions: ["resit"] },
-        { name: "All files", extensions: ["*"] },
+        { name: t("resit workspace"), extensions: ["resit"] },
+        { name: t("All files"), extensions: ["*"] },
       ],
     };
     const result = owner
@@ -447,10 +447,10 @@ export function registerHandlers(
 
   handle(CHANNELS.openArchive, z.tuple([path]), async (archive) => {
     if (!chosenArchives.has(archive))
-      throw new Error("Choose the archive again.");
+      throw new Error(t("Choose the archive again."));
     const owner = window();
     const options: Electron.OpenDialogOptions = {
-      title: "Choose where to put the workspace",
+      title: t("Choose where to put the workspace"),
       properties: ["openDirectory", "createDirectory"],
     };
     const result = owner
@@ -466,7 +466,7 @@ export function registerHandlers(
   });
 
   handle(CHANNELS.stopPackage, z.tuple([]), () => {
-    packageJob?.abort(new Error("Stopped before it finished."));
+    packageJob?.abort(new Error(t("Stopped before it finished.")));
   });
 
   handle(
@@ -484,11 +484,11 @@ export function registerHandlers(
           : [resourceInfo(workspace, input.noteId)];
       const name =
         "subjectId" in input
-          ? (workspace.subjects.get(input.subjectId)?.info.name ?? "Notes")
-          : (notes[0]?.title ?? "Note");
+          ? (workspace.subjects.get(input.subjectId)?.info.name ?? t("Notes"))
+          : (notes[0]?.title ?? t("Note"));
       const owner = window();
       const options: Electron.OpenDialogOptions = {
-        title: "Choose where to save the Markdown files",
+        title: t("Choose where to save the Markdown files"),
         properties: ["openDirectory", "createDirectory"],
       };
       const result = owner
@@ -756,11 +756,11 @@ export function registerHandlers(
       const workspace = currentWorkspace();
       const owner = window();
       const options: Electron.OpenDialogOptions = {
-        title: "Import files",
+        title: t("Import files"),
         properties: ["openFile", "multiSelections"],
         filters: [
           {
-            name: "Documents, notes, and images",
+            name: t("Documents, notes, and images"),
             extensions: [
               "pdf",
               "md",
@@ -772,7 +772,7 @@ export function registerHandlers(
               "svg",
             ],
           },
-          { name: "All files", extensions: ["*"] },
+          { name: t("All files"), extensions: ["*"] },
         ],
       };
       const result = owner
@@ -964,7 +964,7 @@ export function registerHandlers(
       const [created] = await createCards(currentWorkspace(), subjectId, [
         input,
       ]);
-      if (!created) throw new Error("The card was not created.");
+      if (!created) throw new Error(t("The card was not created."));
       return created;
     }),
   );
@@ -1133,9 +1133,9 @@ export function registerHandlers(
     const workspace = currentWorkspace();
     const owner = window();
     const options: Electron.SaveDialogOptions = {
-      title: "Export the study plan",
-      defaultPath: `${workspace.file.name.replace(/[<>:"/\\|?*]/g, " ").trim() || "Study plan"}.ics`,
-      filters: [{ name: "Calendar", extensions: ["ics"] }],
+      title: t("Export the study plan"),
+      defaultPath: `${workspace.file.name.replace(/[<>:"/\\|?*]/g, " ").trim() || t("Study plan")}.ics`,
+      filters: [{ name: t("Calendar"), extensions: ["ics"] }],
     };
     const result = owner
       ? await dialog.showSaveDialog(owner, options)

@@ -3,6 +3,7 @@ import {
   SESSION_KIND_LABELS,
   type PlanFile,
 } from "../../shared/planning";
+import { t } from "../i18n";
 
 /** `20261005T170000Z`: the instant in UTC, as iCalendar writes it. */
 function utcStamp(value: Date): string {
@@ -68,7 +69,9 @@ export function calendarFile(
       ? subjectNames.get(session.subjectId)
       : undefined;
     const description = [
-      [subject, SESSION_KIND_LABELS[session.kind]].filter(Boolean).join(" · "),
+      [subject, t(SESSION_KIND_LABELS[session.kind])]
+        .filter(Boolean)
+        .join(" · "),
       session.notes,
     ]
       .filter(Boolean)

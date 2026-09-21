@@ -72,6 +72,8 @@ export const messages: Record<string, string> = {
   "{provider} {version} at {path}": "{provider} {version} em {path}",
   "{provider} is installed but not signed in.":
     "O {provider} está instalado mas sem sessão iniciada.",
+  "{provider} is not signed in. Run `{command}` in a terminal and sign in, then check again in Settings.":
+    "O {provider} não tem sessão iniciada. Execute `{command}` num terminal e inicie sessão; depois verifique de novo nas Definições.",
   "{right} of {count} quiz answer right":
     "{right} de {count} resposta de questionário certa",
   "{right} of {count} quiz answers right":
@@ -171,8 +173,11 @@ export const messages: Record<string, string> = {
   "Added to {title}": "Adicionado a {title}",
   Address: "Endereço",
   "AI providers": "Fornecedores de IA",
+  "All files": "Todos os ficheiros",
   "Also accept, one per line": "Aceitar também, uma por linha",
   "An assessment needs a title.": "Uma avaliação precisa de um título.",
+  "An export or an archive is being written already.":
+    "Já está a ser escrita uma exportação ou um arquivo.",
   "An hour before": "Uma hora antes",
   "Another copy of resit on this computer has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
     "Outra cópia do resit neste computador tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
@@ -196,6 +201,7 @@ export const messages: Record<string, string> = {
   "Before your changes": "Antes das suas alterações",
   Book: "Livro",
   Brief: "Breves",
+  Calendar: "Calendário",
   "Card actions": "Ações do cartão",
   "Card type": "Tipo de cartão",
   "card\u0004{count} due": "{count} para rever",
@@ -218,15 +224,46 @@ export const messages: Record<string, string> = {
   "Choose a subject": "Escolha uma disciplina",
   "Choose folder…": "Escolher pasta…",
   "Choose subjects and files": "Escolher disciplinas e ficheiros",
+  "Choose the archive again.": "Escolha o arquivo de novo.",
   "Choose the Moodle course this subject follows.":
     "Escolha a unidade curricular do Moodle que esta disciplina acompanha.",
   "Choose the subjects and files it covers.":
     "Escolha as disciplinas e os ficheiros que abrange.",
+  "Choose where to put the workspace": "Escolha onde pôr o espaço de trabalho",
+  "Choose where to save the Markdown files":
+    "Escolha onde guardar os ficheiros Markdown",
+  "Claude Code did not start: {problem}":
+    "O Claude Code não arrancou: {problem}",
+  "Claude Code is not installed, or resit cannot find it.":
+    "O Claude Code não está instalado, ou o resit não o encontra.",
+  "Claude Code is not signed in. Run `claude` in a terminal to sign in.":
+    "O Claude Code não tem sessão iniciada. Execute `claude` num terminal para iniciar sessão.",
+  "Claude could not answer": "O Claude não conseguiu responder",
+  "Claude could not finish this reply":
+    "O Claude não conseguiu acabar esta resposta",
+  "Claude is overloaded right now. Try again in a moment.":
+    "O Claude está sobrecarregado neste momento. Tente de novo daqui a pouco.",
+  "Claude reported an error ({code}).": "O Claude indicou um erro ({code}).",
+  "Claude stopped unexpectedly": "O Claude parou inesperadamente",
   "Close details": "Fechar os detalhes",
   "Close find": "Fechar a pesquisa",
   "Close search": "Fechar a pesquisa",
   Closes: "Fecha",
+  "Codex could not answer": "O Codex não conseguiu responder",
+  "Codex could not be started: {problem}":
+    "Não foi possível iniciar o Codex: {problem}",
+  "Codex could not finish this reply":
+    "O Codex não conseguiu acabar esta resposta",
+  "Codex did not start: {problem}": "O Codex não arrancou: {problem}",
   "Codex home": "Pasta do Codex",
+  "Codex is no longer running.": "O Codex já não está a funcionar.",
+  "Codex is not available": "O Codex não está disponível",
+  "Codex is not installed, or resit cannot find it.":
+    "O Codex não está instalado, ou o resit não o encontra.",
+  "Codex reported an error": "O Codex indicou um erro",
+  "Codex stopped unexpectedly": "O Codex parou inesperadamente",
+  "Codex stopped with code {code}.": "O Codex parou com o código {code}.",
+  "Codex stopped.": "O Codex parou.",
   Colour: "Cor",
   "Colour to start with": "Cor inicial",
   Commands: "Comandos",
@@ -275,6 +312,7 @@ export const messages: Record<string, string> = {
   Discard: "Descartar",
   Disconnect: "Desligar",
   "Document text": "Texto dos documentos",
+  "Documents, notes, and images": "Documentos, apontamentos e imagens",
   Download: "Transferir",
   "Download {count}": "Transferir {count}",
   "Download progress": "Progresso da transferência",
@@ -313,6 +351,8 @@ export const messages: Record<string, string> = {
   "Explanation (optional)": "Explicação (opcional)",
   Explanations: "Explicações",
   "Export as Markdown…": "Exportar como Markdown…",
+  "Export the study plan": "Exportar o plano de estudo",
+  "Export the workspace": "Exportar o espaço de trabalho",
   "Export to a calendar file…": "Exportar para um ficheiro de calendário…",
   "Export workspace": "Exportar espaço de trabalho",
   "Export…": "Exportar…",
@@ -389,6 +429,7 @@ export const messages: Record<string, string> = {
   "I mix up the squeeze theorem and L'Hôpital.":
     "Confundo o teorema das funções enquadradas com a regra de L'Hôpital.",
   "Image tools": "Ferramentas de imagem",
+  "Import files": "Importar ficheiros",
   "Import files…": "Importar ficheiros…",
   "Import stopped": "A importação parou",
   "In {place}": "Em {place}",
@@ -396,6 +437,8 @@ export const messages: Record<string, string> = {
   Include: "Incluir",
   Insert: "Inserir",
   "Inside notes and PDFs": "Dentro de apontamentos e PDFs",
+  "Install {provider}, or set its path in Settings.":
+    "Instale o {provider}, ou indique o caminho nas Definições.",
   "Install it from claude.com/claude-code, or set its path below.":
     "Instale-o a partir de claude.com/claude-code, ou indique o caminho abaixo.",
   "Install it with `npm i -g @openai/codex`, or set its path below.":
@@ -504,7 +547,12 @@ export const messages: Record<string, string> = {
     "Ainda não há cartões. Adicione o primeiro.",
   "No contents": "Sem índice",
   "No course matches that.": "Nenhuma unidade curricular corresponde.",
+  "No detail was given.": "Não foram dados detalhes.",
   "No exams or tests coming up.": "Não há exames nem testes à vista.",
+  "No file exists at the Claude Code path set in Settings.":
+    "Não existe nenhum ficheiro no caminho do Claude Code indicado nas Definições.",
+  "No file exists at the Codex path set in Settings.":
+    "Não existe nenhum ficheiro no caminho do Codex indicado nas Definições.",
   "No file matches.": "Nenhum ficheiro corresponde.",
   "No matches": "Sem resultados",
   "No new cards": "Sem cartões novos",
@@ -547,6 +595,7 @@ export const messages: Record<string, string> = {
   "One page at a time": "Uma página de cada vez",
   "Only PDFs can hold highlights.": "Só os PDFs podem ter realces.",
   "Open “{workspace}”": "Abrir “{workspace}”",
+  "Open a .resit archive": "Abrir um arquivo .resit",
   "Open a note to add this reply":
     "Abra um apontamento para adicionar esta resposta",
   "Open a note to quote this highlight":
@@ -619,10 +668,14 @@ export const messages: Record<string, string> = {
   "Replace with": "Substituir por",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
+  "resit could not find the Codex executable.":
+    "O resit não encontrou o executável do Codex.",
   "resit could not reach {site}.": "O resit não conseguiu chegar a {site}.",
   "resit could not start": "O resit não conseguiu arrancar",
   "resit is already reading the text of another PDF. Wait for it to finish, or stop it.":
     "O resit já está a ler o texto de outro PDF. Espere que acabe, ou pare-o.",
+  "resit is still checking {provider}. Try again in a moment.":
+    "O resit ainda está a verificar o {provider}. Tente de novo daqui a pouco.",
   "resit keeps a copy of {file} before a newer one replaces it. Restoring one keeps the copy it replaces.":
     "O resit guarda uma cópia de {file} antes de uma mais recente o substituir. Restaurar uma guarda a cópia que substitui.",
   "resit keeps this folder in step with the Moodle course. Following the course again would download its files under the old name.":
@@ -630,6 +683,7 @@ export const messages: Record<string, string> = {
   "resit on {host} has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
     "O resit em {host} tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
   "resit will not extract {path}.": "O resit não vai extrair {path}.",
+  "resit workspace": "Espaço de trabalho do resit",
   "Restore it": "Repor",
   "Restoring replaces the lines marked − with the lines marked +.":
     "Restaurar substitui as linhas marcadas com − pelas linhas marcadas com +.",
@@ -680,7 +734,12 @@ export const messages: Record<string, string> = {
   Standard: "Normais",
   "Start its schedule again": "Recomeçar o calendário de revisão",
   "Starting…": "A começar…",
+  "Starts at {start}, ends at {end}": "Começa às {start}, acaba às {end}",
+  "Starts now, {start}–{end}": "Começa agora, {start}–{end}",
   "Stop following": "Deixar de acompanhar",
+  "Stopped before it finished.": "Parou antes de acabar.",
+  "Stopped.": "Parado.",
+  "Study plan": "Plano de estudo",
   "Study sessions": "Sessões de estudo",
   "Study times": "Horários de estudo",
   "Study times…": "Horários de estudo…",
@@ -737,6 +796,7 @@ export const messages: Record<string, string> = {
   "That note ID is not one resit can use.":
     "Esse ID de apontamento não pode ser usado pelo resit.",
   "That project no longer exists.": "Esse projeto já não existe.",
+  "That provider is not ready.": "Esse fornecedor não está pronto.",
   "That question is not in this attempt.":
     "Essa pergunta não está nesta tentativa.",
   "That quiz is no longer here.": "Esse questionário já não está aqui.",
@@ -778,6 +838,7 @@ export const messages: Record<string, string> = {
     "O assistente lê o que aceitar aqui, para as disciplinas de cada conversa.",
   "The calendar was not exported": "O calendário não foi exportado",
   "The card was not added": "O cartão não foi adicionado",
+  "The card was not created.": "O cartão não foi criado.",
   "The card was not deleted": "O cartão não foi eliminado",
   "The card was not discarded": "O cartão não foi descartado",
   "The card was not kept": "O cartão não foi mantido",
@@ -787,6 +848,8 @@ export const messages: Record<string, string> = {
   "The card was not suspended": "O cartão não foi suspenso",
   "The cards could not be loaded": "Não foi possível carregar os cartões",
   "The cards were not kept": "Os cartões não foram mantidos",
+  "The Codex process ended before it answered.":
+    "O processo do Codex acabou antes de responder.",
   "The colour was not changed": "A cor não foi alterada",
   "The comment was not saved": "O comentário não foi guardado",
   "The conversation could not be opened": "Não foi possível abrir a conversa",
@@ -836,6 +899,8 @@ export const messages: Record<string, string> = {
     "A ligação abriu a página onde estava.",
   "The mark was not saved": "A classificação não foi guardada",
   "The message was not sent": "A mensagem não foi enviada",
+  "The model set in Settings is not available to your account.":
+    "O modelo escolhido nas Definições não está disponível para a sua conta.",
   "The next card comes back {time}": "O próximo cartão volta {time}",
   "The note was not created": "O apontamento não foi criado",
   "The note's history could not be read":
@@ -864,6 +929,7 @@ export const messages: Record<string, string> = {
     "O questionário não foi movido para o lixo",
   "The quiz was not saved": "O questionário não foi guardado",
   "The rating was not saved": "A avaliação do cartão não foi guardada",
+  "The reply ended with an error.": "A resposta acabou com um erro.",
   "The review was not undone": "A revisão não foi anulada",
   "The scope was not changed": "O âmbito não foi alterado",
   "The session": "A sessão",
@@ -894,6 +960,7 @@ export const messages: Record<string, string> = {
   "The topic was not saved": "O tema não foi guardado",
   "The trash could not be read": "Não foi possível ler o lixo",
   "The trash was not emptied": "O lixo não foi esvaziado",
+  "The turn ended without an answer.": "A vez acabou sem resposta.",
   "The workspace was exported": "O espaço de trabalho foi exportado",
   "The workspace was not created": "O espaço de trabalho não foi criado",
   "The workspace was not exported": "O espaço de trabalho não foi exportado",
@@ -1039,6 +1106,7 @@ export const messages: Record<string, string> = {
   Worksheets: "Fichas de exercícios",
   Workshop: "Workshop",
   workspace: "espaço de trabalho",
+  Workspace: "Espaço de trabalho",
   "Workspace graph: {nodes} nodes, {edges} connections":
     "Grafo do espaço de trabalho: {nodes} nós, {edges} ligações",
   "workspace.json is not a valid resit workspace: {problem}.":
@@ -1051,11 +1119,15 @@ export const messages: Record<string, string> = {
   "Write the question.": "Escreva a pergunta.",
   Writing: "Escrita",
   Wrong: "Errada",
+  "You have reached your Claude usage limit. Try again later.":
+    "Atingiu o limite de utilização do Claude. Tente de novo mais tarde.",
   "You reviewed {count} card.": "Reviu {count} cartão.",
   "You reviewed {count} cards.": "Reviu {count} cartões.",
   "Your account cannot see that in Moodle.":
     "A sua conta não pode ver isso no Moodle.",
   "Your answers were not saved": "As suas respostas não foram guardadas",
+  "Your Claude account cannot make this request. Check your plan or billing.":
+    "A sua conta do Claude não pode fazer este pedido. Verifique o plano ou a faturação.",
   "Your mark": "A sua classificação",
   "Your practice in the last 30 days": "A sua prática nos últimos 30 dias",
   "Your text has not been saved. Choose which version to keep.":

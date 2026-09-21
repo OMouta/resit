@@ -5,6 +5,7 @@ import type { ModelOption, ProviderState } from "../../shared/conversations";
 import { loadSettings } from "../settings";
 import { exists } from "../workspace/files";
 import { startCodexAppServer, type CodexClient } from "./codex-client";
+import { t } from "../i18n";
 
 const windows = process.platform === "win32";
 const PROBE_TIMEOUT_MS = 20_000;
@@ -158,8 +159,8 @@ async function probe(): Promise<ProviderState> {
     return {
       status: "not-installed",
       message: (await loadSettings()).codex.executablePath
-        ? "No file exists at the Codex path set in Settings."
-        : "Codex is not installed, or resit cannot find it.",
+        ? t("No file exists at the Codex path set in Settings.")
+        : t("Codex is not installed, or resit cannot find it."),
     };
   try {
     return await withAppServer(launch, async (client) => {
@@ -179,7 +180,9 @@ async function probe(): Promise<ProviderState> {
     return {
       status: "failed",
       path: launch.executable,
-      message: `Codex did not start: ${error instanceof Error ? error.message : String(error)}`,
+      message: t("Codex did not start: {problem}", {
+        problem: error instanceof Error ? error.message : String(error),
+      }),
     };
   }
 }

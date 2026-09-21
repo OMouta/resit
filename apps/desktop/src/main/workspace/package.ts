@@ -112,7 +112,7 @@ class Measure extends Transform {
 
 function stopped(signal: AbortSignal): WorkspaceError {
   return new WorkspaceError(
-    signal.reason instanceof Error ? signal.reason.message : "Stopped.",
+    signal.reason instanceof Error ? signal.reason.message : t("Stopped."),
   );
 }
 

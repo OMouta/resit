@@ -40,6 +40,7 @@ import {
   type StudyChange,
   type TurnGrant,
 } from "./study-tools";
+import { t } from "../i18n";
 
 const MAX_HANDOFF_CHARS = 12_000;
 const PROGRESS_INTERVAL_MS = 60;
@@ -72,13 +73,18 @@ function providerProblem(
     case "ready":
       return null;
     case "not-installed":
-      return `${status.message} Install ${name}, or set its path in Settings.`;
+      return `${status.message} ${t("Install {provider}, or set its path in Settings.", { provider: name })}`;
     case "not-authenticated":
-      return `${name} is not signed in. Run \`${command}\` in a terminal and sign in, then check again in Settings.`;
+      return t(
+        "{provider} is not signed in. Run `{command}` in a terminal and sign in, then check again in Settings.",
+        { provider: name, command },
+      );
     case "failed":
       return status.message;
     case "checking":
-      return `resit is still checking ${name}. Try again in a moment.`;
+      return t("resit is still checking {provider}. Try again in a moment.", {
+        provider: name,
+      });
   }
 }
 
@@ -155,17 +161,21 @@ function singleMessage(text: string) {
 function assistantErrorText(code: string): string {
   switch (code) {
     case "authentication_failed":
-      return "Claude Code is not signed in. Run `claude` in a terminal to sign in.";
+      return t(
+        "Claude Code is not signed in. Run `claude` in a terminal to sign in.",
+      );
     case "billing_error":
-      return "Your Claude account cannot make this request. Check your plan or billing.";
+      return t(
+        "Your Claude account cannot make this request. Check your plan or billing.",
+      );
     case "rate_limit":
-      return "You have reached your Claude usage limit. Try again later.";
+      return t("You have reached your Claude usage limit. Try again later.");
     case "overloaded":
-      return "Claude is overloaded right now. Try again in a moment.";
+      return t("Claude is overloaded right now. Try again in a moment.");
     case "model_not_found":
-      return "The model set in Settings is not available to your account.";
+      return t("The model set in Settings is not available to your account.");
     default:
-      return `Claude reported an error (${code}).`;
+      return t("Claude reported an error ({code}).", { code });
   }
 }
 
@@ -215,7 +225,7 @@ export async function startTurn(
     : claudeStatus());
   const problem = providerProblem(providerId, status);
   if (problem || status.status !== "ready")
-    throw new Error(problem ?? "That provider is not ready.");
+    throw new Error(problem ?? t("That provider is not ready."));
 
   const message: ChatMessage = {
     id: randomUUID(),
@@ -273,7 +283,7 @@ export async function startTurn(
           status: "failed",
           tools: [],
           error: {
-            title: "Codex could not answer",
+            title: t("Codex could not answer"),
             detail: error instanceof Error ? error.message : String(error),
           },
           at: now(),
@@ -442,7 +452,7 @@ async function runTurn(
             }
             if (message.error)
               error = {
-                title: "Claude could not answer",
+                title: t("Claude could not answer"),
                 detail: assistantErrorText(message.error),
               };
             progress();
@@ -465,10 +475,10 @@ async function runTurn(
             else {
               status = "failed";
               error ??= {
-                title: "Claude could not finish this reply",
+                title: t("Claude could not finish this reply"),
                 detail:
                   message.subtype === "success"
-                    ? message.result || "The reply ended with an error."
+                    ? message.result || t("The reply ended with an error.")
                     : message.errors.join(" ") || message.subtype,
               };
             }
@@ -508,7 +518,7 @@ async function runTurn(
     if (!turn.cancelled && !turn.controller.signal.aborted) {
       status = "failed";
       error ??= {
-        title: "Claude stopped unexpectedly",
+        title: t("Claude stopped unexpectedly"),
         detail: `${reason instanceof Error ? reason.message : String(reason)}${
           stderr.trim()
             ? `\n${stderr.trim().split("\n").slice(-3).join("\n")}`

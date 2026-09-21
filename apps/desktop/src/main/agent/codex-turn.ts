@@ -15,6 +15,7 @@ import { INSTRUCTIONS } from "./instructions";
 import { startMcpEndpoint } from "./mcp-endpoint";
 import { describeToolCall, studyTools, type TurnGrant } from "./study-tools";
 import { TurnStream } from "./turn-stream";
+import { t } from "../i18n";
 
 /** Codex names the study server; its tools arrive prefixed with it. */
 const MCP_SERVER = "resit";
@@ -84,8 +85,8 @@ export async function runCodexTurn(
     return stream.finish({
       status: "failed",
       error: {
-        title: "Codex is not available",
-        detail: "resit could not find the Codex executable.",
+        title: t("Codex is not available"),
+        detail: t("resit could not find the Codex executable."),
       },
     });
   }
@@ -171,8 +172,8 @@ export async function runCodexTurn(
                 : {
                     status: "failed",
                     error: {
-                      title: "Codex could not finish this reply",
-                      detail: detail ?? "The turn ended without an answer.",
+                      title: t("Codex could not finish this reply"),
+                      detail: detail ?? t("The turn ended without an answer."),
                     },
                   },
           );
@@ -182,8 +183,8 @@ export async function runCodexTurn(
           settle({
             status: "failed",
             error: {
-              title: "Codex reported an error",
-              detail: payload.message ?? "No detail was given.",
+              title: t("Codex reported an error"),
+              detail: payload.message ?? t("No detail was given."),
             },
           });
           break;
@@ -205,10 +206,10 @@ export async function runCodexTurn(
     settle({
       status: job.cancelled() ? "cancelled" : "failed",
       error: {
-        title: "Codex stopped unexpectedly",
+        title: t("Codex stopped unexpectedly"),
         detail:
           client.stderr().trim().split("\n").slice(-2).join(" ") ||
-          "The Codex process ended before it answered.",
+          t("The Codex process ended before it answered."),
       },
     }),
   );
@@ -265,7 +266,7 @@ export async function runCodexTurn(
     return stream.finish({
       status: "failed",
       error: {
-        title: "Codex could not answer",
+        title: t("Codex could not answer"),
         detail: error instanceof Error ? error.message : String(error),
       },
     });

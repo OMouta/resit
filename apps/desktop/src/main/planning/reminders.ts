@@ -9,6 +9,7 @@ import type { ReminderSettings } from "../../shared/settings";
 import { loadSettings } from "../settings";
 import type { OpenWorkspace } from "../workspace/workspace";
 import { readPlan, upcomingSessions } from "./store";
+import { t } from "../i18n";
 
 /** Reminders further ahead are set the next time the plan is read. */
 const LOOKAHEAD_MS = 36 * 60 * 60_000;
@@ -62,8 +63,14 @@ function show(session: StudySession, settings: ReminderSettings): void {
   if (!Notification.isSupported()) return;
   const starts =
     settings.minutesBefore === 0
-      ? `Starts now, ${session.start}–${session.end}`
-      : `Starts at ${session.start}, ends at ${session.end}`;
+      ? t("Starts now, {start}–{end}", {
+          start: session.start,
+          end: session.end,
+        })
+      : t("Starts at {start}, ends at {end}", {
+          start: session.start,
+          end: session.end,
+        });
   const notification = new Notification({ title: session.title, body: starts });
   notification.on("click", () => source?.onOpen(session));
   notification.show();

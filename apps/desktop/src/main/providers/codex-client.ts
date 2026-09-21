@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
+import { t } from "../i18n";
 
 /**
  * Codex's app server speaks JSON-RPC over stdio, one message per line, and
@@ -75,7 +76,11 @@ export function startCodexAppServer(options: CodexClientOptions): CodexClient {
       closed = true;
       fail(
         new CodexError(
-          `Codex stopped${code === null ? "" : ` with code ${code}`}.${
+          `${
+            code === null
+              ? t("Codex stopped.")
+              : t("Codex stopped with code {code}.", { code })
+          }${
             stderr.trim()
               ? ` ${stderr.trim().split("\n").slice(-2).join(" ")}`
               : ""
@@ -86,13 +91,19 @@ export function startCodexAppServer(options: CodexClientOptions): CodexClient {
     });
     child.once("error", (error) => {
       closed = true;
-      fail(new CodexError(`Codex could not be started: ${error.message}`));
+      fail(
+        new CodexError(
+          t("Codex could not be started: {problem}", {
+            problem: error.message,
+          }),
+        ),
+      );
       resolve();
     });
   });
 
   const write = (message: Record<string, unknown>) => {
-    if (closed) throw new CodexError("Codex is no longer running.");
+    if (closed) throw new CodexError(t("Codex is no longer running."));
     child.stdin.write(`${JSON.stringify(message)}\n`);
   };
 
