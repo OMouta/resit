@@ -7,7 +7,12 @@ import { registerHandlers } from "./handlers";
 import { setIpcContext } from "./ipc";
 import { useNetworkFetch } from "./moodle/client";
 import { startReminders } from "./planning/reminders";
-import { currentWorkspace, hasWorkspace, setEventSink } from "./session";
+import {
+  currentWorkspace,
+  hasWorkspace,
+  releaseWorkspaceSync,
+  setEventSink,
+} from "./session";
 import { loadSettings } from "./settings";
 
 const rendererFile = join(import.meta.dirname, "../renderer/index.html");
@@ -172,6 +177,7 @@ void app
   });
 
 app.on("before-quit", abortAllTurns);
+app.on("will-quit", releaseWorkspaceSync);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

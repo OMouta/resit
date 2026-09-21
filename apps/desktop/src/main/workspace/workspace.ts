@@ -174,6 +174,23 @@ export async function createWorkspace(input: {
 }
 
 export async function openWorkspace(folder: string): Promise<OpenWorkspace> {
+  const workspace: OpenWorkspace = {
+    root: folder,
+    file: await readWorkspaceFile(folder),
+    subjects: new Map(),
+    folders: new Map(),
+    resources: new Map(),
+    issues: [],
+    locks: new Map(),
+  };
+  await scanWorkspace(workspace);
+  return workspace;
+}
+
+/** Reads and checks `workspace.json`, without touching anything else. */
+export async function readWorkspaceFile(
+  folder: string,
+): Promise<WorkspaceFile> {
   const manifest = join(folder, "workspace.json");
   if (!(await exists(manifest)))
     throw new WorkspaceError(
@@ -194,17 +211,7 @@ export async function openWorkspace(folder: string): Promise<OpenWorkspace> {
     throw new WorkspaceError(
       "This workspace was created by a newer version of resit. Update resit to open it.",
     );
-  const workspace: OpenWorkspace = {
-    root: folder,
-    file: parsed.data,
-    subjects: new Map(),
-    folders: new Map(),
-    resources: new Map(),
-    issues: [],
-    locks: new Map(),
-  };
-  await scanWorkspace(workspace);
-  return workspace;
+  return parsed.data;
 }
 
 /** Rebuilds the in-memory index of subjects, folders, and files from disk. */

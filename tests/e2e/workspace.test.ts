@@ -1,6 +1,6 @@
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron, type ElectronApplication, type Page } from "playwright";
@@ -302,6 +302,23 @@ describe("desktop workspace", () => {
     await expect
       .poll(() => page.locator(".resit-annotation-layer > div").count())
       .toBeGreaterThan(0);
+  });
+
+  it("asks before opening a workspace another computer has open", async () => {
+    await close();
+    const lock = join(folder, ".resit", "lock.json");
+    expect(await readFile(lock, "utf8").catch(() => null)).toBeNull();
+    await writeFile(
+      lock,
+      JSON.stringify({ pid: 1, host: "another-laptop", since: new Date() }),
+    );
+    await launch();
+    await page.getByText("resit on another-laptop has had it open").waitFor();
+    await page.getByRole("button", { name: "Open anyway" }).click();
+    await page.getByRole("tab", { name: "Limites", exact: true }).waitFor();
+    expect(JSON.parse(await readFile(lock, "utf8"))).toMatchObject({
+      host: hostname(),
+    });
   });
 
   it("brings a deleted note back from the trash", async () => {

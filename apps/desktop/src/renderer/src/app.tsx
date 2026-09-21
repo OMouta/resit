@@ -15,7 +15,7 @@ import {
 import { Splash } from "@resit/ui/patterns/screens/splash";
 
 import type { ProviderId, ProviderState } from "../../shared/conversations";
-import type { AppState } from "../../shared/ipc";
+import type { AppState, LockedWorkspace } from "../../shared/ipc";
 import type { MoodleConnection } from "../../shared/moodle";
 import type { SettingsPatch } from "../../shared/settings";
 import type { WorkspaceSnapshot } from "../../shared/workspace";
@@ -30,6 +30,7 @@ import { PdfSettings } from "./settings/pdf-settings";
 import { ProviderSettings } from "./settings/provider-settings";
 import { SettingsDialog, type SettingsTopic } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
+import { ConfirmDialog } from "./workspace/dialogs";
 import { WorkspaceView } from "./workspace/workspace-view";
 
 export function App() {
@@ -46,6 +47,8 @@ export function App() {
     status: "disconnected",
   });
   const [checkingMoodle, setCheckingMoodle] = useState(false);
+  /** A workspace that another copy of resit has open. */
+  const [locked, setLocked] = useState<LockedWorkspace | null>(null);
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>(
     { claude: { status: "checking" }, codex: { status: "checking" } },
   );
@@ -96,6 +99,7 @@ export function App() {
     api.getAppState().then(
       (next) => {
         apply(next);
+        if (next.locked) setLocked(next.locked);
         if (next.reopenError)
           notices.notify({
             tone: "error",
@@ -156,9 +160,11 @@ export function App() {
   );
 
   const openPath = useCallback(
-    async (path: string) => {
+    async (path: string, force = false) => {
       try {
-        apply(await api.openWorkspace(path));
+        const next = await api.openWorkspace(path, force);
+        if (next.locked) setLocked(next.locked);
+        else apply(next);
       } catch (error) {
         notices.fail("That workspace could not be opened", error);
       }
@@ -341,6 +347,23 @@ export function App() {
             />
           ) : null}
         </SettingsDialog>
+        <ConfirmDialog
+          request={
+            locked
+              ? {
+                  title: "This workspace is already open",
+                  description: `${
+                    locked.here
+                      ? "Another copy of resit on this computer"
+                      : `resit on ${locked.host}`
+                  } has had it open since ${new Date(locked.since).toLocaleString()}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.`,
+                  confirmLabel: "Open anyway",
+                  onConfirm: () => openPath(locked.path, true),
+                }
+              : null
+          }
+          onClose={() => setLocked(null)}
+        />
       </main>
     </SettingsProvider>
   );

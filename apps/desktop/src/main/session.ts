@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 
-import type { AppState, DesktopEvent } from "../shared/ipc";
+import type { AppState, DesktopEvent, LockedWorkspace } from "../shared/ipc";
 import { abandonRenders } from "./agent/render";
 import { abortAllTurns } from "./agent/turns";
 import { setLiveContext } from "./context";
@@ -14,7 +14,16 @@ import {
 } from "./settings";
 import { readJson, writeJson } from "./workspace/files";
 import {
+  acquireLock,
+  heldHere,
+  releaseLock,
+  releaseLockSync,
+  type WorkspaceLock,
+} from "./workspace/lock";
+import {
+  createWorkspace,
   openWorkspace,
+  readWorkspaceFile,
   scanWorkspace,
   snapshot,
   type OpenWorkspace,
@@ -111,9 +120,9 @@ function stopWatching(): void {
   rescanTimer = null;
 }
 
-export async function activateWorkspace(
-  workspace: OpenWorkspace,
-): Promise<void> {
+async function activateWorkspace(workspace: OpenWorkspace): Promise<void> {
+  if (current && current.root !== workspace.root)
+    await releaseLock(current.root).catch(() => undefined);
   stopWatching();
   abortAllTurns();
   abandonRenders();
@@ -133,18 +142,61 @@ export async function activateWorkspace(
   void refreshReminders();
 }
 
+function lockedWorkspace(path: string, lock: WorkspaceLock): LockedWorkspace {
+  return { path, here: heldHere(lock), host: lock.host, since: lock.since };
+}
+
+/**
+ * Opens a workspace folder, unless another copy of resit has it open. Then
+ * nothing changes and the other copy's lock comes back; `force` opens the
+ * workspace anyway.
+ */
+export async function openFolder(
+  folder: string,
+  force = false,
+): Promise<LockedWorkspace | null> {
+  await readWorkspaceFile(folder);
+  const held = await acquireLock(folder, force);
+  if (held) return lockedWorkspace(folder, held);
+  let workspace: OpenWorkspace;
+  try {
+    workspace = await openWorkspace(folder);
+  } catch (error) {
+    if (current?.root !== folder)
+      await releaseLock(folder).catch(() => undefined);
+    throw error;
+  }
+  await activateWorkspace(workspace);
+  return null;
+}
+
+export async function createAndOpen(
+  input: Parameters<typeof createWorkspace>[0],
+): Promise<void> {
+  const workspace = await createWorkspace(input);
+  await acquireLock(workspace.root, true);
+  await activateWorkspace(workspace);
+}
+
+/** Lets go of the open workspace as the app quits. */
+export function releaseWorkspaceSync(): void {
+  if (current) releaseLockSync(current.root);
+}
+
 export async function closeCurrentWorkspace(): Promise<void> {
   stopWatching();
   abortAllTurns();
   abandonRenders();
   setLiveContext(null);
+  if (current) await releaseLock(current.root).catch(() => undefined);
   current = null;
   void refreshReminders();
   await forgetLastWorkspace();
 }
 
 export async function appState(extra?: {
-  reopenError?: string;
+  reopenError?: string | undefined;
+  locked?: LockedWorkspace | null | undefined;
 }): Promise<AppState> {
   const settings = await loadSettings();
   return {
@@ -154,30 +206,36 @@ export async function appState(extra?: {
     workspace: current ? snapshot(current) : null,
     layout: current ? await readLayout(current) : null,
     ...(extra?.reopenError ? { reopenError: extra.reopenError } : {}),
+    ...(extra?.locked ? { locked: extra.locked } : {}),
   };
 }
 
-async function openLastWorkspace(): Promise<string | undefined> {
-  if (current) return undefined;
+interface Reopened {
+  error?: string;
+  locked?: LockedWorkspace;
+}
+
+async function openLastWorkspace(): Promise<Reopened> {
+  if (current) return {};
   const settings = await loadSettings();
-  if (!settings.reopenLastWorkspace || !settings.lastWorkspacePath)
-    return undefined;
+  if (!settings.reopenLastWorkspace || !settings.lastWorkspacePath) return {};
   try {
-    await activateWorkspace(await openWorkspace(settings.lastWorkspacePath));
-    return undefined;
+    const locked = await openFolder(settings.lastWorkspacePath);
+    return locked ? { locked } : {};
   } catch (error) {
     await forgetLastWorkspace().catch(() => undefined);
-    return error instanceof Error ? error.message : String(error);
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-let reopening: Promise<string | undefined> | null = null;
+let reopening: Promise<Reopened> | null = null;
 
 /**
  * Reopens the last workspace on launch, once however often it is asked for:
- * the renderer mounts twice in development. Failure leaves the start screen.
+ * the renderer mounts twice in development. Failure leaves the start screen,
+ * and so does a workspace another copy of resit has open.
  */
-export function reopenLastWorkspace(): Promise<string | undefined> {
+export function reopenLastWorkspace(): Promise<Reopened> {
   reopening ??= openLastWorkspace();
   return reopening;
 }

@@ -70,11 +70,13 @@ import {
   refreshActivities,
 } from "./moodle/sync";
 import {
-  activateWorkspace,
   appState,
   closeCurrentWorkspace,
+  createAndOpen,
   currentWorkspace,
   emitEvent,
+  hasWorkspace,
+  openFolder,
   reopenLastWorkspace,
   saveLayout,
 } from "./session";
@@ -125,14 +127,12 @@ import {
   createFolder,
   createNote,
   createSubject,
-  createWorkspace,
   deleteFolder,
   deleteResource,
   deleteSubject,
   importFile,
   linkSubject,
   moveResource,
-  openWorkspace,
   readNote,
   readResourceBytes,
   renameResource,
@@ -258,8 +258,12 @@ export function registerHandlers(
   handle(HEALTH_CHECK_CHANNEL, z.tuple([]), () => checkHealth());
 
   handle(CHANNELS.getAppState, z.tuple([]), async () => {
-    const reopenError = await reopenLastWorkspace();
-    return appState(reopenError ? { reopenError } : undefined);
+    const reopened = await reopenLastWorkspace();
+    return appState({
+      reopenError: reopened.error,
+      // Opened anyway since.
+      locked: hasWorkspace() ? undefined : reopened.locked,
+    });
   });
 
   handle(
@@ -302,15 +306,17 @@ export function registerHandlers(
       }),
     ]),
     async (input) => {
-      await activateWorkspace(await createWorkspace(input));
+      await createAndOpen(input);
       return appState();
     },
   );
 
-  handle(CHANNELS.openWorkspace, z.tuple([path]), async (folder) => {
-    await activateWorkspace(await openWorkspace(folder));
-    return appState();
-  });
+  handle(
+    CHANNELS.openWorkspace,
+    z.tuple([path, z.boolean().optional()]),
+    async (folder, force) =>
+      appState({ locked: await openFolder(folder, force) }),
+  );
 
   handle(CHANNELS.closeWorkspace, z.tuple([]), async () => {
     await closeCurrentWorkspace();

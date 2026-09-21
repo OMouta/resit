@@ -80,6 +80,17 @@ export interface AppState {
   layout: unknown;
   /** Why the last workspace could not be reopened, if it failed. */
   reopenError?: string;
+  /** A workspace that was not opened because another copy of resit has it. */
+  locked?: LockedWorkspace;
+}
+
+/** Where a workspace is already open, as its lock file tells it. */
+export interface LockedWorkspace {
+  path: string;
+  /** The other copy runs on this computer. */
+  here: boolean;
+  host: string;
+  since: string;
 }
 
 export interface NoteDocument {
@@ -158,7 +169,11 @@ export interface DesktopApi {
     name: string;
     subject: { name: string; color: SubjectColorValue };
   }): Promise<AppState>;
-  openWorkspace(folder: string): Promise<AppState>;
+  /**
+   * Leaves the open workspace as it is when another copy of resit has the
+   * folder open, and says so in `locked`. `force` opens it anyway.
+   */
+  openWorkspace(folder: string, force?: boolean): Promise<AppState>;
   closeWorkspace(): Promise<AppState>;
   saveLayout(layout: unknown): Promise<void>;
 
