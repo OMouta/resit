@@ -147,6 +147,30 @@ export interface TrashEntry {
   ownedCount?: number;
 }
 
+/** The private parts of a workspace, which an export can leave out. */
+export interface PackageOptions {
+  conversations: boolean;
+  learner: boolean;
+  history: boolean;
+  trash: boolean;
+}
+
+/** What a .resit archive holds, read before anything is extracted. */
+export interface PackageSummary {
+  workspaceName: string;
+  exportedAt: string;
+  files: number;
+  bytes: number;
+}
+
+export interface MarkdownExport {
+  folder: string;
+  notes: number;
+  files: number;
+  /** Links left as resit:// addresses: to notes not exported, or gone. */
+  unresolved: number;
+}
+
 /** Note text that was not saved, kept so it survives a restart. */
 export interface NoteDraft {
   body: string;
