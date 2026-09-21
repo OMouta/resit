@@ -87,7 +87,7 @@ export function SessionDialog({
   onStart: (session: StudySession) => void;
 }) {
   const notices = useNotices();
-  const { date: formatDate } = useLocale();
+  const { t, tc, date: formatDate } = useLocale();
   const [title, setTitle] = useState("");
   const [subjectId, setSubjectId] = useState(NO_SUBJECT);
   const [kind, setKind] = useState<SessionKind>("reading");
@@ -167,7 +167,7 @@ export function SessionDialog({
         setTitle(
           quizzes.find((quiz) => quiz.id === parsed.quizId)?.title ?? "",
         );
-      else setTitle("Flashcards");
+      else setTitle(t("Flashcards"));
     }
   };
 
@@ -189,7 +189,7 @@ export function SessionDialog({
       });
       onClose();
     } catch (error) {
-      notices.fail("The session was not saved", error);
+      notices.fail(t("The session was not saved"), error);
     } finally {
       setBusy(false);
     }
@@ -201,7 +201,7 @@ export function SessionDialog({
       await api.setSessionStatus({ id: existing.id, status });
       onClose();
     } catch (error) {
-      notices.fail("The session was not changed", error);
+      notices.fail(t("The session was not changed"), error);
     }
   };
 
@@ -211,20 +211,20 @@ export function SessionDialog({
       await api.deleteSession(existing.id);
       onClose();
     } catch (error) {
-      notices.fail("The session was not deleted", error);
+      notices.fail(t("The session was not deleted"), error);
     }
   };
 
   const status = existing
     ? existing.proposal
-      ? "Suggested by the assistant"
+      ? t("Suggested by the assistant")
       : isOverdue(existing)
-        ? "Missed"
+        ? t("Missed")
         : existing.status === "done"
-          ? "Done"
+          ? t("Done")
           : existing.status === "skipped"
-            ? "Skipped"
-            : "Planned"
+            ? t("Skipped")
+            : t("Planned")
     : null;
 
   return (
@@ -240,7 +240,7 @@ export function SessionDialog({
           >
             <DialogHeader>
               <DialogTitle>
-                {existing ? existing.title : "New session"}
+                {existing ? existing.title : t("New session")}
               </DialogTitle>
               {existing ? (
                 <DialogDescription>
@@ -263,7 +263,7 @@ export function SessionDialog({
                       onClose();
                     }}
                   >
-                    <PlayIcon /> Start
+                    <PlayIcon /> {t("Start")}
                   </Button>
                 ) : null}
                 {existing.status === "planned" ? (
@@ -273,14 +273,14 @@ export function SessionDialog({
                       variant="secondary"
                       onClick={() => void setStatus("done")}
                     >
-                      <CheckIcon /> Mark done
+                      <CheckIcon /> {t("Mark done")}
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() => void setStatus("skipped")}
                     >
-                      <SkipForwardIcon /> Skip
+                      <SkipForwardIcon /> {t("Skip")}
                     </Button>
                   </>
                 ) : (
@@ -289,24 +289,24 @@ export function SessionDialog({
                     variant="secondary"
                     onClick={() => void setStatus("planned")}
                   >
-                    Mark as planned
+                    {t("Mark as planned")}
                   </Button>
                 )}
               </div>
             ) : null}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="session-title">Title</Label>
+              <Label htmlFor="session-title">{t("Title")}</Label>
               <Input
                 id="session-title"
                 autoFocus={!existing}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Worksheet 2, questions 1–5"
+                placeholder={t("Worksheet 2, questions 1–5")}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-subject">Subject</Label>
+                <Label htmlFor="session-subject">{t("Subject")}</Label>
                 <Select
                   value={subjectId}
                   onValueChange={(value) => {
@@ -323,12 +323,14 @@ export function SessionDialog({
                         {subject.name}
                       </SelectItem>
                     ))}
-                    <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
+                    <SelectItem value={NO_SUBJECT}>
+                      {t("No subject")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-kind">Kind</Label>
+                <Label htmlFor="session-kind">{t("Kind")}</Label>
                 <Select
                   value={kind}
                   onValueChange={(value) => setKind(value as SessionKind)}
@@ -339,7 +341,7 @@ export function SessionDialog({
                   <SelectContent>
                     {SESSION_KIND_VALUES.map((value) => (
                       <SelectItem key={value} value={value}>
-                        {SESSION_KIND_LABELS[value]}
+                        {t(SESSION_KIND_LABELS[value])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -348,7 +350,7 @@ export function SessionDialog({
             </div>
             <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-date">Day</Label>
+                <Label htmlFor="session-date">{t("Day")}</Label>
                 <Input
                   id="session-date"
                   type="date"
@@ -357,7 +359,7 @@ export function SessionDialog({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-start">From</Label>
+                <Label htmlFor="session-start">{t("From")}</Label>
                 <Input
                   id="session-start"
                   type="time"
@@ -366,7 +368,7 @@ export function SessionDialog({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-end">To</Label>
+                <Label htmlFor="session-end">{tc("time", "To")}</Label>
                 <Input
                   id="session-end"
                   type="time"
@@ -378,22 +380,22 @@ export function SessionDialog({
             </div>
             {subjectId !== NO_SUBJECT ? (
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="session-target">Opens</Label>
+                <Label htmlFor="session-target">{t("Opens")}</Label>
                 <Select value={target} onValueChange={chooseTarget}>
                   <SelectTrigger id="session-target" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_TARGET}>Nothing</SelectItem>
+                    <SelectItem value={NO_TARGET}>{t("Nothing")}</SelectItem>
                     <SelectItem value={`cards:${subjectId}`}>
-                      Flashcards due in this subject
+                      {t("Flashcards due in this subject")}
                     </SelectItem>
                     {quizzes.map((quiz) => (
                       <SelectItem
                         key={quiz.id}
                         value={`quiz:${subjectId}:${quiz.id}`}
                       >
-                        Quiz: {quiz.title}
+                        {t("Quiz: {title}", { title: quiz.title })}
                       </SelectItem>
                     ))}
                     {resources.map((resource) => (
@@ -409,7 +411,7 @@ export function SessionDialog({
               </div>
             ) : null}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="session-notes">Notes</Label>
+              <Label htmlFor="session-notes">{t("Notes")}</Label>
               <Textarea
                 id="session-notes"
                 value={notes}
@@ -419,7 +421,7 @@ export function SessionDialog({
             </div>
             {backwards ? (
               <InlineMessage tone="error">
-                <p>The session has to end after it starts.</p>
+                <p>{t("The session has to end after it starts.")}</p>
               </InlineMessage>
             ) : clashes.length > 0 || outside ? (
               <InlineMessage tone="warning">
@@ -428,7 +430,9 @@ export function SessionDialog({
                     Overlaps “{clash.title}”, {clash.start}–{clash.end}.
                   </p>
                 ))}
-                {outside ? <p>This is outside your study times.</p> : null}
+                {outside ? (
+                  <p>{t("This is outside your study times.")}</p>
+                ) : null}
               </InlineMessage>
             ) : null}
             <DialogFooter className="sm:justify-between">
@@ -438,17 +442,17 @@ export function SessionDialog({
                   variant="destructive-outline"
                   onClick={() => void remove()}
                 >
-                  <Trash2Icon /> Delete
+                  <Trash2Icon /> {t("Delete")}
                 </Button>
               ) : (
                 <span />
               )}
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={onClose}>
-                  Cancel
+                  {t("Cancel")}
                 </Button>
                 <Button type="submit" disabled={busy || !ready}>
-                  {existing ? "Save" : "Add session"}
+                  {existing ? t("Save") : t("Add session")}
                 </Button>
               </div>
             </DialogFooter>

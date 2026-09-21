@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { msg } from "@resit/ui/lib/i18n";
+
 const timestamp = z.iso.datetime({ offset: true });
 /** A calendar day, `2026-10-05`. */
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -16,10 +18,10 @@ export const sessionKindSchema = z.enum(SESSION_KIND_VALUES);
 export type SessionKind = z.infer<typeof sessionKindSchema>;
 
 export const SESSION_KIND_LABELS: Record<SessionKind, string> = {
-  reading: "Reading",
-  exercises: "Exercises",
-  quiz: "Quiz",
-  flashcards: "Flashcards",
+  reading: msg("Reading"),
+  exercises: msg("Exercises"),
+  quiz: msg("Quiz"),
+  flashcards: msg("Flashcards"),
 };
 
 /** What a session opens when the student starts it. */

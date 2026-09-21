@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@resit/ui/components/select";
 import { Textarea } from "@resit/ui/components/textarea";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 import {
   minutesOf,
@@ -47,6 +49,7 @@ export function AssessmentDialog({
   subjects: SubjectInfo[];
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [title, setTitle] = useState("");
   const [subjectId, setSubjectId] = useState(NO_SUBJECT);
@@ -84,7 +87,7 @@ export function AssessmentDialog({
       });
       onClose();
     } catch (error) {
-      notices.fail("The assessment was not saved", error);
+      notices.fail(t("The assessment was not saved"), error);
     } finally {
       setBusy(false);
     }
@@ -96,7 +99,7 @@ export function AssessmentDialog({
       await api.deleteAssessment(existing.id);
       onClose();
     } catch (error) {
-      notices.fail("The assessment was not deleted", error);
+      notices.fail(t("The assessment was not deleted"), error);
     }
   };
 
@@ -113,21 +116,21 @@ export function AssessmentDialog({
           >
             <DialogHeader>
               <DialogTitle>
-                {existing ? "Edit assessment" : "New assessment"}
+                {existing ? t("Edit assessment") : t("New assessment")}
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="assessment-title">Title</Label>
+              <Label htmlFor="assessment-title">{t("Title")}</Label>
               <Input
                 id="assessment-title"
                 autoFocus
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Mathematics resit"
+                placeholder={t("Mathematics resit")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="assessment-subject">Subject</Label>
+              <Label htmlFor="assessment-subject">{t("Subject")}</Label>
               <Select value={subjectId} onValueChange={setSubjectId}>
                 <SelectTrigger id="assessment-subject" className="w-full">
                   <SelectValue />
@@ -138,13 +141,13 @@ export function AssessmentDialog({
                       {subject.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
+                  <SelectItem value={NO_SUBJECT}>{t("No subject")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="assessment-date">Day</Label>
+                <Label htmlFor="assessment-date">{t("Day")}</Label>
                 <Input
                   id="assessment-date"
                   type="date"
@@ -153,7 +156,7 @@ export function AssessmentDialog({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="assessment-time">Time (optional)</Label>
+                <Label htmlFor="assessment-time">{t("Time (optional)")}</Label>
                 <Input
                   id="assessment-time"
                   type="time"
@@ -163,12 +166,12 @@ export function AssessmentDialog({
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="assessment-notes">Notes</Label>
+              <Label htmlFor="assessment-notes">{t("Notes")}</Label>
               <Textarea
                 id="assessment-notes"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Room B204. Chapters 1–4."
+                placeholder={t("Room B204. Chapters 1–4.")}
                 className="min-h-14"
               />
             </div>
@@ -179,17 +182,17 @@ export function AssessmentDialog({
                   variant="destructive-outline"
                   onClick={() => void remove()}
                 >
-                  <Trash2Icon /> Delete
+                  <Trash2Icon /> {t("Delete")}
                 </Button>
               ) : (
                 <span />
               )}
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={onClose}>
-                  Cancel
+                  {t("Cancel")}
                 </Button>
                 <Button type="submit" disabled={busy || !ready}>
-                  {existing ? "Save" : "Add assessment"}
+                  {existing ? t("Save") : t("Add assessment")}
                 </Button>
               </div>
             </DialogFooter>
@@ -201,13 +204,13 @@ export function AssessmentDialog({
 }
 
 const WEEKDAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+  msg("Monday"),
+  msg("Tuesday"),
+  msg("Wednesday"),
+  msg("Thursday"),
+  msg("Friday"),
+  msg("Saturday"),
+  msg("Sunday"),
 ];
 
 /** The times each week the student keeps for study. */
@@ -220,6 +223,7 @@ export function AvailabilityDialog({
   availability: Availability[];
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [slots, setSlots] = useState<(Availability & { key: string })[]>([]);
   const [busy, setBusy] = useState(false);
@@ -248,7 +252,7 @@ export function AvailabilityDialog({
       );
       onClose();
     } catch (error) {
-      notices.fail("The study times were not saved", error);
+      notices.fail(t("The study times were not saved"), error);
     } finally {
       setBusy(false);
     }
@@ -265,10 +269,11 @@ export function AvailabilityDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Study times</DialogTitle>
+            <DialogTitle>{t("Study times")}</DialogTitle>
             <DialogDescription>
-              When you can study each week. The assistant only suggests sessions
-              inside these times.
+              {t(
+                "When you can study each week. The assistant only suggests sessions inside these times.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col divide-y rounded-lg border">
@@ -278,7 +283,7 @@ export function AvailabilityDialog({
               return (
                 <div key={name} className="flex items-start gap-3 px-3 py-2">
                   <span className="flex h-control w-24 shrink-0 items-center text-sm font-medium">
-                    {name}
+                    {t(name)}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                     {day.map((slot) => (
@@ -337,7 +342,8 @@ export function AvailabilityDialog({
                         ])
                       }
                     >
-                      <PlusIcon /> {day.length === 0 ? "Add a time" : "Add"}
+                      <PlusIcon />{" "}
+                      {day.length === 0 ? t("Add a time") : t("Add")}
                     </Button>
                   </div>
                 </div>
@@ -346,10 +352,10 @@ export function AvailabilityDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" disabled={busy || invalid}>
-              Save
+              {t("Save")}
             </Button>
           </DialogFooter>
         </form>

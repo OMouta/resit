@@ -22,6 +22,8 @@ import {
 } from "@resit/ui/components/select";
 import { Textarea } from "@resit/ui/components/textarea";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 import type {
   Question,
@@ -40,9 +42,9 @@ export interface QuizEditorRequest {
 }
 
 const KIND_LABELS: Record<QuestionKind, string> = {
-  choice: "Multiple choice",
-  short: "Short answer",
-  worked: "Worked answer",
+  choice: msg("Multiple choice"),
+  short: msg("Short answer"),
+  worked: msg("Worked answer"),
 };
 
 interface Draft {
@@ -121,14 +123,15 @@ function toInput(draft: Draft): QuestionInput {
 
 /** Why a question cannot be saved yet, or nothing when it can. */
 function problem(draft: Draft): string | null {
-  if (!draft.prompt.trim()) return "Write the question.";
+  if (!draft.prompt.trim()) return msg("Write the question.");
   if (draft.kind === "choice") {
     const filled = draft.options.filter((option) => option.trim());
-    if (filled.length < 2) return "Give at least two options.";
-    if (!draft.options[draft.right]?.trim()) return "Mark the right option.";
+    if (filled.length < 2) return msg("Give at least two options.");
+    if (!draft.options[draft.right]?.trim())
+      return msg("Mark the right option.");
   }
   if (draft.kind === "short" && !draft.answer.trim())
-    return "Give the answer to compare against.";
+    return msg("Give the answer to compare against.");
   return null;
 }
 
@@ -144,6 +147,7 @@ export function QuizEditor({
   onClose: () => void;
   onSaved: (subjectId: string, quiz: QuizFile) => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [subjectId, setSubjectId] = useState("");
   const [title, setTitle] = useState("");
@@ -199,7 +203,7 @@ export function QuizEditor({
       onSaved(subjectId, quiz);
       onClose();
     } catch (error) {
-      notices.fail("The quiz was not saved", error);
+      notices.fail(t("The quiz was not saved"), error);
     } finally {
       setBusy(false);
     }
@@ -218,7 +222,7 @@ export function QuizEditor({
           >
             <DialogHeader className="px-5 pt-5 pb-4">
               <DialogTitle>
-                {request.quiz ? "Edit quiz" : "New quiz"}
+                {request.quiz ? t("Edit quiz") : t("New quiz")}
               </DialogTitle>
             </DialogHeader>
             <ScrollArea className="min-h-0 flex-1 border-y">
@@ -226,10 +230,10 @@ export function QuizEditor({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {request.quiz ? null : (
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <Label htmlFor="quiz-subject">Subject</Label>
+                      <Label htmlFor="quiz-subject">{t("Subject")}</Label>
                       <Select value={subjectId} onValueChange={setSubjectId}>
                         <SelectTrigger id="quiz-subject" className="w-full">
-                          <SelectValue placeholder="Choose a subject" />
+                          <SelectValue placeholder={t("Choose a subject")} />
                         </SelectTrigger>
                         <SelectContent>
                           {subjects.map((subject) => (
@@ -242,22 +246,22 @@ export function QuizEditor({
                     </div>
                   )}
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="quiz-title">Title</Label>
+                    <Label htmlFor="quiz-title">{t("Title")}</Label>
                     <Input
                       id="quiz-title"
                       autoFocus
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
-                      placeholder="Limits, week 1"
+                      placeholder={t("Limits, week 1")}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="quiz-topic">Topic</Label>
+                    <Label htmlFor="quiz-topic">{t("Topic")}</Label>
                     <Input
                       id="quiz-topic"
                       value={topic}
                       onChange={(event) => setTopic(event.target.value)}
-                      placeholder="Limits"
+                      placeholder={t("Limits")}
                     />
                   </div>
                 </div>
@@ -297,16 +301,16 @@ export function QuizEditor({
                     ])
                   }
                 >
-                  <PlusIcon /> Add question
+                  <PlusIcon /> {t("Add question")}
                 </Button>
               </div>
             </ScrollArea>
             <DialogFooter className="px-5 py-4">
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={busy || (tried && !ready)}>
-                {request.quiz ? "Save" : "Create quiz"}
+                {request.quiz ? t("Save") : t("Create quiz")}
               </Button>
             </DialogFooter>
           </form>
@@ -333,24 +337,27 @@ function QuestionFields({
   onMoveDown: (() => void) | undefined;
   onRemove: (() => void) | undefined;
 }) {
+  const { t } = useLocale();
   const field = (name: string) => `question-${draft.key}-${name}`;
   return (
     <section
-      aria-label={`Question ${number}`}
+      aria-label={t("Question {number}", { number })}
       className={cn(
         "flex flex-col gap-3 rounded-lg border bg-background p-3",
         problem && "border-destructive/50",
       )}
     >
       <header className="flex items-center gap-2">
-        <span className="text-sm font-semibold">Question {number}</span>
+        <span className="text-sm font-semibold">
+          {t("Question {number}", { number })}
+        </span>
         <Select
           value={draft.kind}
           onValueChange={(value) => onChange({ kind: value as QuestionKind })}
         >
           <SelectTrigger
             size="sm"
-            aria-label={`Question ${number} type`}
+            aria-label={t("Question {number} type", { number })}
             className="w-40"
           >
             <SelectValue />
@@ -358,7 +365,7 @@ function QuestionFields({
           <SelectContent>
             {(Object.keys(KIND_LABELS) as QuestionKind[]).map((kind) => (
               <SelectItem key={kind} value={kind}>
-                {KIND_LABELS[kind]}
+                {t(KIND_LABELS[kind])}
               </SelectItem>
             ))}
           </SelectContent>
@@ -368,7 +375,7 @@ function QuestionFields({
             type="button"
             variant="subtle"
             size="icon-sm"
-            aria-label="Move up"
+            aria-label={t("Move up")}
             disabled={!onMoveUp}
             onClick={onMoveUp}
           >
@@ -378,7 +385,7 @@ function QuestionFields({
             type="button"
             variant="subtle"
             size="icon-sm"
-            aria-label="Move down"
+            aria-label={t("Move down")}
             disabled={!onMoveDown}
             onClick={onMoveDown}
           >
@@ -388,7 +395,7 @@ function QuestionFields({
             type="button"
             variant="subtle"
             size="icon-sm"
-            aria-label={`Remove question ${number}`}
+            aria-label={t("Remove question {number}", { number })}
             disabled={!onRemove}
             onClick={onRemove}
           >
@@ -397,16 +404,16 @@ function QuestionFields({
         </span>
       </header>
       <Textarea
-        aria-label={`Question ${number}`}
+        aria-label={t("Question {number}", { number })}
         value={draft.prompt}
         onChange={(event) => onChange({ prompt: event.target.value })}
-        placeholder="Compute $\lim_{x \to 0} \frac{\sin 3x}{x}$."
+        placeholder={t("Compute $\\lim_{x \\to 0} \\frac{\\sin 3x}{x}$.")}
         className="min-h-16"
       />
       {draft.kind === "choice" ? (
         <div className="flex flex-col gap-1.5">
           <p id={field("options")} className="text-xs text-muted-foreground">
-            Options. Pick the right one.
+            {t("Options. Pick the right one.")}
           </p>
           <RadioGroup
             aria-labelledby={field("options")}
@@ -435,7 +442,9 @@ function QuestionFields({
                   type="button"
                   variant="subtle"
                   size="icon-sm"
-                  aria-label={`Remove option ${index + 1}`}
+                  aria-label={t("Remove option {number}", {
+                    number: index + 1,
+                  })}
                   disabled={draft.options.length <= 2}
                   onClick={() =>
                     onChange({
@@ -462,7 +471,7 @@ function QuestionFields({
               className="self-start"
               onClick={() => onChange({ options: [...draft.options, ""] })}
             >
-              <PlusIcon /> Add option
+              <PlusIcon /> {t("Add option")}
             </Button>
           ) : null}
         </div>
@@ -470,7 +479,7 @@ function QuestionFields({
       {draft.kind === "short" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={field("answer")}>Answer</Label>
+            <Label htmlFor={field("answer")}>{t("Answer")}</Label>
             <Input
               id={field("answer")}
               value={draft.answer}
@@ -479,7 +488,9 @@ function QuestionFields({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={field("accept")}>Also accept, one per line</Label>
+            <Label htmlFor={field("accept")}>
+              {t("Also accept, one per line")}
+            </Label>
             <Textarea
               id={field("accept")}
               value={draft.accept}
@@ -491,7 +502,9 @@ function QuestionFields({
       ) : null}
       {draft.kind === "worked" ? (
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={field("answer")}>Final answer (optional)</Label>
+          <Label htmlFor={field("answer")}>
+            {t("Final answer (optional)")}
+          </Label>
           <Input
             id={field("answer")}
             value={draft.answer}
@@ -502,8 +515,8 @@ function QuestionFields({
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={field("solution")}>
           {draft.kind === "worked"
-            ? "Worked solution"
-            : "Explanation (optional)"}
+            ? t("Worked solution")
+            : t("Explanation (optional)")}
         </Label>
         <Textarea
           id={field("solution")}
@@ -513,7 +526,7 @@ function QuestionFields({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={field("hint")}>Hint (optional)</Label>
+        <Label htmlFor={field("hint")}>{t("Hint (optional)")}</Label>
         <Input
           id={field("hint")}
           value={draft.hint}
@@ -522,7 +535,7 @@ function QuestionFields({
       </div>
       {problem ? (
         <p className="text-xs text-destructive" role="alert">
-          {problem}
+          {t(problem)}
         </p>
       ) : null}
     </section>

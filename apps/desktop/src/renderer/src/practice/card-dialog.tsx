@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
 import { Textarea } from "@resit/ui/components/textarea";
 import { MathText } from "@resit/ui/patterns/document/math";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import {
   CLOZE_PATTERN,
@@ -73,6 +74,7 @@ export function CardDialog({
   subjects: SubjectInfo[];
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [practice, setPractice] = useState<PracticeOverview | null>(null);
   const [subjectId, setSubjectId] = useState("");
@@ -157,7 +159,7 @@ export function CardDialog({
       } else onClose();
     } catch (error) {
       notices.fail(
-        editing ? "The card was not saved" : "The card was not added",
+        editing ? t("The card was not saved") : t("The card was not added"),
         error,
       );
     } finally {
@@ -177,7 +179,9 @@ export function CardDialog({
             }}
           >
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit card" : "New card"}</DialogTitle>
+              <DialogTitle>
+                {editing ? t("Edit card") : t("New card")}
+              </DialogTitle>
               {request.sourceLabel ? (
                 <DialogDescription>
                   From {request.sourceLabel}
@@ -187,10 +191,10 @@ export function CardDialog({
             <div className="flex flex-wrap items-end gap-3">
               {editing ? null : (
                 <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-                  <Label htmlFor="card-subject">Subject</Label>
+                  <Label htmlFor="card-subject">{t("Subject")}</Label>
                   <Select value={subjectId} onValueChange={setSubjectId}>
                     <SelectTrigger id="card-subject" className="w-full">
-                      <SelectValue placeholder="Choose a subject" />
+                      <SelectValue placeholder={t("Choose a subject")} />
                     </SelectTrigger>
                     <SelectContent>
                       {subjects.map((subject) => (
@@ -206,16 +210,18 @@ export function CardDialog({
                 value={kind}
                 onValueChange={(value) => setKind(value as CardKind)}
               >
-                <TabsList aria-label="Card type">
-                  <TabsTrigger value="basic">Question and answer</TabsTrigger>
-                  <TabsTrigger value="cloze">Fill the gap</TabsTrigger>
+                <TabsList aria-label={t("Card type")}>
+                  <TabsTrigger value="basic">
+                    {t("Question and answer")}
+                  </TabsTrigger>
+                  <TabsTrigger value="cloze">{t("Fill the gap")}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="card-front">
-                  {kind === "cloze" ? "Text" : "Question"}
+                  {kind === "cloze" ? t("Text") : t("Question")}
                 </Label>
                 {kind === "cloze" ? (
                   <Button
@@ -225,7 +231,7 @@ export function CardDialog({
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={hideSelection}
                   >
-                    <EyeOffIcon /> Hide selected text
+                    <EyeOffIcon /> {t("Hide selected text")}
                   </Button>
                 ) : null}
               </div>
@@ -237,34 +243,36 @@ export function CardDialog({
                 onChange={(event) => setFront(event.target.value)}
                 placeholder={
                   kind === "cloze"
-                    ? "The derivative of $\\sin x$ is {{c1::$\\cos x$}}."
-                    : "What is $\\lim_{x \\to 0} \\frac{\\sin x}{x}$?"
+                    ? t("The derivative of $\\sin x$ is {{c1::$\\cos x$}}.")
+                    : t("What is $\\lim_{x \\to 0} \\frac{\\sin x}{x}$?")
                 }
                 className="min-h-20"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="card-back">
-                {kind === "cloze" ? "Extra (optional)" : "Answer"}
+                {kind === "cloze" ? t("Extra (optional)") : t("Answer")}
               </Label>
               <Textarea
                 id="card-back"
                 value={back}
                 onChange={(event) => setBack(event.target.value)}
                 placeholder={
-                  kind === "cloze" ? "Shown after the gap is revealed" : "$1$"
+                  kind === "cloze"
+                    ? t("Shown after the gap is revealed")
+                    : "$1$"
                 }
                 className="min-h-16"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="card-topic">Topic</Label>
+              <Label htmlFor="card-topic">{t("Topic")}</Label>
               <Input
                 id="card-topic"
                 list="card-topics"
                 value={topic}
                 onChange={(event) => setTopic(event.target.value)}
-                placeholder="Limits"
+                placeholder={t("Limits")}
               />
               <datalist id="card-topics">
                 {topics.map((entry) => (
@@ -295,17 +303,18 @@ export function CardDialog({
                   className="mt-0.5"
                 />
                 <span>
-                  Start its schedule again
+                  {t("Start its schedule again")}
                   <span className="block text-xs text-muted-foreground">
-                    The question changed, so what you remembered may no longer
-                    apply.
+                    {t(
+                      "The question changed, so what you remembered may no longer apply.",
+                    )}
                   </span>
                 </span>
               </label>
             ) : null}
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               {editing ? null : (
                 <Button
@@ -314,11 +323,11 @@ export function CardDialog({
                   disabled={busy || !ready}
                   onClick={() => void save(true)}
                 >
-                  Add another
+                  {t("Add another")}
                 </Button>
               )}
               <Button type="submit" disabled={busy || !ready}>
-                {editing ? "Save" : "Add card"}
+                {editing ? t("Save") : t("Add card")}
               </Button>
             </DialogFooter>
           </form>
