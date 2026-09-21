@@ -45,7 +45,12 @@ import {
   moodleStatus,
   moodleUserId,
 } from "./moodle/credentials";
-import { downloadItems, listItems } from "./moodle/sync";
+import {
+  downloadItems,
+  listActivities,
+  listItems,
+  refreshActivities,
+} from "./moodle/sync";
 import {
   activateWorkspace,
   appState,
@@ -526,9 +531,15 @@ export function registerHandlers(
     },
   );
 
-  handle(CHANNELS.listMoodleItems, z.tuple([id]), async (subjectId) =>
-    listItems(currentWorkspace(), await moodleSession(), subjectId),
-  );
+  handle(CHANNELS.listMoodleItems, z.tuple([id]), async (subjectId) => {
+    const contents = await listItems(
+      currentWorkspace(),
+      await moodleSession(),
+      subjectId,
+    );
+    emitEvent({ type: "moodle-activities-changed" });
+    return contents;
+  });
 
   handle(
     CHANNELS.downloadMoodleItems,
@@ -553,9 +564,23 @@ export function registerHandlers(
           }),
       });
       emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      emitEvent({ type: "moodle-activities-changed" });
       return result;
     },
   );
+
+  handle(CHANNELS.listMoodleActivities, z.tuple([]), () =>
+    listActivities(currentWorkspace()),
+  );
+
+  handle(CHANNELS.refreshMoodleActivities, z.tuple([]), async () => {
+    const failures = await refreshActivities(
+      currentWorkspace(),
+      await moodleSession(),
+    );
+    emitEvent({ type: "moodle-activities-changed" });
+    return failures;
+  });
 
   handle(CHANNELS.getModels, z.tuple([providerIdSchema]), (provider) =>
     provider === "codex" ? codexModels() : claudeModels(),

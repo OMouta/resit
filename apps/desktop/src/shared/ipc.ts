@@ -13,6 +13,7 @@ import type {
   MoodleCourse,
   MoodleCourseContents,
   MoodleDownloadResult,
+  SubjectActivities,
 } from "./moodle";
 import type { AppSettings, ProviderId, SettingsPatch } from "./settings";
 import type {
@@ -80,6 +81,8 @@ export type DesktopEvent =
       page: number;
       maxWidth: number;
     }
+  /** A subject's Moodle activities were read again. */
+  | { type: "moodle-activities-changed" }
   | {
       type: "moodle-progress";
       subjectId: string;
@@ -236,6 +239,10 @@ export interface DesktopApi {
     subjectId: string;
     keys: string[];
   }): Promise<MoodleDownloadResult>;
+  /** Activities as resit last saw them, without contacting Moodle. */
+  listMoodleActivities(): Promise<SubjectActivities[]>;
+  /** Reads every followed course again. Returns the subjects that failed. */
+  refreshMoodleActivities(): Promise<{ subjectId: string; message: string }[]>;
 
   getProviderStatus(
     provider: ProviderId,
@@ -317,6 +324,8 @@ export const CHANNELS = {
   setMoodleCourse: "resit:moodle-set-course",
   listMoodleItems: "resit:moodle-items",
   downloadMoodleItems: "resit:moodle-download",
+  listMoodleActivities: "resit:moodle-activities",
+  refreshMoodleActivities: "resit:moodle-activities-refresh",
   getProviderStatus: "resit:provider-status",
   getModels: "resit:provider-models",
   listConversations: "resit:conversation-list",

@@ -47,6 +47,8 @@ import { noteRevision, parseNote, serializeNote } from "./frontmatter";
 
 export const WORKSPACE_FORMAT_VERSION = 1;
 const SIDECAR_SUFFIX = ".resource.json";
+/** A subject's Moodle activities, beside `subject.json`. */
+const ACTIVITIES_FILE = "activities.json";
 
 interface SubjectEntry {
   info: SubjectInfo;
@@ -301,7 +303,11 @@ async function scanSubjectFiles(scan: SubjectScan, dir: string): Promise<void> {
       continue;
     }
     if (!entry.isFile()) continue;
-    if (dir === subjectDir && entry.name === "subject.json") continue;
+    if (
+      dir === subjectDir &&
+      (entry.name === "subject.json" || entry.name === ACTIVITIES_FILE)
+    )
+      continue;
     if (entry.name.endsWith(SIDECAR_SUFFIX)) continue;
 
     const folder = folderPath(subjectDir, dirname(path));
@@ -1237,6 +1243,14 @@ function annotationFilename(documentId: string): string {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/.test(documentId)
     ? `${documentId}.json`
     : `${sha256(documentId).slice("sha256:".length, "sha256:".length + 32)}.json`;
+}
+
+/** Where a subject's Moodle activities live, whether or not the file exists. */
+export function activitiesPath(
+  workspace: OpenWorkspace,
+  subjectId: string,
+): string {
+  return join(subjectEntry(workspace, subjectId).dir, ACTIVITIES_FILE);
 }
 
 /** Where one document's annotations live, whether or not the file exists. */

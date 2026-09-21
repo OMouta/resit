@@ -264,7 +264,21 @@ export const moodleModuleSchema = z.looseObject({
   id: z.number().int(),
   name: z.string().catch(""),
   modname: z.string().catch(""),
+  /** Labels have no page of their own, so no address. */
+  url: z.string().optional(),
+  /** HTML, sent only when the course page shows it. */
+  description: z.string().optional(),
   uservisible: z.boolean().optional(),
+  dates: z
+    .array(
+      z.looseObject({
+        label: z.string().catch(""),
+        timestamp: z.number(),
+        dataid: z.string().optional(),
+      }),
+    )
+    .optional()
+    .catch(undefined),
   contents: z.array(moodleContentSchema).optional(),
 });
 

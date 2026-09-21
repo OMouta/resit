@@ -1,20 +1,31 @@
 import {
+  activitiesFileSchema,
   itemKey,
+  type ActivitiesFile,
+  type MoodleActivity,
   type MoodleCourseContents,
   type MoodleDownloadResult,
   type MoodleFileRef,
   type MoodleItem,
   type MoodleLink,
   type MoodleSkipped,
+  type SubjectActivities,
 } from "../../shared/moodle";
-import { slugify, splitExtension } from "../workspace/files";
 import {
+  readJson,
+  slugify,
+  splitExtension,
+  writeJson,
+} from "../workspace/files";
+import {
+  activitiesPath,
   importDownload,
   replaceDownload,
   subjectSidecars,
   WorkspaceError,
   type OpenWorkspace,
 } from "../workspace/workspace";
+import { briefMarkdown } from "./brief";
 import {
   courseAssignments,
   courseContents,
@@ -33,6 +44,9 @@ const CONCURRENCY = 3;
  * attached to its brief. Others with files are listed as skipped.
  */
 const FILE_MODULES = new Set(["resource", "folder", "assign"]);
+
+/** Modules that are not activities a student opens: files and labels. */
+const NOT_ACTIVITIES = new Set(["resource", "folder", "label", "subsection"]);
 
 /** A course as Moodle describes it, with its assignments keyed by module. */
 interface CourseRead {
@@ -144,6 +158,79 @@ export function planCourse(
   return { course: link, items, skipped: [...skipped.values()] };
 }
 
+/** Everything in a course that is more than a file, with its dates. */
+function planActivities(
+  sections: MoodleSection[],
+  assignments: ReadonlyMap<number, MoodleAssignment>,
+): MoodleActivity[] {
+  const activities: MoodleActivity[] = [];
+  for (const section of sections) {
+    for (const module of section.modules) {
+      if (
+        module.uservisible === false ||
+        !module.url ||
+        NOT_ACTIVITIES.has(module.modname)
+      )
+        continue;
+      const assignment = assignments.get(module.id);
+      const brief = [
+        assignment?.intro ?? module.description,
+        assignment?.activity,
+      ]
+        .map((html) => (html ? briefMarkdown(html) : ""))
+        .filter(Boolean)
+        .join("\n\n");
+      // The same files planCourse offers, so each one can be downloaded.
+      const attachments = (assignment?.introattachments ?? [])
+        .filter(
+          (file) =>
+            file.type === "file" &&
+            file.fileurl &&
+            !file.isexternalfile &&
+            file.filesize <= MAX_FILE_BYTES,
+        )
+        .map((file) => ({
+          key: itemKey(module.id, `${file.filepath}${file.filename}`),
+          filename: file.filename,
+        }));
+      activities.push({
+        moduleId: module.id,
+        name: module.name,
+        modname: module.modname,
+        sectionName: section.name.trim(),
+        url: module.url,
+        dates: (module.dates ?? [])
+          .filter((date) => date.timestamp > 0)
+          .map((date) => ({
+            type: date.dataid ?? "",
+            label: date.label.replace(/:\s*$/, "").trim(),
+            at: new Date(date.timestamp * 1000).toISOString(),
+          })),
+        ...(brief ? { brief } : {}),
+        ...(attachments.length > 0 ? { attachments } : {}),
+      });
+    }
+  }
+  return activities;
+}
+
+async function saveActivities(
+  workspace: OpenWorkspace,
+  subjectId: string,
+  link: MoodleLink,
+  course: CourseRead,
+): Promise<void> {
+  const file: ActivitiesFile = {
+    format: "resit-moodle-activities",
+    formatVersion: 1,
+    siteUrl: link.siteUrl,
+    courseId: link.courseId,
+    checkedAt: new Date().toISOString(),
+    activities: planActivities(course.sections, course.assignments),
+  };
+  await writeJson(activitiesPath(workspace, subjectId), file);
+}
+
 function subjectLink(workspace: OpenWorkspace, subjectId: string): MoodleLink {
   const subject = workspace.subjects.get(subjectId);
   if (!subject) throw new WorkspaceError("That subject no longer exists.");
@@ -178,12 +265,82 @@ export async function listItems(
 ): Promise<MoodleCourseContents> {
   const link = subjectLink(workspace, subjectId);
   const course = await readCourse(session, link);
+  await saveActivities(workspace, subjectId, link, course);
   return planCourse(
     course.sections,
     link,
     await downloaded(workspace, subjectId, link),
     course.assignments,
   );
+}
+
+/** Reads every followed course again and saves its activities. */
+export async function refreshActivities(
+  workspace: OpenWorkspace,
+  session: MoodleSession,
+): Promise<{ subjectId: string; message: string }[]> {
+  const failures: { subjectId: string; message: string }[] = [];
+  await Promise.all(
+    [...workspace.subjects.values()].map(async ({ info }) => {
+      if (!info.moodle) return;
+      try {
+        await saveActivities(
+          workspace,
+          info.id,
+          info.moodle,
+          await readCourse(session, info.moodle),
+        );
+      } catch (error) {
+        failures.push({
+          subjectId: info.id,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }),
+  );
+  return failures;
+}
+
+/** What each followed subject's course held when resit last read it. */
+export async function listActivities(
+  workspace: OpenWorkspace,
+): Promise<SubjectActivities[]> {
+  const found: SubjectActivities[] = [];
+  for (const { info } of workspace.subjects.values()) {
+    const link = info.moodle;
+    if (!link) continue;
+    let file: ActivitiesFile;
+    try {
+      file = activitiesFileSchema.parse(
+        await readJson(activitiesPath(workspace, info.id)),
+      );
+    } catch {
+      // Not read from Moodle yet, or damaged: the next check rewrites it.
+      continue;
+    }
+    // Left over from a course the subject no longer follows.
+    if (file.siteUrl !== link.siteUrl || file.courseId !== link.courseId)
+      continue;
+    const owned = file.activities.some((activity) => activity.attachments)
+      ? await downloaded(workspace, info.id, link)
+      : new Map<string, { resourceId: string }>();
+    found.push({
+      subjectId: info.id,
+      checkedAt: file.checkedAt,
+      activities: file.activities.map(({ attachments, ...activity }) => ({
+        ...activity,
+        ...(attachments
+          ? {
+              attachments: attachments.map((attachment) => {
+                const resourceId = owned.get(attachment.key)?.resourceId;
+                return resourceId ? { ...attachment, resourceId } : attachment;
+              }),
+            }
+          : {}),
+      })),
+    });
+  }
+  return found;
 }
 
 export interface MoodleProgress {

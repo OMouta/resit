@@ -11,12 +11,16 @@ import {
   useNetworkFetch,
   type NetworkFetch,
 } from "../../apps/desktop/src/main/moodle/client";
+import { briefMarkdown } from "../../apps/desktop/src/main/moodle/brief";
 import {
   downloadItems,
+  listActivities,
   listItems,
   planCourse,
+  refreshActivities,
 } from "../../apps/desktop/src/main/moodle/sync";
 import {
+  createSubject,
   createWorkspace,
   linkSubject,
   openWorkspace,
@@ -453,6 +457,125 @@ describe("activities", () => {
       ["200:/outline.pdf", "Course outline", ""],
       ["203:/brief.pdf", "Project 1", "week-2"],
     ]);
+  });
+
+  it("keeps what is not a file, with its dates and brief", async () => {
+    await listItems(workspace, session, subjectId);
+    const [record] = await listActivities(workspace);
+    expect(record?.subjectId).toBe(subjectId);
+    expect(record?.activities).toEqual([
+      {
+        moduleId: 202,
+        name: "Announcements",
+        modname: "forum",
+        sectionName: "General",
+        url: `${SITE}/mod/forum/view.php?id=202`,
+        dates: [],
+      },
+      {
+        moduleId: 203,
+        name: "Project 1",
+        modname: "assign",
+        sectionName: "Week 2",
+        url: `${SITE}/mod/assign/view.php?id=203`,
+        dates: [
+          {
+            type: "allowsubmissionsfromdate",
+            label: "Aberto",
+            at: new Date(1790000000 * 1000).toISOString(),
+          },
+          {
+            type: "duedate",
+            label: "Data limite",
+            at: new Date(1791000000 * 1000).toISOString(),
+          },
+        ],
+        brief: "Build a **limit** calculator.\n\n- Report\n- Code",
+        attachments: [{ key: "203:/brief.pdf", filename: "brief.pdf" }],
+      },
+      {
+        moduleId: 204,
+        name: "Quiz 1",
+        modname: "quiz",
+        sectionName: "Week 2",
+        url: `${SITE}/mod/quiz/view.php?id=204`,
+        dates: [
+          {
+            type: "timeclose",
+            label: "Fecha",
+            at: new Date(1792000000 * 1000).toISOString(),
+          },
+        ],
+        brief: "Covers **limits**.",
+      },
+    ]);
+  });
+
+  it("says which attachment is already in the subject", async () => {
+    await listItems(workspace, session, subjectId);
+    await downloadItems(workspace, session, {
+      subjectId,
+      keys: ["203:/brief.pdf"],
+    });
+    const brief = snapshot(workspace).resources.find(
+      (resource) => resource.title === "Project 1",
+    );
+    const [record] = await listActivities(workspace);
+    const project = record?.activities.find((entry) => entry.moduleId === 203);
+    expect(project?.attachments).toEqual([
+      { key: "203:/brief.pdf", filename: "brief.pdf", resourceId: brief?.id },
+    ]);
+  });
+
+  it("keeps its record out of the subject's files", async () => {
+    await listItems(workspace, session, subjectId);
+    await scanWorkspace(workspace);
+    const scanned = snapshot(workspace);
+    expect(scanned.resources).toEqual([]);
+    expect(scanned.issues).toEqual([]);
+  });
+
+  it("forgets a course the subject stopped following", async () => {
+    await listItems(workspace, session, subjectId);
+    await linkSubject(workspace, {
+      subjectId,
+      link: { ...link, courseId: 8 },
+    });
+    expect(await listActivities(workspace)).toEqual([]);
+  });
+
+  it("checks every followed course and says which failed", async () => {
+    const physics = await createSubject(workspace, {
+      name: "Physics",
+      color: "red",
+    });
+    await linkSubject(workspace, {
+      subjectId: physics.id,
+      link: { ...link, courseId: 8 },
+    });
+    serveActivities(8);
+    const failures = await refreshActivities(workspace, session);
+    expect(failures).toEqual([
+      {
+        subjectId: physics.id,
+        message: expect.stringContaining("cannot see") as string,
+      },
+    ]);
+    const records = await listActivities(workspace);
+    expect(records.map((record) => record.subjectId)).toEqual([subjectId]);
+  });
+});
+
+describe("assignment briefs", () => {
+  it("keeps structure and drops markup", () => {
+    const html = [
+      "<h3>Entrega</h3>",
+      '    <p>Até às 23:59&nbsp;— ver <a href="https://x.pt/a?b=1&amp;c=2">as regras</a>.<img src="x.png" alt="diagrama"></p>',
+      "<p>It&#039;s <em>final</em>.</p>",
+    ].join("\n");
+    expect(briefMarkdown(html)).toBe(
+      "### Entrega\n\nAté às 23:59 — ver [as regras](https://x.pt/a?b=1&c=2).\n\nIt's *final*.",
+    );
   });
 });
 

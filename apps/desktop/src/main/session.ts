@@ -68,6 +68,7 @@ function ignored(filename: string): boolean {
     path === ".resit" ||
     path.startsWith("conversations/") ||
     path.includes("/annotations/") ||
+    /^subjects\/[^/]+\/activities\.json$/.test(path) ||
     base.endsWith(".tmp")
   );
 }

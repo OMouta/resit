@@ -106,3 +106,59 @@ export interface MoodleDownloadResult {
   replaced: number;
   failures: { key: string; filename: string; message: string }[];
 }
+
+const moodleActivityDateSchema = z.object({
+  /** Moodle's name for the date, such as `duedate` or `timeclose`. */
+  type: z.string(),
+  /** Moodle's own label, in the site's language. */
+  label: z.string(),
+  at: z.iso.datetime({ offset: true }),
+});
+export type MoodleActivityDate = z.infer<typeof moodleActivityDateSchema>;
+
+/** Something in a course resit does not download: an assignment, a quiz, a forum. */
+const moodleActivitySchema = z.object({
+  moduleId: z.number().int().nonnegative(),
+  name: z.string(),
+  /** Moodle's activity type: `assign`, `quiz`, `forum`, … */
+  modname: z.string(),
+  sectionName: z.string(),
+  /** The activity's page in Moodle. */
+  url: z.string(),
+  dates: z.array(moodleActivityDateSchema),
+  /** The assignment brief, or the description the course shows, as Markdown. */
+  brief: z.string().optional(),
+  /** Files attached to an assignment brief, keyed like download items. */
+  attachments: z
+    .array(z.object({ key: z.string(), filename: z.string() }))
+    .optional(),
+});
+export type MoodleActivity = z.infer<typeof moodleActivitySchema>;
+
+/**
+ * `subjects/<folder>/activities.json`. resit rewrites it whenever it reads
+ * the course, so it is never edited by hand.
+ */
+export const activitiesFileSchema = z.object({
+  format: z.literal("resit-moodle-activities"),
+  formatVersion: z.number().int().positive(),
+  siteUrl: z.string(),
+  courseId: z.number().int().positive(),
+  checkedAt: z.iso.datetime({ offset: true }),
+  activities: z.array(moodleActivitySchema),
+});
+export type ActivitiesFile = z.infer<typeof activitiesFileSchema>;
+
+/** A subject's activities as resit last saw them in Moodle. */
+export interface SubjectActivities {
+  subjectId: string;
+  checkedAt: string;
+  activities: (Omit<MoodleActivity, "attachments"> & {
+    attachments?: {
+      key: string;
+      filename: string;
+      /** Set once the file has been downloaded into the subject. */
+      resourceId?: string;
+    }[];
+  })[];
+}
