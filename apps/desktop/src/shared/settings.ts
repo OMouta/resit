@@ -64,6 +64,18 @@ const pdfSettingsSchema = z.object({
 });
 export type PdfSettings = z.infer<typeof pdfSettingsSchema>;
 
+/** Reminders before study sessions, shown while resit is running. */
+const reminderSettingsSchema = z.object({
+  enabled: z.boolean().catch(false),
+  minutesBefore: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60)
+    .catch(10),
+});
+export type ReminderSettings = z.infer<typeof reminderSettingsSchema>;
+
 const DOCUMENT_DEFAULTS: DocumentSettings = {
   font: "sans",
   size: 17,
@@ -73,6 +85,10 @@ const EDITOR_DEFAULTS: EditorSettings = {
   spellcheck: true,
   mode: "rich",
   outline: false,
+};
+const REMINDER_DEFAULTS: ReminderSettings = {
+  enabled: false,
+  minutesBefore: 10,
 };
 const PDF_DEFAULTS: PdfSettings = {
   zoom: "fit-width",
@@ -90,6 +106,7 @@ export const appSettingsSchema = z.object({
   document: documentSettingsSchema.catch(DOCUMENT_DEFAULTS),
   editor: editorSettingsSchema.catch(EDITOR_DEFAULTS),
   pdf: pdfSettingsSchema.catch(PDF_DEFAULTS),
+  reminders: reminderSettingsSchema.catch(REMINDER_DEFAULTS),
   recent: z.array(recentWorkspaceSchema).catch([]),
   lastWorkspacePath: z.string().optional().catch(undefined),
   /** Provider new conversations start with. */
@@ -119,6 +136,7 @@ export const settingsPatchSchema = z.object({
   document: documentSettingsSchema.partial().optional(),
   editor: editorSettingsSchema.partial().optional(),
   pdf: pdfSettingsSchema.partial().optional(),
+  reminders: reminderSettingsSchema.partial().optional(),
   provider: providerIdSchema.optional(),
   claude: z
     .object({

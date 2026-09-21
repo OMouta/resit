@@ -85,6 +85,7 @@ export async function updateSettings(
     document: merge(current.document, patch.document),
     editor: merge(current.editor, patch.editor),
     pdf: merge(current.pdf, patch.pdf),
+    reminders: merge(current.reminders, patch.reminders),
     claude,
     codex,
   });
