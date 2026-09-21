@@ -41,6 +41,12 @@ import {
   updateAnnotation,
 } from "./workspace/annotations";
 import {
+  discardDraft,
+  keepDraft,
+  readDraft,
+  restoreDraft,
+} from "./workspace/drafts";
+import {
   listNoteRevisions,
   readNoteRevision,
   restoreNoteRevision,
@@ -424,8 +430,56 @@ export function registerHandlers(
         expectedRevision: z.string().max(200),
       }),
     ]),
-    (input) => saveNoteWithHistory(currentWorkspace(), input, "edit"),
+    async (input) => {
+      const workspace = currentWorkspace();
+      let result;
+      try {
+        result = await saveNoteWithHistory(workspace, input, "edit");
+      } catch (error) {
+        await keepDraft(workspace, input).catch(() => undefined);
+        throw error;
+      }
+      if (result.status === "saved")
+        await discardDraft(workspace, input.id).catch(() => undefined);
+      else await keepDraft(workspace, input).catch(() => undefined);
+      return result;
+    },
   );
+
+  handle(CHANNELS.readDraft, z.tuple([id]), async (noteId) => {
+    const workspace = currentWorkspace();
+    const draft = await readDraft(workspace, noteId);
+    if (!draft) return null;
+    // Saved since, by another route.
+    if (draft.body === (await readNote(workspace, noteId)).body) {
+      await discardDraft(workspace, noteId);
+      return null;
+    }
+    return draft;
+  });
+
+  handle(
+    CHANNELS.keepDraft,
+    z.tuple([
+      z.object({
+        id,
+        body: z.string().max(MAX_NOTE_BYTES),
+        expectedRevision: z.string().max(200),
+      }),
+    ]),
+    (input) => keepDraft(currentWorkspace(), input),
+  );
+
+  handle(CHANNELS.discardDraft, z.tuple([id]), (noteId) =>
+    discardDraft(currentWorkspace(), noteId),
+  );
+
+  handle(CHANNELS.restoreDraft, z.tuple([id]), async (noteId) => {
+    const workspace = currentWorkspace();
+    const restored = await restoreDraft(workspace, noteId);
+    emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+    return restored;
+  });
 
   handle(CHANNELS.listNoteRevisions, z.tuple([id]), (noteId) =>
     listNoteRevisions(currentWorkspace(), noteId),

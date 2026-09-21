@@ -14,6 +14,7 @@ import { InlineMessage } from "@resit/ui/components/inline-message";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { isMac } from "@resit/ui/lib/keys";
 import { DocumentHeader } from "@resit/ui/patterns/document/document-header";
 import {
@@ -33,10 +34,15 @@ import {
 } from "@resit/ui/patterns/files/save-status";
 
 import type { NoteDocument } from "../../../shared/ipc";
-import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
+import type {
+  NoteDraft,
+  ResourceInfo,
+  SubjectInfo,
+} from "../../../shared/workspace";
 import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api, errorMessage } from "../lib/api";
 import { parseResitLink } from "../lib/citations";
+import { useNotices } from "../lib/notices";
 import { useSettings } from "../lib/settings-context";
 import { useWidth } from "../lib/use-width";
 import { registerView, type DocumentTarget } from "../views/view-registry";
@@ -79,6 +85,8 @@ export function NoteView(props: NoteViewProps) {
   const [document, setDocument] = useState<NoteDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  /** Text an earlier session could not save. */
+  const [draft, setDraft] = useState<NoteDraft | null>(null);
 
   const load = useCallback((next: NoteDocument) => {
     setDocument(next);
@@ -94,6 +102,12 @@ export function NoteView(props: NoteViewProps) {
       (reason: unknown) => {
         if (!cancelled) setError(errorMessage(reason));
       },
+    );
+    api.readDraft(props.resource.id).then(
+      (kept) => {
+        if (!cancelled) setDraft(kept);
+      },
+      () => undefined,
     );
     return () => {
       cancelled = true;
@@ -117,13 +131,23 @@ export function NoteView(props: NoteViewProps) {
       </div>
     );
   return (
-    <NoteEditor key={version} {...props} initial={document} onReplace={load} />
+    <NoteEditor
+      key={version}
+      {...props}
+      initial={document}
+      onReplace={load}
+      draft={draft}
+      onDraftSettled={() => setDraft(null)}
+    />
   );
 }
 
 interface NoteEditorProps extends NoteViewProps {
   initial: NoteDocument;
   onReplace: (document: NoteDocument) => void;
+  draft: NoteDraft | null;
+  /** The draft was put back or thrown away. */
+  onDraftSettled: () => void;
 }
 
 interface DocumentSummary {
@@ -163,8 +187,12 @@ function NoteEditor({
   onOpenLink,
   initial,
   onReplace,
+  draft,
+  onDraftSettled,
 }: NoteEditorProps) {
   const settings = useSettings();
+  const notices = useNotices();
+  const { dateTime } = useLocale();
   const [mode, setMode] = useState<"rich" | "source">(settings.editor.mode);
   const [source, setSource] = useState(initial.body);
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -197,7 +225,18 @@ function NoteEditor({
   const save = useCallback(async (): Promise<void> => {
     window.clearTimeout(timer.current);
     while (saving.current) await saving.current;
-    if (edits.current === savedEdits.current || conflictRef.current) return;
+    if (edits.current === savedEdits.current) return;
+    if (conflictRef.current) {
+      // Kept on disk until the conflict is settled, so quitting keeps it.
+      await api
+        .keepDraft({
+          id: resource.id,
+          body: bodyRef.current(),
+          expectedRevision: revision.current,
+        })
+        .catch(() => undefined);
+      return;
+    }
     const edit = edits.current;
     const body = bodyRef.current();
     setSaveState("saving");
@@ -539,6 +578,7 @@ function NoteEditor({
   const resolveConflict = (keep: "mine" | "disk") => {
     if (!conflict) return;
     if (keep === "disk") {
+      void api.discardDraft(resource.id).catch(() => undefined);
       onReplace(conflict);
       return;
     }
@@ -671,6 +711,49 @@ function NoteEditor({
           }
         >
           <p>Your text has not been saved. Choose which version to keep.</p>
+        </InlineMessage>
+      ) : null}
+      {draft && !conflict ? (
+        <InlineMessage
+          tone="info"
+          title="Text you had not saved was kept"
+          className="mx-4 mt-3"
+          actions={
+            <>
+              <Button
+                size="sm"
+                onClick={() =>
+                  void (async () => {
+                    await save();
+                    try {
+                      const restored = await api.restoreDraft(resource.id);
+                      onDraftSettled();
+                      onReplace(restored);
+                    } catch (reason) {
+                      notices.fail("The text was not put back", reason);
+                    }
+                  })()
+                }
+              >
+                Restore it
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  onDraftSettled();
+                  void api.discardDraft(resource.id).catch(() => undefined);
+                }}
+              >
+                Discard
+              </Button>
+            </>
+          }
+        >
+          <p>
+            From {dateTime(draft.savedAt)}. Restoring it replaces what the note
+            says now, which stays in Version history.
+          </p>
         </InlineMessage>
       ) : null}
       {lossy && mode === "source" ? (

@@ -52,6 +52,7 @@ import type {
   AnnotationSegment,
   AnnotationType,
   FolderInfo,
+  NoteDraft,
   NoteRevision,
   NoteRevisionContent,
   RecentWorkspace,
@@ -224,6 +225,17 @@ export interface DesktopApi {
     body: string;
     expectedRevision: string;
   }): Promise<SaveNoteResult>;
+  /** Text kept from an earlier session that never reached the note. */
+  readDraft(noteId: string): Promise<NoteDraft | null>;
+  /** Keeps text the editor cannot save yet, such as during a conflict. */
+  keepDraft(input: {
+    id: string;
+    body: string;
+    expectedRevision: string;
+  }): Promise<void>;
+  discardDraft(noteId: string): Promise<void>;
+  /** Makes the kept text the note's text, keeping what it replaces. */
+  restoreDraft(noteId: string): Promise<NoteDocument>;
   /** Kept copies of a note's text, newest first. */
   listNoteRevisions(noteId: string): Promise<NoteRevision[]>;
   readNoteRevision(input: {
@@ -440,6 +452,10 @@ export const CHANNELS = {
   createNote: "resit:note-create",
   readNote: "resit:note-read",
   saveNote: "resit:note-save",
+  readDraft: "resit:draft-read",
+  keepDraft: "resit:draft-keep",
+  discardDraft: "resit:draft-discard",
+  restoreDraft: "resit:draft-restore",
   listNoteRevisions: "resit:note-history",
   readNoteRevision: "resit:note-revision",
   restoreNoteRevision: "resit:note-restore",

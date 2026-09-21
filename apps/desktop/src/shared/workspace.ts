@@ -145,6 +145,12 @@ export interface TrashEntry {
   originalPath: string;
 }
 
+/** Note text that was not saved, kept so it survives a restart. */
+export interface NoteDraft {
+  body: string;
+  savedAt: string;
+}
+
 export type SaveNoteResult =
   | { status: "saved"; revision: string; resource: ResourceInfo }
   | { status: "conflict"; currentRevision: string; currentBody: string }

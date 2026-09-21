@@ -293,6 +293,32 @@ describe("desktop workspace", () => {
       .waitFor();
   });
 
+  it("keeps text it could not save through a restart", async () => {
+    await page.locator(".note-content p").first().click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" Unsaved.");
+    const subjects = join(folder, "subjects");
+    const [subject] = await readdir(subjects);
+    const path = join(subjects, subject!, "notes", "limites.md");
+    await writeFile(path, `${await readFile(path, "utf8")}\nFrom disk.\n`);
+    await page.getByText("This note changed on disk").waitFor();
+    const drafts = join(folder, ".resit", "drafts");
+    await expect
+      .poll(async () => {
+        const [file] = await readdir(drafts).catch(() => []);
+        return file ? readFile(join(drafts, file), "utf8") : "";
+      })
+      .toContain("Unsaved.");
+
+    await close();
+    await launch();
+    await page.getByText("Text you had not saved was kept").waitFor();
+    await page.getByRole("button", { name: "Restore it" }).click();
+    await expect.poll(noteFile).toContain("is 9. Mine. Unsaved.");
+    expect(await noteFile()).not.toContain("From disk.");
+    expect(await readdir(drafts)).toEqual([]);
+  });
+
   it("reopens the workspace with its tabs after a restart", async () => {
     await page.waitForTimeout(600);
     await close();
