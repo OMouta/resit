@@ -38,7 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
-import { useLocale } from "@resit/ui/hooks/use-locale";
+import { useLocale, type LocaleFormatters } from "@resit/ui/hooks/use-locale";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { AiPanel } from "@resit/ui/patterns/ai/ai-panel";
@@ -133,7 +133,10 @@ function toolCalls(tools: ToolSummary[]) {
   }));
 }
 
-function contextItems(context: TurnContext): ScopeItem[] {
+function contextItems(
+  context: TurnContext,
+  t: LocaleFormatters["t"],
+): ScopeItem[] {
   const items: ScopeItem[] = [];
   if (context.focused) {
     items.push({
@@ -146,7 +149,7 @@ function contextItems(context: TurnContext): ScopeItem[] {
       items.push({
         kind: "page",
         id: `${context.focused.resourceId}-page`,
-        label: `Page ${context.focused.page}`,
+        label: t("Page {page}", { page: context.focused.page }),
         page: context.focused.page,
       });
   }
@@ -154,7 +157,7 @@ function contextItems(context: TurnContext): ScopeItem[] {
     items.push({
       kind: "annotation",
       id: context.annotation.id,
-      label: `Highlight · p. ${context.annotation.page}`,
+      label: t("Highlight · p. {page}", { page: context.annotation.page }),
       page: context.annotation.page,
       text: context.annotation.text,
     });
@@ -162,7 +165,7 @@ function contextItems(context: TurnContext): ScopeItem[] {
     items.push({
       kind: "selection",
       id: "selection",
-      label: "Selection",
+      label: t("Selection"),
       text:
         context.selection.length > 80
           ? `${context.selection.slice(0, 77)}…`
@@ -171,13 +174,13 @@ function contextItems(context: TurnContext): ScopeItem[] {
   return items;
 }
 
-function toTurn(message: ChatMessage): Turn {
+function toTurn(message: ChatMessage, t: LocaleFormatters["t"]): Turn {
   if (message.role === "user")
     return {
       id: message.id,
       role: "user",
       text: message.text,
-      attachments: contextItems(message.context),
+      attachments: contextItems(message.context, t),
       at: message.at,
     };
   return {
@@ -239,7 +242,7 @@ export function ChatPanel({
   onOpenSettings,
 }: ChatPanelProps) {
   const notices = useNotices();
-  const { relative } = useLocale();
+  const { t, relative } = useLocale();
   const [conversations, setConversations] = useState<ConversationMeta[]>([]);
   const [current, setCurrent] = useState<ConversationDetail | null>(null);
   const [streaming, setStreaming] = useState<Streaming | null>(null);
@@ -303,10 +306,10 @@ export function ChatPanel({
         setStreaming(null);
         setConversation(id);
       } catch (error) {
-        notices.fail("The conversation could not be opened", error);
+        notices.fail(t("The conversation could not be opened"), error);
       }
     },
-    [notices, setConversation],
+    [t, notices, setConversation],
   );
 
   // Once: load the list, then the conversation saved in the layout or the
@@ -323,7 +326,7 @@ export function ChatPanel({
         if (target) void openConversation(target.id);
       },
       (error: unknown) =>
-        report.fail("Conversations could not be loaded", error),
+        report.fail(t("Conversations could not be loaded"), error),
     );
     return () => {
       cancelled = true;
@@ -455,11 +458,11 @@ export function ChatPanel({
         setConversation(meta.id);
         return meta;
       } catch (error) {
-        notices.fail("The conversation was not created", error);
+        notices.fail(t("The conversation was not created"), error);
         return null;
       }
     },
-    [notices, remember, setConversation, settings.provider],
+    [t, notices, remember, setConversation, settings.provider],
   );
 
   // "Ask about this project" starts a conversation with the project's scope.
@@ -481,10 +484,10 @@ export function ChatPanel({
       try {
         remember(await api.updateConversation({ id: current.meta.id, scope }));
       } catch (error) {
-        notices.fail("The scope was not changed", error);
+        notices.fail(t("The scope was not changed"), error);
       }
     },
-    [current, notices, remember],
+    [t, current, notices, remember],
   );
 
   const send = useCallback(
@@ -502,12 +505,12 @@ export function ChatPanel({
         });
         setPinned(null);
       } catch (error) {
-        notices.fail("The message was not sent", error);
+        notices.fail(t("The message was not sent"), error);
       } finally {
         setSending(false);
       }
     },
-    [current, createConversation, defaultScope, notices],
+    [t, current, createConversation, defaultScope, notices],
   );
 
   const outgoingContext = (): TurnContext => {
@@ -556,7 +559,7 @@ export function ChatPanel({
   ];
 
   const messages = current?.messages ?? [];
-  const turns: Turn[] = messages.map(toTurn);
+  const turns: Turn[] = messages.map((message) => toTurn(message, t));
   if (streaming)
     turns.push({
       id: streaming.turnId,
@@ -579,7 +582,7 @@ export function ChatPanel({
   else if (last?.role === "assistant" && last.status === "failed")
     status = {
       kind: "failed",
-      message: last.error?.title ?? "The last reply failed",
+      message: last.error?.title ?? t("The last reply failed"),
     };
   else if (last?.role === "assistant" && last.status === "cancelled")
     status = { kind: "stopped" };
@@ -599,9 +602,15 @@ export function ChatPanel({
   const insertReply = (text: string) => {
     const note = insertIntoNote(layout, resources, text);
     if (note)
-      notices.notify({ tone: "success", title: `Added to ${note.title}` });
+      notices.notify({
+        tone: "success",
+        title: t("Added to {title}", { title: note.title }),
+      });
     else
-      notices.notify({ tone: "info", title: "Open a note to add this reply" });
+      notices.notify({
+        tone: "info",
+        title: t("Open a note to add this reply"),
+      });
   };
 
   const unscopedSubjects = [...subjects.values()].filter(
@@ -626,11 +635,11 @@ export function ChatPanel({
     if (current) await createConversation(scope, next);
   };
 
-  const composerItems = contextItems(outgoingContext());
+  const composerItems = contextItems(outgoingContext(), t);
 
   return (
     <AiPanel
-      title={current?.meta.title ?? "New conversation"}
+      title={current?.meta.title ?? t("New conversation")}
       provider={{
         providers: (["claude", "codex"] as const).map((id) => {
           const state = providers[id];
@@ -643,7 +652,9 @@ export function ChatPanel({
               id: entry.id,
               name: entry.name,
               description: entry.isDefault
-                ? `${entry.description} · default`
+                ? t("{description} · default", {
+                    description: entry.description,
+                  })
                 : entry.description,
             })),
           };
@@ -675,7 +686,9 @@ export function ChatPanel({
               resourceIds: scope.resourceIds.filter((id) => id !== item.id),
             });
         },
-        emptyLabel: `Add a subject or file so ${PROVIDER_NAMES[providerId]} can read it.`,
+        emptyLabel: t("Add a subject or file so {provider} can read it.", {
+          provider: PROVIDER_NAMES[providerId],
+        }),
         add: (
           <Popover open={scopeOpen} onOpenChange={setScopeOpen}>
             <Tooltip>
@@ -684,21 +697,21 @@ export function ChatPanel({
                   <Button
                     variant="subtle"
                     size="icon-sm"
-                    aria-label="Add a subject or file to this conversation"
+                    aria-label={t("Add a subject or file to this conversation")}
                   >
                     <PlusIcon />
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent>Add to this conversation</TooltipContent>
+              <TooltipContent>{t("Add to this conversation")}</TooltipContent>
             </Tooltip>
             <PopoverContent align="start" className="w-80 p-0">
               <Command>
-                <CommandInput placeholder="Add a subject or file…" />
+                <CommandInput placeholder={t("Add a subject or file…")} />
                 <CommandList>
-                  <CommandEmpty>Nothing left to add.</CommandEmpty>
+                  <CommandEmpty>{t("Nothing left to add.")}</CommandEmpty>
                   {otherProjects.length > 0 ? (
-                    <CommandGroup heading="Projects">
+                    <CommandGroup heading={t("Projects")}>
                       {otherProjects.map((entry) => (
                         <CommandItem
                           key={entry.id}
@@ -715,7 +728,7 @@ export function ChatPanel({
                     </CommandGroup>
                   ) : null}
                   {unscopedSubjects.length > 0 ? (
-                    <CommandGroup heading="Subjects">
+                    <CommandGroup heading={t("Subjects")}>
                       {unscopedSubjects.map((subject) => (
                         <CommandItem
                           key={subject.id}
@@ -741,7 +754,7 @@ export function ChatPanel({
                     </CommandGroup>
                   ) : null}
                   {unscopedResources.length > 0 ? (
-                    <CommandGroup heading="Files">
+                    <CommandGroup heading={t("Files")}>
                       {unscopedResources.map((resource) => (
                         <CommandItem
                           key={resource.id}
@@ -805,14 +818,16 @@ export function ChatPanel({
         disabledReason:
           provider.status === "ready" || provider.status === "checking"
             ? undefined
-            : `Connect ${PROVIDER_NAMES[providerId]} in Settings to ask questions`,
+            : t("Connect {provider} in Settings to ask questions", {
+                provider: PROVIDER_NAMES[providerId],
+              }),
         placeholder: focused
-          ? `Ask about ${focused.title}…`
-          : "Ask about your notes or PDFs…",
+          ? t("Ask about {title}…", { title: focused.title })
+          : t("Ask about your notes or PDFs…"),
         children:
           composerItems.length > 0 ? (
             <ul
-              aria-label="Sent with your message"
+              aria-label={t("Sent with your message")}
               className="flex flex-wrap gap-1"
             >
               {composerItems.map((item) => (
@@ -841,14 +856,16 @@ export function ChatPanel({
       onCopy={(text) => {
         navigator.clipboard
           .writeText(text)
-          .catch((error: unknown) => notices.fail("Copy failed", error));
+          .catch((error: unknown) => notices.fail(t("Copy failed"), error));
       }}
       onNewConversation={() => void createConversation(defaultScope())}
       onConnect={onOpenSettings}
       renderText={renderMarkdown}
       emptyState={
         <div className="flex flex-col items-center gap-2 px-2 py-10 text-center">
-          <p className="text-sm font-medium">Ask about your notes or PDFs</p>
+          <p className="text-sm font-medium">
+            {t("Ask about your notes or PDFs")}
+          </p>
           <p className="max-w-64 text-xs text-muted-foreground">
             {PROVIDER_NAMES[providerId]} reads the subjects and files listed
             above, and the file you have open. Ask it to write in a note or
@@ -862,18 +879,22 @@ export function ChatPanel({
           <Tooltip>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
-                <Button variant="subtle" size="icon" aria-label="Conversations">
+                <Button
+                  variant="subtle"
+                  size="icon"
+                  aria-label={t("Conversations")}
+                >
                   <HistoryIcon />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>Conversations</TooltipContent>
+            <TooltipContent>{t("Conversations")}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Conversations</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("Conversations")}</DropdownMenuLabel>
             {conversations.length === 0 ? (
               <p className="px-2 py-1.5 text-xs text-subtle-foreground">
-                None yet
+                {t("None yet")}
               </p>
             ) : (
               conversations.slice(0, 30).map((meta) => {
@@ -915,7 +936,7 @@ export function ChatPanel({
                 {unscopedSubjects.length > 0 ? (
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <PlusIcon /> Add a subject to the scope
+                      <PlusIcon /> {t("Add a subject to the scope")}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       {unscopedSubjects.map((subject) => (
@@ -956,13 +977,13 @@ export function ChatPanel({
                       },
                       (error: unknown) =>
                         notices.fail(
-                          "The conversation was not deleted",
+                          t("The conversation was not deleted"),
                           errorMessage(error),
                         ),
                     );
                   }}
                 >
-                  <Trash2Icon /> Move this conversation to the trash
+                  <Trash2Icon /> {t("Move this conversation to the trash")}
                 </DropdownMenuItem>
               </>
             ) : null}

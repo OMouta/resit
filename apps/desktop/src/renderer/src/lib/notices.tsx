@@ -10,6 +10,7 @@ import {
 
 import { Button } from "@resit/ui/components/button";
 import { InlineMessage } from "@resit/ui/components/inline-message";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import { errorMessage } from "./api";
 
@@ -29,6 +30,7 @@ interface Notices {
 const NoticeContext = createContext<Notices | null>(null);
 
 export function NoticeProvider({ children }: { children: ReactNode }) {
+  const { t } = useLocale();
   const [notices, setNotices] = useState<Notice[]>([]);
 
   const dismiss = useCallback((id: number) => {
@@ -72,7 +74,7 @@ export function NoticeProvider({ children }: { children: ReactNode }) {
                 variant="subtle"
                 onClick={() => dismiss(notice.id)}
               >
-                <XIcon /> Dismiss
+                <XIcon /> {t("Dismiss")}
               </Button>
             }
           >

@@ -34,6 +34,7 @@ export const messages: Record<string, string> = {
   "{count} updated": "{count} atualizados",
   "{count} word": "{count} palavra",
   "{count} words": "{count} palavras",
+  "{description} · default": "{description} · predefinido",
   "{done} of {total}": "{done} de {total}",
   "{provider} {version} at {path}": "{provider} {version} em {path}",
   "{provider} is installed but not signed in.":
@@ -48,11 +49,25 @@ export const messages: Record<string, string> = {
   "A project gathers subjects and files for work that spans them. Nothing is copied.":
     "Um projeto junta disciplinas e ficheiros para trabalhos que as atravessam. Nada é copiado.",
   Account: "Conta",
+  "Add a subject or file so {provider} can read it.":
+    "Adicione uma disciplina ou um ficheiro para o {provider} o poder ler.",
+  "Add a subject or file to this conversation":
+    "Adicionar uma disciplina ou um ficheiro a esta conversa",
+  "Add a subject or file…": "Adicionar uma disciplina ou um ficheiro…",
+  "Add a subject to the scope": "Adicionar uma disciplina ao âmbito",
   "Add link": "Adicionar ligação",
+  "Add to this conversation": "Adicionar a esta conversa",
+  "Added to {title}": "Adicionado a {title}",
   Address: "Endereço",
   "AI providers": "Fornecedores de IA",
   "An hour before": "Uma hora antes",
+  "Another copy of resit on this computer has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
+    "Outra cópia do resit neste computador tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
   Apply: "Aplicar",
+  "Ask about {title}…": "Pergunte sobre {title}…",
+  "Ask about your notes or PDFs": "Pergunte sobre os seus apontamentos ou PDFs",
+  "Ask about your notes or PDFs…":
+    "Pergunte sobre os seus apontamentos ou PDFs…",
   "Before a newer copy replaced it":
     "Antes de uma cópia mais recente o substituir",
   "Before a restore": "Antes de um restauro",
@@ -61,6 +76,8 @@ export const messages: Record<string, string> = {
   "Check again": "Verificar de novo",
   "Check spelling": "Verificar a ortografia",
   "Checking {provider}…": "A verificar o {provider}…",
+  "Choose a folder for the workspace":
+    "Escolha uma pasta para o espaço de trabalho",
   "Choose folder…": "Escolher pasta…",
   "Choose the Moodle course this subject follows.":
     "Escolha a unidade curricular do Moodle que esta disciplina acompanha.",
@@ -69,10 +86,15 @@ export const messages: Record<string, string> = {
   Colour: "Cor",
   "Colour to start with": "Cor inicial",
   Commands: "Comandos",
+  "Connect {provider} in Settings to ask questions":
+    "Ligue o {provider} nas Definições para fazer perguntas",
   "Connect your Moodle account to follow a course.":
     "Ligue a sua conta do Moodle para acompanhar uma unidade curricular.",
+  "Connected to {site}": "Ligado a {site}",
   "Connecting…": "A ligar…",
   Contents: "Índice",
+  "Conversations could not be loaded": "Não foi possível carregar as conversas",
+  "Copy failed": "Não foi possível copiar",
   "Copying files": "A copiar ficheiros",
   "Course files": "Ficheiros da unidade curricular",
   "Create folder": "Criar pasta",
@@ -119,6 +141,7 @@ export const messages: Record<string, string> = {
     "{count} apontamentos exportados como Markdown",
   Exporting: "A exportar",
   "File actions": "Ações do ficheiro",
+  Files: "Ficheiros",
   "Files from other subjects": "Ficheiros de outras disciplinas",
   Find: "Procurar",
   "Find a file": "Procurar um ficheiro",
@@ -138,6 +161,7 @@ export const messages: Record<string, string> = {
     "De {time}. Repô-lo substitui o que o apontamento diz agora, que fica no Histórico de versões.",
   General: "Geral",
   "Go to": "Ir para",
+  "Highlight · p. {page}": "Realce · p. {page}",
   "Highlight colour": "Cor do realce",
   Highlights: "Realces",
   "Highlights are saved beside the file. The PDF itself never changes.":
@@ -187,13 +211,17 @@ export const messages: Record<string, string> = {
   Monospace: "Monoespaçada",
   Moodle: "Moodle",
   "Moodle address": "Endereço do Moodle",
+  "Moodle could not be checked": "Não foi possível verificar o Moodle",
   "Moodle course": "Unidade curricular do Moodle",
+  "Moodle did not connect": "O Moodle não se ligou",
   "Moodle lists no courses for your account.":
     "O Moodle não mostra unidades curriculares para a sua conta.",
+  "Moodle was not disconnected": "O Moodle não foi desligado",
   "Moodle…": "Moodle…",
   "Move “{path}” to the trash?": "Mover “{path}” para o lixo?",
   "Move “{title}” to the trash?": "Mover “{title}” para o lixo?",
   "Move {name} to the trash?": "Mover {name} para o lixo?",
+  "Move this conversation to the trash": "Mover esta conversa para o lixo",
   "Move to trash…": "Mover para o lixo…",
   Name: "Nome",
   Narrow: "Estreita",
@@ -209,6 +237,7 @@ export const messages: Record<string, string> = {
   "No course matches that.": "Nenhuma unidade curricular corresponde.",
   "No file matches.": "Nenhum ficheiro corresponde.",
   None: "Nenhum",
+  "None yet": "Nenhuma ainda",
   Normal: "Normal",
   "Not linked": "Sem ligação",
   "Note outline": "Estrutura do apontamento",
@@ -218,13 +247,18 @@ export const messages: Record<string, string> = {
     "Os apontamentos cujo Markdown o editor visual alteraria abrem sempre em Markdown.",
   "Notes, PDF quotations, and AI replies.":
     "Apontamentos, citações de PDF e respostas da IA.",
+  "Nothing left to add.": "Não há mais nada para adicionar.",
   "Nothing matches.": "Nada corresponde.",
   "Nothing to compare yet": "Ainda não há nada para comparar",
   "Nothing was downloaded": "Nada foi transferido",
   "Numerical simulation": "Simulação numérica",
   "Open “{workspace}”": "Abrir “{workspace}”",
+  "Open a note to add this reply":
+    "Abra um apontamento para adicionar esta resposta",
   "Open a note to quote this highlight":
     "Abra um apontamento para citar este realce",
+  "Open a workspace folder": "Abrir a pasta de um espaço de trabalho",
+  "Open anyway": "Abrir mesmo assim",
   "Open practice": "Abrir a prática",
   "Open settings": "Abrir as definições",
   "Open the graph": "Abrir o grafo",
@@ -257,8 +291,11 @@ export const messages: Record<string, string> = {
   "Replace with": "Substituir por",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
+  "resit could not start": "O resit não conseguiu arrancar",
   "resit keeps a copy of {file} before a newer one replaces it. Restoring one keeps the copy it replaces.":
     "O resit guarda uma cópia de {file} antes de uma mais recente o substituir. Restaurar uma guarda a cópia que substitui.",
+  "resit on {host} has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
+    "O resit em {host} tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
   "Restore it": "Repor",
   "Restoring replaces the lines marked − with the lines marked +.":
     "Restaurar substitui as linhas marcadas com − pelas linhas marcadas com +.",
@@ -274,6 +311,8 @@ export const messages: Record<string, string> = {
   "Search your courses": "Procurar nas suas unidades curriculares",
   "Select all": "Selecionar todos",
   "Select none": "Não selecionar nenhum",
+  Selection: "Seleção",
+  "Sent with your message": "Enviado com a sua mensagem",
   Serif: "Com serifa",
   "Sets CODEX_HOME, for a second Codex account.":
     "Define CODEX_HOME, para uma segunda conta do Codex.",
@@ -294,14 +333,20 @@ export const messages: Record<string, string> = {
   "Text size": "Tamanho do texto",
   "Text you had not saved was kept":
     "O texto que não tinha guardado foi mantido",
+  "That archive cannot be opened": "Não é possível abrir esse arquivo",
   "That copy was not restored": "Essa cópia não foi restaurada",
   "That link points to a file that is no longer here":
     "Essa ligação aponta para um ficheiro que já não está aqui",
   "That version could not be read": "Não foi possível ler essa versão",
   "That version was not restored": "Essa versão não foi restaurada",
+  "That workspace could not be opened":
+    "Não foi possível abrir esse espaço de trabalho",
   "The {count} items in the trash are removed from disk.":
     "Os {count} itens no lixo são removidos do disco.",
   "The archive was not opened": "O arquivo não foi aberto",
+  "The conversation could not be opened": "Não foi possível abrir a conversa",
+  "The conversation was not created": "A conversa não foi criada",
+  "The conversation was not deleted": "A conversa não foi eliminada",
   "The copy it replaced was kept, so you can undo this too.":
     "A cópia que substituiu foi guardada, por isso também pode desfazer isto.",
   "The course was not linked": "A unidade curricular não foi ligada",
@@ -324,6 +369,10 @@ export const messages: Record<string, string> = {
   "The item": "O item",
   "The item in the trash is removed from disk.":
     "O item no lixo é removido do disco.",
+  "The last reply failed": "A última resposta falhou",
+  "The last workspace could not be reopened":
+    "Não foi possível reabrir o último espaço de trabalho",
+  "The message was not sent": "A mensagem não foi enviada",
   "The note was not created": "O apontamento não foi criado",
   "The note's history could not be read":
     "Não foi possível ler o histórico do apontamento",
@@ -333,6 +382,8 @@ export const messages: Record<string, string> = {
   "The project was not changed": "O projeto não foi alterado",
   "The project was not created": "O projeto não foi criado",
   "The project was not deleted": "O projeto não foi eliminado",
+  "The scope was not changed": "O âmbito não foi alterado",
+  "The setting was not saved": "A definição não foi guardada",
   "the subject": "a disciplina",
   "The subject has no notes or files.":
     "A disciplina não tem apontamentos nem ficheiros.",
@@ -347,6 +398,7 @@ export const messages: Record<string, string> = {
   "The trash could not be read": "Não foi possível ler o lixo",
   "The trash was not emptied": "O lixo não foi esvaziado",
   "The workspace was exported": "O espaço de trabalho foi exportado",
+  "The workspace was not created": "O espaço de trabalho não foi criado",
   "The workspace was not exported": "O espaço de trabalho não foi exportado",
   Theme: "Tema",
   "These apply to this computer only.": "Aplicam-se apenas a este computador.",
@@ -363,6 +415,7 @@ export const messages: Record<string, string> = {
   "This note could not be opened": "Não foi possível abrir este apontamento",
   "This note uses Markdown the rich editor would change, so it opens as source.":
     "Este apontamento usa Markdown que o editor visual alteraria, por isso abre como código-fonte.",
+  "This workspace is already open": "Este espaço de trabalho já está aberto",
   Title: "Título",
   Typeface: "Tipo de letra",
   "Untitled heading": "Título vazio",

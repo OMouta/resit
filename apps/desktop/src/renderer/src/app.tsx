@@ -13,6 +13,7 @@ import {
   Onboarding,
 } from "@resit/ui/patterns/screens/onboarding";
 import { Splash } from "@resit/ui/patterns/screens/splash";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { ProviderId, ProviderState } from "../../shared/conversations";
 import type { AppState, LockedWorkspace } from "../../shared/ipc";
@@ -36,6 +37,7 @@ import { ConfirmDialog } from "./workspace/dialogs";
 import { WorkspaceView } from "./workspace/workspace-view";
 
 export function App() {
+  const { t, dateTime } = useLocale();
   const notices = useNotices();
   const [state, setState] = useState<AppState | null>(null);
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot | null>(null);
@@ -106,11 +108,11 @@ export function App() {
         if (next.reopenError)
           notices.notify({
             tone: "error",
-            title: "The last workspace could not be reopened",
+            title: t("The last workspace could not be reopened"),
             detail: next.reopenError,
           });
       },
-      (error: unknown) => notices.fail("resit could not start", error),
+      (error: unknown) => notices.fail(t("resit could not start"), error),
     );
   }, [apply, notices]);
 
@@ -176,10 +178,10 @@ export function App() {
         if (next.locked) setLocked(next.locked);
         else apply(next);
       } catch (error) {
-        notices.fail("That workspace could not be opened", error);
+        notices.fail(t("That workspace could not be opened"), error);
       }
     },
-    [apply, notices],
+    [t, apply, notices],
   );
 
   const chooseArchive = useCallback(async () => {
@@ -187,14 +189,14 @@ export function App() {
       const chosen = await api.chooseArchive();
       if (chosen) setArchive(chosen);
     } catch (error) {
-      notices.fail("That archive cannot be opened", error);
+      notices.fail(t("That archive cannot be opened"), error);
     }
-  }, [notices]);
+  }, [t, notices]);
 
   const openFolder = useCallback(async () => {
-    const folder = await api.chooseFolder("Open a workspace folder");
+    const folder = await api.chooseFolder(t("Open a workspace folder"));
     if (folder) await openPath(folder);
-  }, [openPath]);
+  }, [t, openPath]);
 
   const changeSettings = useCallback(
     async (patch: SettingsPatch) => {
@@ -210,10 +212,10 @@ export function App() {
         )
           checkProvider("codex", true);
       } catch (error) {
-        notices.fail("The setting was not saved", error);
+        notices.fail(t("The setting was not saved"), error);
       }
     },
-    [notices, checkProvider],
+    [t, notices, checkProvider],
   );
 
   const connectMoodle = async (input: {
@@ -227,10 +229,10 @@ export function App() {
       if (connection.status === "connected")
         notices.notify({
           tone: "success",
-          title: `Connected to ${connection.siteName}`,
+          title: t("Connected to {site}", { site: connection.siteName }),
         });
     } catch (error) {
-      notices.fail("Moodle did not connect", error);
+      notices.fail(t("Moodle did not connect"), error);
     }
   };
 
@@ -242,7 +244,7 @@ export function App() {
     api
       .getMoodleStatus(true)
       .then(setMoodle, (error: unknown) =>
-        notices.fail("Moodle could not be checked", error),
+        notices.fail(t("Moodle could not be checked"), error),
       )
       .finally(() => setCheckingMoodle(false));
   };
@@ -262,13 +264,13 @@ export function App() {
         className="min-h-0 flex-1"
         onBack={() => setCreating(false)}
         onChooseFolder={() =>
-          api.chooseFolder("Choose a folder for the workspace")
+          api.chooseFolder(t("Choose a folder for the workspace"))
         }
         onFinish={async (values) => {
           try {
             apply(await api.createWorkspace(values));
           } catch (error) {
-            notices.fail("The workspace was not created", error);
+            notices.fail(t("The workspace was not created"), error);
           }
         }}
       />
@@ -362,7 +364,7 @@ export function App() {
                 void api
                   .disconnectMoodle()
                   .then(setMoodle, (error: unknown) =>
-                    notices.fail("Moodle was not disconnected", error),
+                    notices.fail(t("Moodle was not disconnected"), error),
                   );
               }}
               onRefresh={checkMoodle}
@@ -381,13 +383,17 @@ export function App() {
           request={
             locked
               ? {
-                  title: "This workspace is already open",
-                  description: `${
-                    locked.here
-                      ? "Another copy of resit on this computer"
-                      : `resit on ${locked.host}`
-                  } has had it open since ${new Date(locked.since).toLocaleString()}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.`,
-                  confirmLabel: "Open anyway",
+                  title: t("This workspace is already open"),
+                  description: locked.here
+                    ? t(
+                        "Another copy of resit on this computer has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.",
+                        { time: dateTime(locked.since) },
+                      )
+                    : t(
+                        "resit on {host} has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.",
+                        { host: locked.host, time: dateTime(locked.since) },
+                      ),
+                  confirmLabel: t("Open anyway"),
                   onConfirm: () => openPath(locked.path, true),
                 }
               : null
