@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -146,6 +147,35 @@ describe("desktop process boundary", () => {
     });
     await page.waitForTimeout(500);
     expect(await page.evaluate(() => window.location.href)).toBe(currentUrl);
+    expect(
+      await application.evaluate(
+        ({ BrowserWindow }) => BrowserWindow.getAllWindows().length,
+      ),
+    ).toBe(1);
+  });
+
+  it("hands a second copy over to the one already running", async () => {
+    if (typeof executablePath !== "string")
+      throw new Error("Electron executable not found");
+    const environment = { ...process.env };
+    delete environment.ELECTRON_RUN_AS_NODE;
+    delete environment.ELECTRON_RENDERER_URL;
+    const second = spawn(
+      executablePath,
+      [desktopDirectory, "--hidden", `--user-data-dir=${userDataDirectory}`],
+      { env: environment, stdio: "ignore" },
+    );
+    const code = await new Promise<number | null>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        second.kill();
+        reject(new Error("The second copy kept running"));
+      }, 10_000);
+      second.once("exit", (exitCode) => {
+        clearTimeout(timer);
+        resolve(exitCode);
+      });
+    });
+    expect(code).toBe(0);
     expect(
       await application.evaluate(
         ({ BrowserWindow }) => BrowserWindow.getAllWindows().length,

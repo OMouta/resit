@@ -21,6 +21,24 @@ let mainWindow: BrowserWindow | null = null;
 let closeConfirmed = false;
 
 /**
+ * A second copy of resit would write to the same workspace as this one. It
+ * hands over to the running copy, which comes to the front, and quits.
+ */
+const firstInstance = app.requestSingleInstanceLock();
+if (!firstInstance) app.quit();
+
+app.on("second-instance", () => {
+  const window = mainWindow;
+  if (!window) {
+    if (app.isReady()) void createWindow();
+    return;
+  }
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+});
+
+/**
  * Height of the window buttons drawn over the title bar. The bar is 48px
  * (--toolbar-height) including its 1px bottom border, which must stay
  * visible under the buttons.
@@ -96,6 +114,7 @@ async function createWindow(): Promise<void> {
 void app
   .whenReady()
   .then(async () => {
+    if (!firstInstance) return;
     // Only writing to the clipboard (the Copy buttons) is allowed.
     session.defaultSession.setPermissionCheckHandler(
       (_contents, permission) => permission === "clipboard-sanitized-write",
