@@ -198,10 +198,18 @@ export function ReviewControls({
     if (disabled) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
       const grade = grades.find((entry) => entry.key === event.key);
+      const target = event.target;
+      // Digits typed into any field, including a rich-text editor in the
+      // other pane, are text rather than ratings.
       if (
         grade &&
-        !(event.target instanceof HTMLTextAreaElement) &&
-        !(event.target instanceof HTMLInputElement)
+        !event.repeat &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !(target instanceof HTMLTextAreaElement) &&
+        !(target instanceof HTMLInputElement) &&
+        !(target instanceof HTMLElement && target.isContentEditable)
       )
         onGrade(grade.id);
     };
