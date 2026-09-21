@@ -31,9 +31,13 @@ import { insertIntoNote } from "../lib/citations";
 import { useLiveContext } from "../lib/live-context";
 import { useNotices } from "../lib/notices";
 import { startPageRenderer } from "../lib/pdf-render";
+import { dueCount, usePractice } from "../lib/practice";
+import { CardDialog, type CardRequest } from "../practice/card-dialog";
+import { QuizEditor, type QuizEditorRequest } from "../practice/quiz-editor";
 import {
   flushAllViews,
   onAskRequest,
+  onCardRequest,
   showTarget,
   viewFor,
   type DocumentTarget,
@@ -48,6 +52,9 @@ import {
   activeTab,
   GRAPH_TAB_ID,
   layoutReducer,
+  PRACTICE_TAB_ID,
+  PROFILE_TAB_ID,
+  quizTabId,
   restoreLayout,
   SCHEDULE_TAB_ID,
   type Layout,
@@ -109,6 +116,10 @@ export function WorkspaceView({
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const [moodleSubjectId, setMoodleSubjectId] = useState<string | null>(null);
+  const [cardRequest, setCardRequest] = useState<CardRequest | null>(null);
+  const [quizRequest, setQuizRequest] = useState<QuizEditorRequest | null>(
+    null,
+  );
   const [courses, setCourses] = useState<MoodleCourse[]>();
 
   const resources = useMemo(
@@ -118,6 +129,17 @@ export function WorkspaceView({
   );
   const subjects = useMemo(
     () => new Map(snapshot.subjects.map((subject) => [subject.id, subject])),
+    [snapshot.subjects],
+  );
+  const subjectIds = useMemo(
+    () => snapshot.subjects.map((subject) => subject.id),
+    [snapshot.subjects],
+  );
+  const { practice } = usePractice(subjectIds);
+  const practiceDue = practice ? dueCount(practice) : 0;
+  const waitingSuggestions = useWaitingSuggestions();
+  const liveSubjects = useMemo(
+    () => snapshot.subjects.filter((subject) => !subject.archived),
     [snapshot.subjects],
   );
 
@@ -138,6 +160,13 @@ export function WorkspaceView({
     () =>
       api.onEvent((event) => {
         if (event.type === "workspace-changed") setSnapshot(event.snapshot);
+        // A session reminder was clicked.
+        if (event.type === "show-schedule")
+          dispatch({
+            type: "open",
+            resourceId: SCHEDULE_TAB_ID,
+            title: "Schedule",
+          });
       }),
     [setSnapshot],
   );
@@ -552,6 +581,18 @@ export function WorkspaceView({
         resourceId: SCHEDULE_TAB_ID,
         title: "Schedule",
       }),
+    openPractice: () =>
+      dispatch({
+        type: "open",
+        resourceId: PRACTICE_TAB_ID,
+        title: "Practice",
+      }),
+    openProfile: () =>
+      dispatch({
+        type: "open",
+        resourceId: PROFILE_TAB_ID,
+        title: "Learner profile",
+      }),
     openTrash: () => setTrashOpen(true),
     openSettings: () => onOpenSettings(),
   };
@@ -578,6 +619,9 @@ export function WorkspaceView({
     },
     [resources, notices],
   );
+
+  // A highlight made into a flashcard opens the card dialog over the PDF.
+  useEffect(() => onCardRequest(setCardRequest), []);
 
   // Asking about a highlight brings the AI panel out if it is collapsed.
   useEffect(
@@ -652,6 +696,9 @@ export function WorkspaceView({
       onOpenLink={openLink}
       onCite={cite}
       onOpenSettings={() => onOpenSettings("moodle")}
+      onOpenResource={openResource}
+      onEditCard={setCardRequest}
+      onEditQuiz={setQuizRequest}
     />
   ));
 
@@ -694,6 +741,8 @@ export function WorkspaceView({
               dispatch({ type: "set-expanded", id, expanded })
             }
             activeResourceId={focusedResource?.id}
+            practiceDue={practiceDue}
+            waitingSuggestions={waitingSuggestions}
             actions={actions}
           />
         }
@@ -751,6 +800,40 @@ export function WorkspaceView({
             run: actions.openSchedule,
           },
           {
+            id: "practice",
+            label: "Open practice",
+            icon: "practice",
+            run: actions.openPractice,
+          },
+          {
+            id: "profile",
+            label: "Open the learner profile",
+            icon: "profile",
+            run: actions.openProfile,
+          },
+          ...(liveSubjects.length > 0
+            ? [
+                {
+                  id: "new-card",
+                  label: "New flashcard",
+                  icon: "practice" as const,
+                  run: () =>
+                    setCardRequest(
+                      currentSubjectId ? { subjectId: currentSubjectId } : {},
+                    ),
+                },
+                {
+                  id: "new-quiz",
+                  label: "New quiz",
+                  icon: "quiz" as const,
+                  run: () =>
+                    setQuizRequest(
+                      currentSubjectId ? { subjectId: currentSubjectId } : {},
+                    ),
+                },
+              ]
+            : []),
+          {
             id: "settings",
             label: "Settings",
             icon: "settings",
@@ -773,6 +856,21 @@ export function WorkspaceView({
         onOpenSettings={() => onOpenSettings("moodle")}
       />
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+      <CardDialog
+        request={cardRequest}
+        subjects={liveSubjects}
+        onClose={() => setCardRequest(null)}
+      />
+      <QuizEditor
+        request={quizRequest}
+        subjects={liveSubjects}
+        onClose={() => setQuizRequest(null)}
+        onSaved={(subjectId, quiz) => {
+          const resourceId = quizTabId(subjectId, quiz.id);
+          dispatch({ type: "rename-resource", resourceId, title: quiz.title });
+          dispatch({ type: "open", resourceId, title: quiz.title });
+        }}
+      />
       <TrashDialog
         open={trashOpen}
         onOpenChange={setTrashOpen}
@@ -780,6 +878,35 @@ export function WorkspaceView({
       />
     </>
   );
+}
+
+/** How many profile suggestions wait for the student. Read when the profile changes. */
+function useWaitingSuggestions(): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let current = true;
+    const load = () =>
+      api.getLearnerProfile().then(
+        (profile) => {
+          if (current)
+            setCount(
+              profile.file.proposals.filter(
+                (proposal) => proposal.status === "proposed",
+              ).length,
+            );
+        },
+        () => undefined,
+      );
+    void load();
+    const stop = api.onEvent((event) => {
+      if (event.type === "learner-changed") void load();
+    });
+    return () => {
+      current = false;
+      stop();
+    };
+  }, []);
+  return count;
 }
 
 /** Title bar location after the workspace: the open document and its subject. */

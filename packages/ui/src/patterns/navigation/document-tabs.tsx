@@ -5,9 +5,11 @@ import {
   ClipboardListIcon,
   FileTextIcon,
   ImageIcon,
+  LayersIcon,
   PaperclipIcon,
   PinIcon,
   PlusIcon,
+  UserRoundIcon,
   WaypointsIcon,
   XIcon,
 } from "lucide-react";
@@ -50,7 +52,10 @@ export interface DocumentTabItem {
     | "study"
     | "graph"
     | "schedule"
-    | "activity";
+    | "activity"
+    | "practice"
+    | "quiz"
+    | "profile";
   subject?: { name: string; color: SubjectColor };
   /** Show the subject beside the title (title collision or foreign subject). */
   showSubject?: boolean;
@@ -97,6 +102,9 @@ const icons = {
   graph: WaypointsIcon,
   schedule: CalendarIcon,
   activity: ClipboardListIcon,
+  practice: LayersIcon,
+  quiz: ClipboardListIcon,
+  profile: UserRoundIcon,
 };
 
 /**

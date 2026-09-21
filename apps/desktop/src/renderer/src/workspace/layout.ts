@@ -29,6 +29,22 @@ export type Layout = z.infer<typeof layoutSchema>;
 /** The graph opens in a tab of its own rather than as a file. */
 export const GRAPH_TAB_ID = "resit:graph";
 export const SCHEDULE_TAB_ID = "resit:schedule";
+export const PRACTICE_TAB_ID = "resit:practice";
+export const PROFILE_TAB_ID = "resit:profile";
+
+/** One quiz, by subject and quiz ID. */
+export function quizTabId(subjectId: string, quizId: string): string {
+  return `resit:quiz:${subjectId}:${quizId}`;
+}
+
+export function parseQuizTabId(
+  tabResourceId: string,
+): { subjectId: string; quizId: string } | null {
+  const match = /^resit:quiz:([^:]+):([^:]+)$/.exec(tabResourceId);
+  return match?.[1] && match[2]
+    ? { subjectId: match[1], quizId: match[2] }
+    : null;
+}
 
 /** A Moodle activity's page, by subject and Moodle module. */
 export function activityTabId(subjectId: string, moduleId: number): string {

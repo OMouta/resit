@@ -49,6 +49,8 @@ export interface SidebarActions {
   deleteResource: (resourceId: string) => void;
   openGraph: () => void;
   openSchedule: () => void;
+  openPractice: () => void;
+  openProfile: () => void;
   openTrash: () => void;
   openSettings: () => void;
 }
@@ -108,12 +110,18 @@ export function Sidebar({
   expanded,
   onExpandedChange,
   activeResourceId,
+  practiceDue,
+  waitingSuggestions,
   actions,
 }: {
   snapshot: WorkspaceSnapshot;
   expanded: readonly string[];
   onExpandedChange: (id: string, expanded: boolean) => void;
   activeResourceId: string | undefined;
+  /** Cards to review now, shown beside Practice. */
+  practiceDue: number;
+  /** The assistant's profile suggestions, shown beside Learner profile. */
+  waitingSuggestions: number;
   actions: SidebarActions;
 }) {
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -316,9 +324,15 @@ export function Sidebar({
       onOpenProject={() => undefined}
       onNavigate={(destination) => {
         if (destination === "graph") actions.openGraph();
+        if (destination === "study") actions.openPractice();
         if (destination === "calendar") actions.openSchedule();
+        if (destination === "profile") actions.openProfile();
       }}
-      destinations={["graph", "calendar"]}
+      destinations={["study", "calendar", "profile", "graph"]}
+      counts={{
+        ...(practiceDue > 0 ? { study: practiceDue } : {}),
+        ...(waitingSuggestions > 0 ? { profile: waitingSuggestions } : {}),
+      }}
       onAddSubject={actions.addSubject}
       sections={{ subjects: subjectsOpen, projects: false }}
       onSectionToggle={(section, open) => {

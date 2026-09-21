@@ -100,11 +100,7 @@ export function ProfileProposal({
             value={level}
             onValueChange={(value) => setLevel(value as ConceptLevel)}
           >
-            <SelectTrigger
-              size="sm"
-              aria-label="Corrected level"
-              className="w-32"
-            >
+            <SelectTrigger aria-label="Corrected level" className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -143,21 +139,16 @@ export function ProfileProposal({
       ) : null}
       {status === "proposed" ? (
         <footer className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => onAccept?.(id, level)}>
+          <Button onClick={() => onAccept?.(id, level)}>
             <CheckIcon />{" "}
             {correcting ? `Accept as ${conceptLevelLabels[level]}` : "Accept"}
           </Button>
           {!correcting ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCorrecting(true)}
-            >
+            <Button variant="outline" onClick={() => setCorrecting(true)}>
               <PencilIcon /> Correct
             </Button>
           ) : (
             <Button
-              size="sm"
               variant="subtle"
               onClick={() => {
                 setCorrecting(false);
@@ -168,7 +159,6 @@ export function ProfileProposal({
             </Button>
           )}
           <Button
-            size="sm"
             variant="subtle"
             className="ml-auto"
             onClick={() => onReject?.(id)}

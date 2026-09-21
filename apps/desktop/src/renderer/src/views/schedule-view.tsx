@@ -1,8 +1,17 @@
 import {
-  CalendarIcon,
+  CalendarClockIcon,
+  CheckIcon,
+  ChevronLeftIcon,
   ChevronRightIcon,
+  ClockIcon,
+  DownloadIcon,
   ExternalLinkIcon,
+  GraduationCapIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
   RefreshCwIcon,
+  SkipForwardIcon,
+  XIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -14,7 +23,12 @@ import {
 } from "react";
 
 import { Button } from "@resit/ui/components/button";
-import { EmptyState } from "@resit/ui/components/empty-state";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@resit/ui/components/dropdown-menu";
 import { InlineMessage } from "@resit/ui/components/inline-message";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
@@ -22,12 +36,25 @@ import { useLocale } from "@resit/ui/hooks/use-locale";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
+import type { AgendaStatus } from "@resit/ui/patterns/study/agenda-item";
+import {
+  AssessmentCard,
+  CalendarActivityCard,
+  WeekGrid,
+} from "@resit/ui/patterns/study/calendar";
 
 import type {
   MoodleActivityDate,
   MoodleConnection,
   SubjectActivities,
 } from "../../../shared/moodle";
+import {
+  isOverdue,
+  localInstant,
+  type PlanFile,
+  type StudySession,
+  type TimeSlot,
+} from "../../../shared/planning";
 import type { SubjectInfo, WorkspaceSnapshot } from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import {
@@ -37,6 +64,16 @@ import {
   isDeadline,
   useMoodleActivities,
 } from "../lib/moodle-activities";
+import { useNotices } from "../lib/notices";
+import { addDays, today, usePlan, weekOf } from "../lib/plan";
+import { usePractice } from "../lib/practice";
+import { useWidth } from "../lib/use-width";
+import {
+  AssessmentDialog,
+  AvailabilityDialog,
+  type AssessmentRequest,
+} from "../planning/plan-dialogs";
+import { SessionDialog, type SessionRequest } from "../planning/session-dialog";
 
 type Activity = SubjectActivities["activities"][number];
 
@@ -44,11 +81,20 @@ type Activity = SubjectActivities["activities"][number];
 const RECHECK_MS = 10 * 60_000;
 /** Older than this, the check time is shown as a warning. */
 const STALE_MS = 2 * 24 * 60 * 60_000;
+/** Narrower than this, the week is a list of days instead of a grid. */
+const GRID_WIDTH = 720;
 
-interface Entry {
-  subject: SubjectInfo;
-  activity: Activity;
-  date: MoodleActivityDate;
+export interface ScheduleViewProps {
+  snapshot: WorkspaceSnapshot;
+  moodle: MoodleConnection;
+  /** The tab is on top, so a stale schedule is worth checking. */
+  active: boolean;
+  onOpenActivity: (subjectId: string, activity: Activity) => void;
+  onOpenSettings: () => void;
+  onOpenResource: (resourceId: string) => void;
+  onOpenQuiz: (subjectId: string, quiz: { id: string; title: string }) => void;
+  /** Opens Practice and starts reviewing a subject's due cards. */
+  onReview: (subjectId: string) => void;
 }
 
 function dayKey(value: Date): string {
@@ -60,23 +106,685 @@ function hasPage(activity: Activity): boolean {
   return Boolean(activity.brief || activity.attachments?.length);
 }
 
+function SectionTitle({
+  children,
+  action,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-control items-center justify-between gap-2">
+      <h2 className="px-2 text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
+        {children}
+      </h2>
+      {action}
+    </div>
+  );
+}
+
+function sessionStatus(session: StudySession): AgendaStatus {
+  if (session.status === "done") return "completed";
+  if (session.status === "skipped") return "skipped";
+  return isOverdue(session) ? "overdue" : "scheduled";
+}
+
+/** Your own study plan beside the dates from Moodle. */
+export function ScheduleView(props: ScheduleViewProps) {
+  const { snapshot } = props;
+  const notices = useNotices();
+  const { date: formatDate, weekday } = useLocale();
+  const { plan, error } = usePlan();
+  const subjectIds = useMemo(
+    () => snapshot.subjects.map((subject) => subject.id),
+    [snapshot.subjects],
+  );
+  const { practice } = usePractice(subjectIds);
+  const records = useMoodleActivities();
+  const [week, setWeek] = useState(today);
+  const [sessionRequest, setSessionRequest] = useState<SessionRequest | null>(
+    null,
+  );
+  const [assessmentRequest, setAssessmentRequest] =
+    useState<AssessmentRequest | null>(null);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const width = useWidth(rootRef);
+
+  const subjects = useMemo(
+    () => new Map(snapshot.subjects.map((subject) => [subject.id, subject])),
+    [snapshot.subjects],
+  );
+  const liveSubjects = snapshot.subjects.filter((subject) => !subject.archived);
+
+  const start = (session: StudySession) => {
+    const target = session.target;
+    if (!target) return;
+    if (target.type === "resource") props.onOpenResource(target.resourceId);
+    else if (target.type === "quiz") {
+      const quiz = practice?.subjects
+        .find((entry) => entry.subjectId === target.subjectId)
+        ?.quizzes.find((entry) => entry.id === target.quizId);
+      props.onOpenQuiz(target.subjectId, {
+        id: target.quizId,
+        title: quiz?.title ?? session.title,
+      });
+    } else props.onReview(target.subjectId);
+  };
+
+  const exportCalendar = async () => {
+    try {
+      const path = await api.exportCalendar();
+      if (path)
+        notices.notify({
+          tone: "success",
+          title: "The study plan was exported",
+          detail: path,
+        });
+    } catch (reason) {
+      notices.fail("The calendar was not exported", reason);
+    }
+  };
+
+  const days = weekOf(week);
+  const thisWeek = weekOf(today())[0] === days[0];
+
+  return (
+    <div ref={rootRef} className="h-full">
+      <ScrollArea className="h-full bg-background">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-8 pt-12 pb-24">
+          <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+            <h1 className="text-3xl font-bold tracking-[-0.025em]">Schedule</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                disabled={!plan}
+                onClick={() =>
+                  setSessionRequest({
+                    initial: {
+                      date: thisWeek ? today() : (days[0] ?? today()),
+                    },
+                  })
+                }
+              >
+                <PlusIcon /> New session
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="subtle"
+                    size="icon"
+                    aria-label="More planning actions"
+                    disabled={!plan}
+                  >
+                    <MoreHorizontalIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => setAssessmentRequest({})}>
+                    <GraduationCapIcon /> New assessment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setAvailabilityOpen(true)}>
+                    <ClockIcon /> Study times…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void exportCalendar()}>
+                    <DownloadIcon /> Export to a calendar file…
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          {error && !plan ? (
+            <InlineMessage tone="error" title="The plan could not be read">
+              <p>{error}</p>
+            </InlineMessage>
+          ) : null}
+
+          {plan ? (
+            <>
+              <Decisions
+                plan={plan}
+                subjects={subjects}
+                onEdit={(session) => setSessionRequest({ session })}
+              />
+              <section aria-label="Week" className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="px-2 text-base font-semibold">
+                    {thisWeek
+                      ? "This week"
+                      : `Week of ${formatDate(localInstant(days[0] ?? week, "12:00"), { year: undefined })}`}
+                  </h2>
+                  <div className="flex items-center gap-1">
+                    {thisWeek ? null : (
+                      <Button variant="subtle" onClick={() => setWeek(today())}>
+                        Today
+                      </Button>
+                    )}
+                    <ToolbarButton
+                      label="Previous week"
+                      onClick={() => setWeek((value) => addDays(value, -7))}
+                    >
+                      <ChevronLeftIcon />
+                    </ToolbarButton>
+                    <ToolbarButton
+                      label="Next week"
+                      onClick={() => setWeek((value) => addDays(value, 7))}
+                    >
+                      <ChevronRightIcon />
+                    </ToolbarButton>
+                  </div>
+                </div>
+                <Week
+                  days={days}
+                  plan={plan}
+                  subjects={subjects}
+                  records={records}
+                  compact={width > 0 && width < GRID_WIDTH}
+                  dayLabel={(day) =>
+                    `${weekday(localInstant(day, "12:00"))}, ${formatDate(localInstant(day, "12:00"), { year: undefined })}`
+                  }
+                  onOpenSession={(session) => setSessionRequest({ session })}
+                  onOpenAssessment={(assessment) =>
+                    setAssessmentRequest({ assessment })
+                  }
+                  onOpenDeadline={(subjectId, activity) =>
+                    hasPage(activity)
+                      ? props.onOpenActivity(subjectId, activity)
+                      : void api
+                          .openExternal(activity.url)
+                          .catch(() => undefined)
+                  }
+                />
+                {plan.availability.length === 0 ? (
+                  <p className="px-2 text-sm text-muted-foreground">
+                    <button
+                      type="button"
+                      className="text-link hover:underline"
+                      onClick={() => setAvailabilityOpen(true)}
+                    >
+                      Set your study times
+                    </button>{" "}
+                    so the assistant plans sessions when you are free.
+                  </p>
+                ) : null}
+              </section>
+              <Assessments
+                plan={plan}
+                subjects={subjects}
+                onAdd={() => setAssessmentRequest({})}
+                onOpen={(assessment) => setAssessmentRequest({ assessment })}
+              />
+            </>
+          ) : error ? null : (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-row w-40" />
+              <Skeleton className="h-56 w-full" />
+            </div>
+          )}
+
+          <MoodleSections {...props} records={records} />
+        </div>
+      </ScrollArea>
+      <SessionDialog
+        request={sessionRequest}
+        snapshot={snapshot}
+        plan={plan}
+        practice={practice}
+        onClose={() => setSessionRequest(null)}
+        onStart={start}
+      />
+      <AssessmentDialog
+        request={assessmentRequest}
+        subjects={liveSubjects}
+        onClose={() => setAssessmentRequest(null)}
+      />
+      <AvailabilityDialog
+        open={availabilityOpen}
+        availability={plan?.availability ?? []}
+        onClose={() => setAvailabilityOpen(false)}
+      />
+    </div>
+  );
+}
+
+function SubjectDot({ subject }: { subject: SubjectInfo | undefined }) {
+  if (!subject) return null;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        subjectColorClasses[subject.color].dot,
+      )}
+    />
+  );
+}
+
+/** The assistant's suggestions and missed sessions, which wait for the student. */
+function Decisions({
+  plan,
+  subjects,
+  onEdit,
+}: {
+  plan: PlanFile;
+  subjects: ReadonlyMap<string, SubjectInfo>;
+  onEdit: (session: StudySession) => void;
+}) {
+  const notices = useNotices();
+  const { date: formatDate } = useLocale();
+  const suggested = plan.sessions
+    .filter((session) => session.proposal || session.move)
+    .sort((a, b) =>
+      `${(a.move ?? a).date}${(a.move ?? a).start}`.localeCompare(
+        `${(b.move ?? b).date}${(b.move ?? b).start}`,
+      ),
+    );
+  const missed = plan.sessions
+    .filter((session) => isOverdue(session) && !session.move)
+    .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`));
+  if (suggested.length === 0 && missed.length === 0) return null;
+
+  const when = (slot: { date: string; start: string; end: string }) =>
+    `${formatDate(localInstant(slot.date, "12:00"), { weekday: "short", year: undefined })}, ${slot.start}–${slot.end}`;
+
+  const resolve = async (ids: string[], accept: boolean) => {
+    try {
+      await api.resolveProposals({ ids, accept });
+    } catch (reason) {
+      notices.fail(
+        accept
+          ? "The suggestion was not accepted"
+          : "The suggestion was not declined",
+        reason,
+      );
+    }
+  };
+  const mark = async (id: string, status: "done" | "skipped") => {
+    try {
+      await api.setSessionStatus({ id, status });
+    } catch (reason) {
+      notices.fail("The session was not changed", reason);
+    }
+  };
+
+  return (
+    <section aria-label="Needs a decision" className="flex flex-col gap-4">
+      {suggested.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <SectionTitle
+            action={
+              suggested.length > 1 ? (
+                <div className="flex gap-1">
+                  <Button
+                    variant="subtle"
+                    onClick={() =>
+                      void resolve(
+                        suggested.map((session) => session.id),
+                        false,
+                      )
+                    }
+                  >
+                    Decline all
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      void resolve(
+                        suggested.map((session) => session.id),
+                        true,
+                      )
+                    }
+                  >
+                    <CheckIcon /> Accept all
+                  </Button>
+                </div>
+              ) : undefined
+            }
+          >
+            Suggested by the assistant · {suggested.length}
+          </SectionTitle>
+          <ul className="flex flex-col">
+            {suggested.map((session) => {
+              const subject = session.subjectId
+                ? subjects.get(session.subjectId)
+                : undefined;
+              const reason = session.move?.reason ?? session.proposal?.reason;
+              return (
+                <li
+                  key={session.id}
+                  className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent"
+                >
+                  <CalendarClockIcon
+                    aria-hidden
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex items-center gap-2 text-sm">
+                      <SubjectDot subject={subject} />
+                      <span className="truncate font-medium">
+                        {session.move
+                          ? `Move “${session.title}”`
+                          : session.title}
+                      </span>
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {session.move
+                        ? `${when(session)} → ${when(session.move)}`
+                        : when(session)}
+                      {reason ? ` · ${reason}` : ""}
+                    </span>
+                  </span>
+                  <Button
+                    variant="subtle"
+                    onClick={() => void resolve([session.id], false)}
+                  >
+                    <XIcon /> Decline
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => void resolve([session.id], true)}
+                  >
+                    <CheckIcon /> Accept
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+      {missed.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <SectionTitle>Missed · {missed.length}</SectionTitle>
+          <ul className="flex flex-col">
+            {missed.map((session) => {
+              const subject = session.subjectId
+                ? subjects.get(session.subjectId)
+                : undefined;
+              return (
+                <li
+                  key={session.id}
+                  className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent"
+                >
+                  <SubjectDot subject={subject} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-medium">
+                      {session.title}
+                    </span>
+                    <span className="truncate text-xs text-warning">
+                      {when(session)}
+                    </span>
+                  </span>
+                  <Button variant="subtle" onClick={() => onEdit(session)}>
+                    <CalendarClockIcon /> Move…
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    onClick={() => void mark(session.id, "skipped")}
+                  >
+                    <SkipForwardIcon /> Skip
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => void mark(session.id, "done")}
+                  >
+                    <CheckIcon /> Done
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+interface Deadline {
+  subjectId: string;
+  activity: Activity;
+  date: MoodleActivityDate;
+}
+
+/** The week's sessions, assessments, and Moodle deadlines, day by day. */
+function Week({
+  days,
+  plan,
+  subjects,
+  records,
+  compact,
+  dayLabel,
+  onOpenSession,
+  onOpenAssessment,
+  onOpenDeadline,
+}: {
+  days: string[];
+  plan: PlanFile;
+  subjects: ReadonlyMap<string, SubjectInfo>;
+  records: SubjectActivities[] | null;
+  compact: boolean;
+  dayLabel: (day: string) => string;
+  onOpenSession: (session: StudySession) => void;
+  onOpenAssessment: (assessment: PlanFile["assessments"][number]) => void;
+  onOpenDeadline: (subjectId: string, activity: Activity) => void;
+}) {
+  const { time } = useLocale();
+  const byDay = useMemo(() => {
+    const deadlines = new Map<string, Deadline[]>();
+    for (const record of records ?? []) {
+      if (!subjects.has(record.subjectId)) continue;
+      for (const activity of record.activities)
+        for (const date of activity.dates) {
+          if (!isDeadline(date)) continue;
+          const at = new Date(date.at);
+          const day = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
+          deadlines.set(day, [
+            ...(deadlines.get(day) ?? []),
+            { subjectId: record.subjectId, activity, date },
+          ]);
+        }
+    }
+    return deadlines;
+  }, [records, subjects]);
+
+  const content = (day: string) => {
+    // A session with a suggested new time shows at both, the new one dashed.
+    const sessions: {
+      session: StudySession;
+      slot: TimeSlot;
+      pending: boolean;
+    }[] = [
+      ...plan.sessions
+        .filter((session) => session.date === day)
+        .map((session) => ({
+          session,
+          slot: session as TimeSlot,
+          pending: Boolean(session.proposal),
+        })),
+      ...plan.sessions.flatMap((session) =>
+        session.move?.date === day
+          ? [{ session, slot: session.move, pending: true }]
+          : [],
+      ),
+    ].sort((a, b) => a.slot.start.localeCompare(b.slot.start));
+    const assessments = plan.assessments.filter(
+      (assessment) => assessment.date === day,
+    );
+    const deadlines = byDay.get(day) ?? [];
+    return (
+      <>
+        {assessments.map((assessment) => {
+          const subject = assessment.subjectId
+            ? subjects.get(assessment.subjectId)
+            : undefined;
+          return (
+            <button
+              key={assessment.id}
+              type="button"
+              onClick={() => onOpenAssessment(assessment)}
+              className="flex w-full items-start gap-1 rounded-md bg-danger-soft px-2 py-1.5 text-left text-xs text-destructive hover:brightness-95 focus-visible:shadow-focus focus-visible:outline-none"
+            >
+              <GraduationCapIcon
+                className="mt-0.5 size-3 shrink-0"
+                aria-hidden
+              />
+              <span className="line-clamp-2 font-medium">
+                {assessment.time ? `${assessment.time} ` : ""}
+                {assessment.title}
+                {subject ? (
+                  <span className="sr-only">, {subject.name}</span>
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+        {sessions.map(({ session, slot, pending }) => {
+          const subject = session.subjectId
+            ? subjects.get(session.subjectId)
+            : undefined;
+          return (
+            <CalendarActivityCard
+              key={`${session.id}-${slot === session ? "at" : "to"}`}
+              title={pending ? `${session.title} (suggested)` : session.title}
+              subjectName={subject?.name ?? "No subject"}
+              subjectColor={subject?.color ?? "gray"}
+              kind={session.kind}
+              start={localInstant(slot.date, slot.start)}
+              end={localInstant(slot.date, slot.end)}
+              // A suggested new time is not missed, whatever the old one was.
+              status={slot === session ? sessionStatus(session) : "scheduled"}
+              onOpen={() => onOpenSession(session)}
+              className={cn(pending && "border-dashed opacity-75")}
+            />
+          );
+        })}
+        {deadlines.map(({ subjectId, activity, date }) => {
+          const subject = subjects.get(subjectId);
+          return (
+            <button
+              key={`${activity.moduleId}:${date.type}`}
+              type="button"
+              onClick={() => onOpenDeadline(subjectId, activity)}
+              className={cn(
+                "flex w-full flex-col gap-0.5 rounded-md border-l-[3px] px-2 py-1 text-left text-2xs hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none",
+                subject ? subjectColorClasses[subject.color].border : "",
+              )}
+            >
+              <span className="tabular-nums text-muted-foreground">
+                {dateLabel(date)} {time(date.at)}
+              </span>
+              <span className="line-clamp-2 font-medium">{activity.name}</span>
+            </button>
+          );
+        })}
+      </>
+    );
+  };
+
+  if (compact)
+    return (
+      <div className="flex flex-col divide-y rounded-lg border">
+        {days.map((day) => (
+          <div key={day} className="flex flex-col gap-1.5 px-3 py-2.5">
+            <span
+              className={cn(
+                "text-xs font-medium text-muted-foreground",
+                day === today() && "text-primary",
+              )}
+            >
+              {dayLabel(day)}
+            </span>
+            <div className="flex flex-col gap-1">{content(day)}</div>
+          </div>
+        ))}
+      </div>
+    );
+
+  return (
+    <WeekGrid
+      days={days}
+      today={today()}
+      availability={plan.availability.flatMap((slot) => {
+        const day = days[slot.weekday - 1];
+        return day ? [{ day, from: slot.start, to: slot.end }] : [];
+      })}
+    >
+      {content}
+    </WeekGrid>
+  );
+}
+
+function Assessments({
+  plan,
+  subjects,
+  onAdd,
+  onOpen,
+}: {
+  plan: PlanFile;
+  subjects: ReadonlyMap<string, SubjectInfo>;
+  onAdd: () => void;
+  onOpen: (assessment: PlanFile["assessments"][number]) => void;
+}) {
+  const now = new Date();
+  const upcoming = plan.assessments
+    .filter(
+      (assessment) =>
+        localInstant(assessment.date, "23:59").getTime() >= now.getTime(),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return (
+    <section aria-label="Assessments" className="flex flex-col gap-2">
+      <SectionTitle
+        action={
+          <Button variant="subtle" onClick={onAdd}>
+            <PlusIcon /> Add
+          </Button>
+        }
+      >
+        Assessments
+      </SectionTitle>
+      {upcoming.length === 0 ? (
+        <p className="px-2 text-sm text-muted-foreground">
+          No exams or tests coming up.
+        </p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {upcoming.map((assessment) => (
+            <AssessmentCard
+              key={assessment.id}
+              title={assessment.title}
+              subjectName={
+                assessment.subjectId
+                  ? (subjects.get(assessment.subjectId)?.name ?? "")
+                  : ""
+              }
+              date={localInstant(assessment.date, assessment.time ?? "12:00")}
+              now={now}
+              onOpen={() => onOpen(assessment)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface Entry {
+  subject: SubjectInfo;
+  activity: Activity;
+  date: MoodleActivityDate;
+}
+
 /** Dates from Moodle across every followed subject, soonest first. */
-export function ScheduleView({
+function MoodleSections({
   snapshot,
   moodle,
   active,
   onOpenActivity,
   onOpenSettings,
-}: {
-  snapshot: WorkspaceSnapshot;
-  moodle: MoodleConnection;
-  /** The tab is on top, so a stale schedule is worth checking. */
-  active: boolean;
-  onOpenActivity: (subjectId: string, activity: Activity) => void;
-  onOpenSettings: () => void;
-}) {
+  records,
+}: ScheduleViewProps & { records: SubjectActivities[] | null }) {
   const { relative, time, weekday, date, number } = useLocale();
-  const records = useMoodleActivities();
   const [checking, setChecking] = useState(false);
   const [failures, setFailures] = useState<
     { subjectId: string; message: string }[]
@@ -144,6 +852,8 @@ export function ScheduleView({
     return [...days.values()];
   }, [followed, bySubject]);
 
+  if (followed.length === 0) return null;
+
   const dayTitle = (day: Date) => {
     const today = new Date();
     const tomorrow = new Date();
@@ -156,17 +866,6 @@ export function ScheduleView({
   const openInMoodle = (activity: Activity) =>
     void api.openExternal(activity.url).catch(() => undefined);
 
-  if (followed.length === 0)
-    return (
-      <div className="flex h-full items-center justify-center bg-background">
-        <EmptyState
-          icon={<CalendarIcon />}
-          title="No subject follows a Moodle course"
-          description="Follow one from a subject's Moodle menu and its deadlines appear here."
-        />
-      </div>
-    );
-
   const failedNames = failures
     .map(
       (failure) =>
@@ -176,167 +875,153 @@ export function ScheduleView({
     .filter(Boolean);
 
   return (
-    <ScrollArea className="h-full bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 pt-12 pb-24">
-        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold tracking-[-0.025em]">Schedule</h1>
-            <p
-              className={cn(
-                "text-sm text-muted-foreground",
-                oldest !== null &&
-                  Date.now() - oldest > STALE_MS &&
-                  "text-warning",
-              )}
-              aria-live="polite"
-            >
-              {checking
-                ? "Checking Moodle…"
-                : oldest === null
-                  ? records === null
-                    ? ""
-                    : "Not checked yet"
-                  : checkedLabel(oldest, relative)}
-            </p>
-          </div>
-          {connected ? (
-            <ToolbarButton
-              label="Check Moodle again"
-              disabled={checking}
-              onClick={() => void check()}
-            >
-              <RefreshCwIcon className={cn(checking && "animate-spin")} />
-            </ToolbarButton>
-          ) : (
-            <Button variant="secondary" onClick={onOpenSettings}>
-              Connect Moodle
-            </Button>
-          )}
-        </header>
-
-        {failures.length > 0 ? (
-          <InlineMessage tone="warning">
-            <p>
-              {failedNames.length > 0
-                ? `${failedNames.join(", ")} could not be checked. `
-                : ""}
-              {failures[0]?.message}
-            </p>
-          </InlineMessage>
-        ) : null}
-
-        {records === null || (checking && oldest === null) ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-row w-40" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+    <section aria-label="Moodle" className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-8">
+        <div className="flex flex-col gap-0.5 px-2">
+          <h2 className="text-base font-semibold">From Moodle</h2>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              oldest !== null &&
+                Date.now() - oldest > STALE_MS &&
+                "text-warning",
+            )}
+            aria-live="polite"
+          >
+            {checking
+              ? "Checking Moodle…"
+              : oldest === null
+                ? records === null
+                  ? ""
+                  : "Not checked yet"
+                : checkedLabel(oldest, relative)}
+          </p>
+        </div>
+        {connected ? (
+          <ToolbarButton
+            label="Check Moodle again"
+            disabled={checking}
+            onClick={() => void check()}
+          >
+            <RefreshCwIcon className={cn(checking && "animate-spin")} />
+          </ToolbarButton>
         ) : (
-          <section aria-label="Upcoming" className="flex flex-col gap-6">
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nothing coming up in the courses you follow.
-              </p>
-            ) : null}
-            {upcoming.map(({ day, entries }) => (
-              <div key={dayKey(day)} className="flex flex-col gap-1">
-                <h2 className="px-2 text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-                  {dayTitle(day)}
-                </h2>
-                <ul className="flex flex-col">
-                  {entries.map((entry) => (
-                    <UpcomingRow
-                      key={`${entry.activity.moduleId}:${entry.date.type}:${entry.date.at}`}
-                      entry={entry}
-                      time={time(entry.date.at)}
-                      onOpen={
-                        hasPage(entry.activity)
-                          ? () =>
-                              onOpenActivity(entry.subject.id, entry.activity)
-                          : undefined
-                      }
-                      onOpenInMoodle={() => openInMoodle(entry.activity)}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </section>
+          <Button variant="secondary" onClick={onOpenSettings}>
+            Connect Moodle
+          </Button>
         )}
-
-        {records && records.length > 0 ? (
-          <section aria-label="Activities" className="flex flex-col gap-1">
-            <h2 className="px-2 text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-              Activities
-            </h2>
-            {followed.map((subject) => {
-              const record = bySubject.get(subject.id);
-              if (!record) return null;
-              const open = expanded.has(subject.id);
-              return (
-                <div key={subject.id} className="flex flex-col">
-                  <button
-                    type="button"
-                    aria-expanded={open}
-                    onClick={() =>
-                      setExpanded((current) => {
-                        const next = new Set(current);
-                        if (open) next.delete(subject.id);
-                        else next.add(subject.id);
-                        return next;
-                      })
-                    }
-                    className="flex h-control items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
-                  >
-                    <ChevronRightIcon
-                      aria-hidden
-                      className={cn(
-                        "size-4 shrink-0 text-subtle-foreground transition-transform duration-(--duration-fast)",
-                        open && "rotate-90",
-                      )}
-                    />
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        subjectColorClasses[subject.color].dot,
-                      )}
-                    />
-                    <span className="min-w-0 flex-1 truncate font-medium">
-                      {subject.name}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {number(record.activities.length)}
-                    </span>
-                  </button>
-                  {open ? (
-                    <ul className="flex flex-col pl-6">
-                      {record.activities.length === 0 ? (
-                        <li className="flex h-control items-center px-2 text-sm text-muted-foreground">
-                          The course has no activities.
-                        </li>
-                      ) : null}
-                      {record.activities.map((activity) => (
-                        <ActivityRow
-                          key={activity.moduleId}
-                          activity={activity}
-                          onOpen={
-                            hasPage(activity)
-                              ? () => onOpenActivity(subject.id, activity)
-                              : undefined
-                          }
-                          onOpenInMoodle={() => openInMoodle(activity)}
-                        />
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              );
-            })}
-          </section>
-        ) : null}
       </div>
-    </ScrollArea>
+
+      {failures.length > 0 ? (
+        <InlineMessage tone="warning">
+          <p>
+            {failedNames.length > 0
+              ? `${failedNames.join(", ")} could not be checked. `
+              : ""}
+            {failures[0]?.message}
+          </p>
+        </InlineMessage>
+      ) : null}
+
+      {records === null || (checking && oldest === null) ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-row w-40" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : (
+        <section aria-label="Upcoming" className="flex flex-col gap-6">
+          {upcoming.length === 0 ? (
+            <p className="px-2 text-sm text-muted-foreground">
+              Nothing coming up in the courses you follow.
+            </p>
+          ) : null}
+          {upcoming.map(({ day, entries }) => (
+            <div key={dayKey(day)} className="flex flex-col gap-1">
+              <SectionTitle>{dayTitle(day)}</SectionTitle>
+              <ul className="flex flex-col">
+                {entries.map((entry) => (
+                  <UpcomingRow
+                    key={`${entry.activity.moduleId}:${entry.date.type}:${entry.date.at}`}
+                    entry={entry}
+                    time={time(entry.date.at)}
+                    onOpen={
+                      hasPage(entry.activity)
+                        ? () => onOpenActivity(entry.subject.id, entry.activity)
+                        : undefined
+                    }
+                    onOpenInMoodle={() => openInMoodle(entry.activity)}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {records && records.length > 0 ? (
+        <section aria-label="Activities" className="flex flex-col gap-1">
+          <SectionTitle>Activities</SectionTitle>
+          {followed.map((subject) => {
+            const record = bySubject.get(subject.id);
+            if (!record) return null;
+            const open = expanded.has(subject.id);
+            return (
+              <div key={subject.id} className="flex flex-col">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() =>
+                    setExpanded((current) => {
+                      const next = new Set(current);
+                      if (open) next.delete(subject.id);
+                      else next.add(subject.id);
+                      return next;
+                    })
+                  }
+                  className="flex h-control items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
+                >
+                  <ChevronRightIcon
+                    aria-hidden
+                    className={cn(
+                      "size-4 shrink-0 text-subtle-foreground transition-transform duration-(--duration-fast)",
+                      open && "rotate-90",
+                    )}
+                  />
+                  <SubjectDot subject={subject} />
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {subject.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {number(record.activities.length)}
+                  </span>
+                </button>
+                {open ? (
+                  <ul className="flex flex-col pl-6">
+                    {record.activities.length === 0 ? (
+                      <li className="flex h-control items-center px-2 text-sm text-muted-foreground">
+                        The course has no activities.
+                      </li>
+                    ) : null}
+                    {record.activities.map((activity) => (
+                      <ActivityRow
+                        key={activity.moduleId}
+                        activity={activity}
+                        onOpen={
+                          hasPage(activity)
+                            ? () => onOpenActivity(subject.id, activity)
+                            : undefined
+                        }
+                        onOpenInMoodle={() => openInMoodle(activity)}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+    </section>
   );
 }
 
@@ -386,13 +1071,7 @@ function UpcomingRow({
         <span className="w-12 shrink-0 text-sm tabular-nums text-muted-foreground">
           {time}
         </span>
-        <span
-          aria-hidden
-          className={cn(
-            "size-2 shrink-0 rounded-full",
-            subjectColorClasses[subject.color].dot,
-          )}
-        />
+        <SubjectDot subject={subject} />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium" title={activity.name}>
             {activity.name}

@@ -62,6 +62,7 @@ import { PdfOutline, PdfThumbnails } from "./pdf-panel";
 import {
   registerView,
   requestAsk,
+  requestCard,
   takePendingTarget,
   type DocumentTarget,
 } from "./view-registry";
@@ -409,6 +410,16 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         text: annotationText(annotation),
         ...(annotation.comment ? { comment: annotation.comment } : {}),
       },
+    });
+  };
+
+  const makeCard = (annotation: Annotation) => {
+    const page = annotationPage(annotation);
+    requestCard({
+      subjectId: resource.subjectId,
+      initial: { back: annotationText(annotation) },
+      source: { resourceId: resource.id, page, annotationId: annotation.id },
+      sourceLabel: `${resource.title}, p. ${page}`,
     });
   };
 
@@ -796,6 +807,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
                   onColor={(next) => void recolour(barAnnotation, next)}
                   {...(onCite ? { onCite: () => cite(barAnnotation) } : {})}
                   onAsk={() => ask(barAnnotation)}
+                  onCard={() => makeCard(barAnnotation)}
                   onComment={() => comment(barAnnotation)}
                   onDelete={() => void remove(barAnnotation)}
                 />

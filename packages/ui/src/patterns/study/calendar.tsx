@@ -57,7 +57,8 @@ export function CalendarActivityCard({
             colors.border,
             status === "completed" && "opacity-60",
             status === "overdue" && "bg-warning-soft",
-            status === "suspended" && "border-dashed opacity-70",
+            (status === "suspended" || status === "skipped") &&
+              "border-dashed opacity-70",
             className,
           )}
         >
@@ -68,7 +69,8 @@ export function CalendarActivityCard({
           <span
             className={cn(
               "line-clamp-2 font-medium",
-              status === "completed" && "line-through",
+              (status === "completed" || status === "skipped") &&
+                "line-through",
             )}
           >
             {title}

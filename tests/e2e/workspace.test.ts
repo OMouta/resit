@@ -435,10 +435,30 @@ describe("desktop workspace", () => {
     await page.getByRole("tab", { name: "Ficha 1", exact: true }).waitFor();
   });
 
-  it("opens the schedule, which waits for a followed course", async () => {
+  it("plans a study session in the schedule", async () => {
     await page.getByRole("button", { name: "Schedule", exact: true }).click();
     await page.getByRole("tab", { name: "Schedule" }).waitFor();
-    await page.getByText("No subject follows a Moodle course").waitFor();
+    const main = page.locator("main");
+    await main.getByText("This week").waitFor();
+    await main.getByRole("button", { name: "New session" }).click();
+    const day = new Date();
+    const today = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    await page.getByLabel("Title", { exact: true }).fill("Limits worksheet");
+    await page.getByLabel("Day", { exact: true }).fill(today);
+    await page.getByLabel("From", { exact: true }).fill("18:00");
+    await page.getByLabel("To", { exact: true }).fill("19:30");
+    await page.getByRole("button", { name: "Add session" }).click();
+    await main.getByRole("button", { name: /Limits worksheet/ }).waitFor();
+    const plan = JSON.parse(await readFile(join(folder, "plan.json"), "utf8"));
+    expect(plan.sessions).toEqual([
+      expect.objectContaining({
+        title: "Limits worksheet",
+        date: today,
+        start: "18:00",
+        end: "19:30",
+        status: "planned",
+      }),
+    ]);
   });
 
   it("sends the student to settings before following a Moodle course", async () => {
@@ -454,5 +474,63 @@ describe("desktop workspace", () => {
     await page.getByRole("tab", { name: "General" }).click();
     await page.getByRole("tablist", { name: "Theme" }).waitFor();
     await page.keyboard.press("Escape");
+  });
+
+  it("makes a flashcard, reviews it, and undoes the rating", async () => {
+    await page
+      .getByRole("button", { name: /^Practice/ })
+      .first()
+      .click();
+    await page.getByRole("tab", { name: "Practice" }).waitFor();
+    const main = page.locator("main");
+    await main.getByRole("button", { name: "New card" }).click();
+    await page
+      .getByLabel("Question", { exact: true })
+      .fill(String.raw`What is $\lim_{x \to 0} \frac{\sin x}{x}$?`);
+    await page.getByLabel("Answer", { exact: true }).fill("$1$");
+    await page.getByLabel("Topic").fill("Limites");
+    await page.getByRole("button", { name: "Add card" }).click();
+    await main.getByText("1 card to review").waitFor();
+
+    await main.getByRole("button", { name: "Review", exact: true }).click();
+    // Space reveals the card once it is on screen.
+    await main.getByRole("button", { name: /Show answer/ }).waitFor();
+    await page.keyboard.press("Space");
+    await main.getByRole("button", { name: /^Easy/ }).click();
+    await main.getByText("That's all for now").waitFor();
+    const reviewed = await page.evaluate(() => window.resit.listPractice());
+    const card = reviewed.subjects.flatMap((subject) => subject.cards)[0];
+    expect(card?.topic).toBe("Limites");
+    expect(card?.schedule.state).toBe("review");
+
+    await main.getByRole("button", { name: "Undo the last rating" }).click();
+    await main.getByRole("button", { name: /Show answer/ }).waitFor();
+    const undone = await page.evaluate(() => window.resit.listPractice());
+    expect(
+      undone.subjects.flatMap((subject) => subject.cards)[0]?.schedule.state,
+    ).toBe("new");
+    await main.getByRole("button", { name: "Practice", exact: true }).click();
+  });
+
+  it("keeps a topic and a preference in the learner profile", async () => {
+    await page
+      .getByRole("button", { name: /^Learner profile/ })
+      .first()
+      .click();
+    const main = page.locator("main");
+    // The flashcard's topic shows up from practice.
+    await main.getByText("From your practice").waitFor();
+    await main.getByRole("tab", { name: "Thorough" }).click();
+    await main.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("tab", { name: "Developing" }).click();
+    await page.getByRole("button", { name: "Add topic" }).last().click();
+    await main.getByText("Topics · 1").waitFor();
+    const profile = JSON.parse(
+      await readFile(join(folder, "learner.json"), "utf8"),
+    );
+    expect(profile.preferences.detail).toBe("thorough");
+    expect(profile.topics).toEqual([
+      expect.objectContaining({ name: "Limites", level: "developing" }),
+    ]);
   });
 });

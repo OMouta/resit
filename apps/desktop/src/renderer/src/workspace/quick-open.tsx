@@ -1,10 +1,13 @@
 import {
   CalendarIcon,
+  ClipboardListIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
+  LayersIcon,
   PaperclipIcon,
   PlusIcon,
+  UserRoundIcon,
   SettingsIcon,
   TextSearchIcon,
   WaypointsIcon,
@@ -41,7 +44,15 @@ export interface QuickOpenCommand {
   id: string;
   label: string;
   shortcut?: string;
-  icon: "new-note" | "new-subject" | "graph" | "schedule" | "settings";
+  icon:
+    | "new-note"
+    | "new-subject"
+    | "graph"
+    | "schedule"
+    | "practice"
+    | "quiz"
+    | "profile"
+    | "settings";
   run: () => void;
 }
 
@@ -50,6 +61,9 @@ const commandIcons = {
   "new-subject": FolderPlusIcon,
   graph: WaypointsIcon,
   schedule: CalendarIcon,
+  practice: LayersIcon,
+  quiz: ClipboardListIcon,
+  profile: UserRoundIcon,
   settings: SettingsIcon,
 };
 

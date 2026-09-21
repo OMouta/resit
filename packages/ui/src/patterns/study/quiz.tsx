@@ -107,17 +107,11 @@ export function QuizNavigation({
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onPrevious}
-          disabled={index <= 0}
-        >
+        <Button variant="outline" onClick={onPrevious} disabled={index <= 0}>
           <ChevronLeftIcon /> Previous
         </Button>
         <Button
           variant="outline"
-          size="sm"
           onClick={onNext}
           disabled={index >= questions.length - 1}
         >
@@ -125,7 +119,6 @@ export function QuizNavigation({
         </Button>
         <Button
           variant={current?.status === "flagged" ? "secondary" : "subtle"}
-          size="sm"
           aria-pressed={current?.status === "flagged"}
           onClick={() => onToggleFlag(currentId)}
         >
@@ -134,7 +127,7 @@ export function QuizNavigation({
           />{" "}
           {current?.status === "flagged" ? "Flagged" : "Flag"}
         </Button>
-        <Button size="sm" className="ml-auto" onClick={onSubmit}>
+        <Button className="ml-auto" onClick={onSubmit}>
           Submit{unanswered > 0 ? ` (${unanswered} unanswered)` : ""}
         </Button>
       </div>

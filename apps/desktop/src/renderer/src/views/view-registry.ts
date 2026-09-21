@@ -1,3 +1,5 @@
+import type { CardRequest } from "../practice/card-dialog";
+
 /** What an open view can tell the AI panel about where the student is. */
 export interface ViewContext {
   /** Selected text in the view, if any. */
@@ -89,5 +91,43 @@ export function onAskRequest(
   askListeners.add(listener);
   return () => {
     askListeners.delete(listener);
+  };
+}
+
+const cardListeners = new Set<(request: CardRequest) => void>();
+
+/** Opens the card dialog, filled in from what the student was reading. */
+export function requestCard(request: CardRequest): void {
+  for (const listener of cardListeners) listener(request);
+}
+
+export function onCardRequest(
+  listener: (request: CardRequest) => void,
+): () => void {
+  cardListeners.add(listener);
+  return () => {
+    cardListeners.delete(listener);
+  };
+}
+
+let pendingReview: { subjectId?: string } | null = null;
+const reviewListeners = new Set<(request: { subjectId?: string }) => void>();
+
+/** Starts a flashcard review in the Practice tab, once it is showing. */
+export function requestReview(request: { subjectId?: string }): void {
+  if (reviewListeners.size === 0) pendingReview = request;
+  for (const listener of reviewListeners) listener(request);
+}
+
+export function onReviewRequest(
+  listener: (request: { subjectId?: string }) => void,
+): () => void {
+  reviewListeners.add(listener);
+  if (pendingReview) {
+    listener(pendingReview);
+    pendingReview = null;
+  }
+  return () => {
+    reviewListeners.delete(listener);
   };
 }

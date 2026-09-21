@@ -1,4 +1,5 @@
 import {
+  LayersIcon,
   MessageSquarePlusIcon,
   SparklesIcon,
   TextQuoteIcon,
@@ -27,6 +28,7 @@ export interface AnnotationActionsProps {
   onUnderline?: (() => void) | undefined;
   onCite?: (() => void) | undefined;
   onAsk?: (() => void) | undefined;
+  onCard?: (() => void) | undefined;
   onComment?: (() => void) | undefined;
   onDelete?: (() => void) | undefined;
   /** True while editing a highlight, so the current colour is marked. */
@@ -76,6 +78,7 @@ export function AnnotationActions({
   onUnderline,
   onCite,
   onAsk,
+  onCard,
   onComment,
   onDelete,
   existing = false,
@@ -122,7 +125,7 @@ export function AnnotationActions({
           <TooltipContent>{annotationColorClasses[key].label}</TooltipContent>
         </Tooltip>
       ))}
-      {onUnderline || onCite || onAsk || onComment || onDelete ? (
+      {onUnderline || onCite || onAsk || onCard || onComment || onDelete ? (
         <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
       ) : null}
       {onUnderline ? (
@@ -138,6 +141,11 @@ export function AnnotationActions({
       {onAsk ? (
         <Action label="Ask about this" onClick={onAsk}>
           <SparklesIcon />
+        </Action>
+      ) : null}
+      {onCard ? (
+        <Action label="Make a flashcard" onClick={onCard}>
+          <LayersIcon />
         </Action>
       ) : null}
       {onComment ? (

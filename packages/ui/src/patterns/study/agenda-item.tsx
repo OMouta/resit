@@ -20,7 +20,12 @@ import {
 import { cn } from "@resit/ui/lib/utils";
 
 export type AgendaStatus =
-  "scheduled" | "in-progress" | "completed" | "overdue" | "suspended";
+  | "scheduled"
+  | "in-progress"
+  | "completed"
+  | "overdue"
+  | "suspended"
+  | "skipped";
 export type ActivityKind =
   "reading" | "exercises" | "quiz" | "flashcards" | "assessment";
 
@@ -38,6 +43,7 @@ const statusMeta: Record<AgendaStatus, { label: string; className: string }> = {
   completed: { label: "Done", className: "text-success" },
   overdue: { label: "Overdue", className: "text-warning" },
   suspended: { label: "Suspended", className: "text-subtle-foreground" },
+  skipped: { label: "Skipped", className: "text-subtle-foreground" },
 };
 
 export interface AgendaItemProps {
@@ -90,7 +96,7 @@ export function AgendaItem({
         "flex gap-3 rounded-lg border bg-background p-3",
         status === "completed" && "opacity-75",
         status === "overdue" && "border-warning/40",
-        status === "suspended" && "border-dashed",
+        (status === "suspended" || status === "skipped") && "border-dashed",
         className,
       )}
     >

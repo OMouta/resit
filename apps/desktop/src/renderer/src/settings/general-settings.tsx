@@ -23,6 +23,7 @@ const FONTS: { value: DocumentFont; label: string }[] = [
 ];
 
 const SIZES = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+const REMINDER_MINUTES = [0, 5, 10, 15, 30, 60];
 
 /** Theme, startup, and the text your notes are written in. */
 export function GeneralSettings({
@@ -77,6 +78,47 @@ export function GeneralSettings({
             }
           />
         </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection title="Study sessions">
+        <SettingRow
+          label="Remind me before a session"
+          description="A notification from your computer, while resit is open."
+          htmlFor="session-reminders"
+        >
+          <Switch
+            id="session-reminders"
+            checked={settings.reminders.enabled}
+            onCheckedChange={(checked) =>
+              onChange({ reminders: { enabled: checked } })
+            }
+          />
+        </SettingRow>
+        {settings.reminders.enabled ? (
+          <SettingRow label="How early">
+            <Select
+              value={String(settings.reminders.minutesBefore)}
+              onValueChange={(value) =>
+                onChange({ reminders: { minutesBefore: Number(value) } })
+              }
+            >
+              <SelectTrigger aria-label="How early" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REMINDER_MINUTES.map((minutes) => (
+                  <SelectItem key={minutes} value={String(minutes)}>
+                    {minutes === 0
+                      ? "When it starts"
+                      : minutes === 60
+                        ? "An hour before"
+                        : `${minutes} minutes before`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+        ) : null}
       </SettingsSection>
 
       <SettingsSection

@@ -19,16 +19,25 @@ import type {
   WorkspaceSnapshot,
 } from "../../../shared/workspace";
 import { NoteView } from "../editor/note-view";
+import type { CardRequest } from "../practice/card-dialog";
+import type { QuizEditorRequest } from "../practice/quiz-editor";
 import { ActivityView } from "../views/activity-view";
 import { AttachmentView, ImageView } from "../views/file-views";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
+import { PracticeView } from "../views/practice-view";
+import { ProfileView } from "../views/profile-view";
+import { QuizView } from "../views/quiz-view";
 import { ScheduleView } from "../views/schedule-view";
-import type { DocumentTarget } from "../views/view-registry";
+import { requestReview, type DocumentTarget } from "../views/view-registry";
 import {
   activityTabId,
   GRAPH_TAB_ID,
   parseActivityTabId,
+  parseQuizTabId,
+  PRACTICE_TAB_ID,
+  PROFILE_TAB_ID,
+  quizTabId,
   SCHEDULE_TAB_ID,
   type LayoutAction,
   type Pane,
@@ -49,6 +58,10 @@ export interface PaneProps {
   onOpenLink: (resourceId: string, target: DocumentTarget) => void;
   onCite: (markdown: string) => void;
   onOpenSettings: () => void;
+  /** Opens a file, at a PDF page when one is given. */
+  onOpenResource: (resourceId: string, page?: number) => void;
+  onEditCard: (request: CardRequest) => void;
+  onEditQuiz: (request: QuizEditorRequest) => void;
 }
 
 function ResourceView({
@@ -100,6 +113,9 @@ export function WorkspacePane({
   onOpenLink,
   onCite,
   onOpenSettings,
+  onOpenResource,
+  onEditCard,
+  onEditQuiz,
 }: PaneProps) {
   const openResource = (resourceId: string) => {
     const target = resources.get(resourceId);
@@ -111,6 +127,22 @@ export function WorkspacePane({
       return { id: tab.id, title: "Graph", kind: "graph" };
     if (tab.resourceId === SCHEDULE_TAB_ID)
       return { id: tab.id, title: "Schedule", kind: "schedule" };
+    if (tab.resourceId === PRACTICE_TAB_ID)
+      return { id: tab.id, title: "Practice", kind: "practice" };
+    if (tab.resourceId === PROFILE_TAB_ID)
+      return { id: tab.id, title: "Learner profile", kind: "profile" };
+    const quiz = parseQuizTabId(tab.resourceId);
+    if (quiz) {
+      const subject = subjects.get(quiz.subjectId);
+      return {
+        id: tab.id,
+        title: tab.title,
+        kind: "quiz",
+        ...(subject
+          ? { subject: { name: subject.name, color: subject.color } }
+          : {}),
+      };
+    }
     const activity = parseActivityTabId(tab.resourceId);
     if (activity) {
       const subject = subjects.get(activity.subjectId);
@@ -158,6 +190,56 @@ export function WorkspacePane({
             })
           }
           onOpenSettings={onOpenSettings}
+          onOpenResource={onOpenResource}
+          onOpenQuiz={(subjectId, quiz) =>
+            dispatch({
+              type: "open",
+              resourceId: quizTabId(subjectId, quiz.id),
+              title: quiz.title,
+            })
+          }
+          onReview={(subjectId) => {
+            dispatch({
+              type: "open",
+              resourceId: PRACTICE_TAB_ID,
+              title: "Practice",
+            });
+            requestReview({ subjectId });
+          }}
+        />
+      );
+    if (tab.resourceId === PRACTICE_TAB_ID)
+      return (
+        <PracticeView
+          snapshot={snapshot}
+          active={active}
+          onOpenQuiz={(subjectId, quiz) =>
+            dispatch({
+              type: "open",
+              resourceId: quizTabId(subjectId, quiz.id),
+              title: quiz.title,
+            })
+          }
+          onOpenSource={onOpenResource}
+          onEditCard={onEditCard}
+          onNewQuiz={(subjectId) => onEditQuiz(subjectId ? { subjectId } : {})}
+        />
+      );
+    if (tab.resourceId === PROFILE_TAB_ID)
+      return <ProfileView snapshot={snapshot} />;
+    const quiz = parseQuizTabId(tab.resourceId);
+    if (quiz)
+      return (
+        <QuizView
+          subject={subjects.get(quiz.subjectId)}
+          subjectId={quiz.subjectId}
+          quizId={quiz.quizId}
+          onEdit={(file) =>
+            onEditQuiz({ quiz: file, subjectId: quiz.subjectId })
+          }
+          onDeleted={() =>
+            dispatch({ type: "close-resource", resourceId: tab.resourceId })
+          }
         />
       );
     const activity = parseActivityTabId(tab.resourceId);
