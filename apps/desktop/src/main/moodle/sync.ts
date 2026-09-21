@@ -17,10 +17,10 @@ import {
   splitExtension,
   writeJson,
 } from "../workspace/files";
+import { replaceFileWithHistory } from "../workspace/history";
 import {
   activitiesPath,
   importDownload,
-  replaceDownload,
   subjectSidecars,
   WorkspaceError,
   type OpenWorkspace,
@@ -390,7 +390,7 @@ export async function downloadItems(
           timemodified: item.timemodified,
         };
         if (item.state === "updated" && item.resourceId) {
-          await replaceDownload(workspace, {
+          await replaceFileWithHistory(workspace, {
             resourceId: item.resourceId,
             bytes,
             moodle: ref,

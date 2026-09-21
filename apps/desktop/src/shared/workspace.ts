@@ -237,3 +237,12 @@ export interface NoteRevision {
 export interface NoteRevisionContent extends NoteRevision {
   body: string;
 }
+
+/** One kept copy of an imported file, taken before it was replaced. */
+export interface FileRevision {
+  id: string;
+  at: string;
+  /** Replaced by a newer copy, or by putting a kept one back. */
+  cause: "replace" | "restore";
+  size: number;
+}

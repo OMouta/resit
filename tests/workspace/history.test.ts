@@ -1,19 +1,25 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  listFileRevisions,
   listNoteRevisions,
   readNoteRevision,
+  replaceFileWithHistory,
+  restoreFileRevision,
   restoreNoteRevision,
   saveNoteWithHistory,
+  snapshotFile,
 } from "../../apps/desktop/src/main/workspace/history";
 import {
   createNote,
   createWorkspace,
+  importFile,
   readNote,
+  resourcePath,
   snapshot,
   type OpenWorkspace,
 } from "../../apps/desktop/src/main/workspace/workspace";
@@ -109,5 +115,48 @@ describe("note history", () => {
     await expect(
       readNoteRevision(workspace, noteId, "not-a-revision"),
     ).rejects.toThrow(/not a saved version/i);
+  });
+});
+
+describe("file history", () => {
+  async function importPdf(bytes: string) {
+    const source = join(directory, "worksheet.pdf");
+    await writeFile(source, bytes);
+    return importFile(workspace, {
+      subjectId: snapshot(workspace).subjects[0]!.id,
+      sourcePath: source,
+    });
+  }
+
+  it("keeps a copy when a newer one replaces the file, and puts it back", async () => {
+    const pdf = await importPdf("first copy");
+    await replaceFileWithHistory(workspace, {
+      resourceId: pdf.id,
+      bytes: new TextEncoder().encode("second copy"),
+    });
+    const path = resourcePath(workspace, pdf.id);
+    expect(await readFile(path, "utf8")).toBe("second copy");
+
+    const [kept] = await listFileRevisions(workspace, pdf.id);
+    expect(kept).toMatchObject({ cause: "replace", size: 10 });
+    expect(kept!.id).toMatch(/\.pdf$/);
+
+    await delay(5);
+    const restored = await restoreFileRevision(workspace, pdf.id, kept!.id);
+    expect(await readFile(path, "utf8")).toBe("first copy");
+    expect(restored.revision).toBe(pdf.revision);
+    expect(
+      (await listFileRevisions(workspace, pdf.id)).map(
+        (revision) => revision.cause,
+      ),
+    ).toEqual(["restore", "replace"]);
+  });
+
+  it("does not keep the same contents twice", async () => {
+    const pdf = await importPdf("same");
+    await snapshotFile(workspace, pdf.id, "replace");
+    await delay(5);
+    await snapshotFile(workspace, pdf.id, "replace");
+    expect(await listFileRevisions(workspace, pdf.id)).toHaveLength(1);
   });
 });

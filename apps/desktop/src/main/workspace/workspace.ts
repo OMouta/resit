@@ -1191,12 +1191,18 @@ export function importDownload(
 }
 
 /**
- * Replaces a file's contents with a newer copy from Moodle. The resource keeps
- * its ID, so open tabs and links still point at it.
+ * Replaces an imported file's contents, with a newer copy from Moodle or a
+ * kept one. The resource keeps its ID, so open tabs and links still point
+ * at it.
  */
-export function replaceDownload(
+export function replaceFile(
   workspace: OpenWorkspace,
-  input: { resourceId: string; bytes: Uint8Array; moodle: MoodleFileRef },
+  input: {
+    resourceId: string;
+    bytes: Uint8Array;
+    /** Where a newer copy came from. Without it, the record stays as it was. */
+    moodle?: MoodleFileRef | undefined;
+  },
 ): Promise<ResourceInfo> {
   return withLock(workspace, input.resourceId, async () => {
     const entry = resourceEntry(workspace, input.resourceId);
@@ -1211,7 +1217,7 @@ export function replaceDownload(
       ...sidecar,
       contentHash: hash,
       revision: hash,
-      moodle: input.moodle,
+      ...(input.moodle ? { moodle: input.moodle } : {}),
       updatedAt: at,
     });
     entry.info = {
