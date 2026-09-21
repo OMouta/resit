@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import {
   annotationColorClasses,
@@ -53,10 +54,10 @@ const kindIcons = {
 };
 
 const kindLabels: Record<AnnotationKind, string> = {
-  highlight: "Highlight",
-  underline: "Underline",
-  region: "Region",
-  comment: "Comment",
+  highlight: msg("Highlight"),
+  underline: msg("Underline"),
+  region: msg("Region"),
+  comment: msg("Comment"),
 };
 
 /** One annotation in the PDF sidebar list. */
@@ -77,7 +78,7 @@ export function AnnotationRow({
   onDelete,
   className,
 }: AnnotationRowProps) {
-  const { dateTime } = useLocale();
+  const { dateTime, t } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const Icon = kindIcons[kind];
   const colors = annotationColorClasses[color];
@@ -111,7 +112,7 @@ export function AnnotationRow({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {kindLabels[kind]} · {colors.label}
+            {t(kindLabels[kind])} · {t(colors.label)}
           </span>
           <button
             type="button"
@@ -121,7 +122,7 @@ export function AnnotationRow({
             }}
             className="rounded-sm text-link hover:underline focus-visible:shadow-focus focus-visible:outline-none"
           >
-            p. {page}
+            {t("p. {page}", { page })}
           </button>
           <span className="ml-auto shrink-0 tabular-nums">
             {dateTime(createdAt)}
@@ -147,14 +148,14 @@ export function AnnotationRow({
             }}
             className="w-fit text-xs text-muted-foreground hover:text-foreground"
           >
-            {expanded ? "Show less" : "Show more"}
+            {expanded ? t("Show less") : t("Show more")}
           </button>
         ) : null}
         {comment ? <p className="text-foreground/90">{comment}</p> : null}
         {orphaned ? (
           <p className="flex items-center gap-1 text-xs text-warning">
-            <AlertTriangleIcon className="size-3.5" /> Anchored to a previous
-            revision of the PDF
+            <AlertTriangleIcon className="size-3.5" />{" "}
+            {t("Anchored to a previous revision of the PDF")}
           </p>
         ) : null}
       </div>
@@ -165,7 +166,7 @@ export function AnnotationRow({
               <Button
                 variant="subtle"
                 size="icon-sm"
-                aria-label="Edit annotation"
+                aria-label={t("Edit annotation")}
                 onClick={(event) => {
                   event.stopPropagation();
                   onEdit(id);
@@ -174,7 +175,7 @@ export function AnnotationRow({
                 <PencilIcon />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
+            <TooltipContent>{t("Edit")}</TooltipContent>
           </Tooltip>
         ) : null}
         {onDelete ? (
@@ -183,7 +184,7 @@ export function AnnotationRow({
               <Button
                 variant="subtle"
                 size="icon-sm"
-                aria-label="Delete annotation"
+                aria-label={t("Delete annotation")}
                 onClick={(event) => {
                   event.stopPropagation();
                   onDelete(id);
@@ -192,7 +193,7 @@ export function AnnotationRow({
                 <Trash2Icon />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Move to trash</TooltipContent>
+            <TooltipContent>{t("Move to trash")}</TooltipContent>
           </Tooltip>
         ) : null}
       </div>

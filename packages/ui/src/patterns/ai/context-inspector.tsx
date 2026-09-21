@@ -67,7 +67,7 @@ export function ContextInspector({
   tokens,
   className,
 }: ContextInspectorProps) {
-  const { number, percent } = useLocale();
+  const { number, percent, t } = useLocale();
   const used = tokens.prompt + tokens.retrieved;
   return (
     <div
@@ -76,22 +76,28 @@ export function ContextInspector({
     >
       <div className="flex flex-col gap-1.5 px-2 pb-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">Context budget</span>
+          <span className="font-medium">{t("Context budget")}</span>
           <span className="tabular-nums text-muted-foreground">
-            {number(used)} / {number(tokens.budget)} tokens ·{" "}
-            {percent(used / tokens.budget)}
+            {t("{used} / {budget} tokens", {
+              used: number(used),
+              budget: number(tokens.budget),
+            })}{" "}
+            · {percent(used / tokens.budget)}
           </span>
         </div>
         <Progress
           value={(used / tokens.budget) * 100}
-          aria-label="Context budget used"
+          aria-label={t("Context budget used")}
         />
         <p className="text-2xs text-subtle-foreground">
-          Prompt {number(tokens.prompt)} · retrieved {number(tokens.retrieved)}
+          {t("Prompt {prompt} · retrieved {retrieved}", {
+            prompt: number(tokens.prompt),
+            retrieved: number(tokens.retrieved),
+          })}
         </p>
       </div>
       <Group
-        title="Included in the prompt"
+        title={t("Included in the prompt")}
         icon={PackageCheckIcon}
         count={included.reduce((sum, section) => sum + section.items.length, 0)}
       >
@@ -109,7 +115,7 @@ export function ContextInspector({
         ))}
       </Group>
       <Group
-        title="Retrieved during the turn"
+        title={t("Retrieved during the turn")}
         icon={SearchIcon}
         count={retrieved.length}
       >
@@ -125,7 +131,7 @@ export function ContextInspector({
         ))}
       </Group>
       <Group
-        title="Left out"
+        title={t("Left out")}
         icon={EyeOffIcon}
         count={excluded.length}
         defaultOpen={false}

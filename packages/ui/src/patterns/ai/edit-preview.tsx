@@ -2,6 +2,7 @@ import { CheckIcon, ExternalLinkIcon, FileTextIcon, XIcon } from "lucide-react";
 
 import { Badge } from "@resit/ui/components/badge";
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 import type { EditProposal } from "@resit/ui/patterns/ai/types";
 
@@ -98,10 +99,11 @@ export function EditPreview({
   onOpen,
   className,
 }: EditPreviewProps) {
+  const { t } = useLocale();
   return (
     <section
       data-slot="edit-preview"
-      aria-label={`Proposed edit to ${edit.resourceTitle}`}
+      aria-label={t("Proposed edit to {title}", { title: edit.resourceTitle })}
       className={cn(
         "flex flex-col gap-2 rounded-lg border p-2.5",
         edit.status === "pending" && "border-primary/40 bg-info-soft/40",
@@ -121,13 +123,13 @@ export function EditPreview({
           </span>
         ) : null}
         {edit.status === "pending" ? (
-          <Badge variant="info">Awaiting review</Badge>
+          <Badge variant="info">{t("Awaiting review")}</Badge>
         ) : null}
         {edit.status === "accepted" ? (
-          <Badge variant="success">Accepted</Badge>
+          <Badge variant="success">{t("Accepted")}</Badge>
         ) : null}
         {edit.status === "rejected" ? (
-          <Badge variant="muted">Rejected</Badge>
+          <Badge variant="muted">{t("Rejected")}</Badge>
         ) : null}
       </header>
       <DiffView before={edit.before} after={edit.after} className="max-h-64" />
@@ -135,14 +137,14 @@ export function EditPreview({
         {edit.status === "pending" ? (
           <>
             <Button size="sm" onClick={() => onAccept?.(edit.id)}>
-              <CheckIcon /> Accept
+              <CheckIcon /> {t("Accept")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => onReject?.(edit.id)}
             >
-              <XIcon /> Reject
+              <XIcon /> {t("Reject")}
             </Button>
           </>
         ) : null}
@@ -153,7 +155,7 @@ export function EditPreview({
             className="ml-auto"
             onClick={() => onOpen(edit.resourceId)}
           >
-            Open in note <ExternalLinkIcon />
+            {t("Open in note")} <ExternalLinkIcon />
           </Button>
         ) : null}
       </footer>

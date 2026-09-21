@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface RelatedResourceRowProps {
@@ -39,6 +40,7 @@ export function RelatedResourceRow({
   onOpen,
   className,
 }: RelatedResourceRowProps) {
+  const { t } = useLocale();
   const Icon = icons[kind];
   return (
     <div
@@ -72,7 +74,7 @@ export function RelatedResourceRow({
         </p>
         <p className="truncate text-xs text-muted-foreground">
           {subjectName ? `${subjectName} · ` : ""}
-          {missing ? "File missing · " : ""}
+          {missing ? `${t("File missing")} · ` : ""}
           {reason}
         </p>
       </div>
@@ -80,7 +82,11 @@ export function RelatedResourceRow({
         <Button
           variant="subtle"
           size="icon-sm"
-          aria-label={missing ? `Locate ${title}` : `Open ${title}`}
+          aria-label={
+            missing
+              ? t("Locate {title}", { title })
+              : t("Open {title}", { title })
+          }
           className="opacity-0 group-hover/related:opacity-100 group-focus-within/related:opacity-100"
           onClick={() => onOpen(resourceId)}
         >

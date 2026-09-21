@@ -12,6 +12,8 @@ import {
 import type { ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import {
   ProjectRow,
@@ -70,13 +72,17 @@ const allDestinations: {
   label: string;
   icon: typeof LibraryIcon;
 }[] = [
-  { id: "graph", label: "Graph", icon: WaypointsIcon },
-  { id: "library", label: "Library", icon: LibraryIcon },
-  { id: "study", label: "Practice", icon: LayersIcon },
-  { id: "calendar", label: "Schedule", icon: CalendarIcon },
-  { id: "profile", label: "Learner profile", icon: UserRoundIcon },
-  { id: "conversations", label: "Conversations", icon: MessageSquareIcon },
-  { id: "trash", label: "Trash", icon: Trash2Icon },
+  { id: "graph", label: msg("Graph"), icon: WaypointsIcon },
+  { id: "library", label: msg("Library"), icon: LibraryIcon },
+  { id: "study", label: msg("Practice"), icon: LayersIcon },
+  { id: "calendar", label: msg("Schedule"), icon: CalendarIcon },
+  { id: "profile", label: msg("Learner profile"), icon: UserRoundIcon },
+  {
+    id: "conversations",
+    label: msg("Conversations"),
+    icon: MessageSquareIcon,
+  },
+  { id: "trash", label: msg("Trash"), icon: Trash2Icon },
 ];
 
 /** The whole left sidebar: subjects tree, projects, destinations. */
@@ -96,6 +102,7 @@ export function WorkspaceSidebar({
   footer,
   className,
 }: WorkspaceSidebarProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="workspace-sidebar"
@@ -106,7 +113,7 @@ export function WorkspaceSidebar({
     >
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto py-2">
         <SidebarSection
-          title="Subjects"
+          title={t("Subjects")}
           count={tree.subjects.filter((subject) => !subject.archived).length}
           expanded={sections.subjects}
           onToggle={(expanded) => onSectionToggle("subjects", expanded)}
@@ -115,7 +122,7 @@ export function WorkspaceSidebar({
               <Button
                 variant="subtle"
                 size="icon-sm"
-                aria-label="Add subject"
+                aria-label={t("Add subject")}
                 onClick={onAddSubject}
               >
                 <PlusIcon />
@@ -127,7 +134,7 @@ export function WorkspaceSidebar({
         </SidebarSection>
         {projects ? (
           <SidebarSection
-            title="Projects"
+            title={t("Projects")}
             count={projects.length}
             expanded={sections.projects}
             onToggle={(expanded) => onSectionToggle("projects", expanded)}
@@ -136,7 +143,7 @@ export function WorkspaceSidebar({
                 <Button
                   variant="subtle"
                   size="icon-sm"
-                  aria-label="Add project"
+                  aria-label={t("Add project")}
                   onClick={onAddProject}
                 >
                   <PlusIcon />
@@ -147,7 +154,7 @@ export function WorkspaceSidebar({
             <div className="flex flex-col gap-px px-2">
               {projects.length === 0 ? (
                 <p className="flex h-row items-center pl-6 text-xs text-subtle-foreground">
-                  No projects yet
+                  {t("No projects yet")}
                 </p>
               ) : null}
               {projects.map((project) => (
@@ -170,7 +177,7 @@ export function WorkspaceSidebar({
               <SidebarNavItem
                 key={id}
                 icon={<Icon />}
-                label={label}
+                label={t(label)}
                 active={activeDestination === id}
                 onClick={() => onNavigate(id)}
                 {...(counts?.[id] !== undefined ? { count: counts[id] } : {})}

@@ -33,6 +33,7 @@ export function DocumentHeader({
   className,
 }: DocumentHeaderProps) {
   const { relative } = useLocale();
+  const { t } = useLocale();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const segments = path.split("/").slice(0, -1);
@@ -70,7 +71,7 @@ export function DocumentHeader({
           </span>
         ) : null}
         <nav
-          aria-label="Location"
+          aria-label={t("Location")}
           className="flex min-w-0 items-center gap-1 truncate"
         >
           {segments.map((segment, index) => (
@@ -84,12 +85,12 @@ export function DocumentHeader({
         </nav>
         {readOnly ? (
           <Badge variant="outline" className="gap-1">
-            <LockIcon /> Read-only
+            <LockIcon /> {t("Read-only")}
           </Badge>
         ) : null}
         {modifiedAt ? (
           <span className="ml-auto shrink-0">
-            Edited {relative(modifiedAt)}
+            {t("Edited {when}", { when: relative(modifiedAt) })}
           </span>
         ) : null}
       </div>
@@ -97,7 +98,7 @@ export function DocumentHeader({
         {editing ? (
           <input
             autoFocus
-            aria-label="Document title"
+            aria-label={t("Document title")}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={commit}
@@ -121,7 +122,7 @@ export function DocumentHeader({
             onClick={() => {
               if (onRename && !readOnly) setEditing(true);
             }}
-            title={onRename && !readOnly ? "Click to rename" : undefined}
+            title={onRename && !readOnly ? t("Click to rename") : undefined}
           >
             {title}
           </h1>

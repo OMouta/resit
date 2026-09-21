@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@resit/ui/components/dialog";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 function Command({
@@ -28,8 +29,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = "Command palette",
-  description = "Search for a command to run",
+  title,
+  description,
   children,
   className,
   showCloseButton = false,
@@ -43,11 +44,14 @@ function CommandDialog({
   /** Set to false when the caller filters and orders the items itself. */
   shouldFilter?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        <DialogTitle>{title ?? t("Command palette")}</DialogTitle>
+        <DialogDescription>
+          {description ?? t("Search for a command to run")}
+        </DialogDescription>
       </DialogHeader>
       <DialogContent
         className={cn(

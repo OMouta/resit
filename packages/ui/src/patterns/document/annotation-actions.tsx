@@ -13,11 +13,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import {
   annotationColorClasses,
   type AnnotationColor,
 } from "@resit/ui/patterns/document/pdf-toolbar";
+
+/** Each colour button's name, whole, so it reads right in every language. */
+const highlightLabels: Record<AnnotationColor, string> = {
+  yellow: msg("Yellow highlight"),
+  green: msg("Green highlight"),
+  blue: msg("Blue highlight"),
+  pink: msg("Pink highlight"),
+};
 
 export interface AnnotationActionsProps {
   /** Pixels inside the positioned parent. The bar sits above this point. */
@@ -84,10 +94,11 @@ export function AnnotationActions({
   existing = false,
   className,
 }: AnnotationActionsProps) {
+  const { t } = useLocale();
   return (
     <div
       role="toolbar"
-      aria-label={existing ? "Highlight actions" : "Selection actions"}
+      aria-label={existing ? t("Highlight actions") : t("Selection actions")}
       onMouseDown={(event) => {
         // Keep the text selection, and the bar itself, while an action is
         // chosen: the surface underneath clears both on a press.
@@ -106,7 +117,7 @@ export function AnnotationActions({
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label={`${annotationColorClasses[key].label} highlight`}
+              aria-label={t(highlightLabels[key])}
               aria-pressed={existing ? key === color : undefined}
               onClick={() => onColor(key)}
               className={cn(
@@ -122,39 +133,41 @@ export function AnnotationActions({
               />
             </button>
           </TooltipTrigger>
-          <TooltipContent>{annotationColorClasses[key].label}</TooltipContent>
+          <TooltipContent>
+            {t(annotationColorClasses[key].label)}
+          </TooltipContent>
         </Tooltip>
       ))}
       {onUnderline || onCite || onAsk || onCard || onComment || onDelete ? (
         <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
       ) : null}
       {onUnderline ? (
-        <Action label="Underline" onClick={onUnderline}>
+        <Action label={t("Underline")} onClick={onUnderline}>
           <UnderlineIcon />
         </Action>
       ) : null}
       {onCite ? (
-        <Action label="Quote in note" onClick={onCite}>
+        <Action label={t("Quote in note")} onClick={onCite}>
           <TextQuoteIcon />
         </Action>
       ) : null}
       {onAsk ? (
-        <Action label="Ask about this" onClick={onAsk}>
+        <Action label={t("Ask about this")} onClick={onAsk}>
           <SparklesIcon />
         </Action>
       ) : null}
       {onCard ? (
-        <Action label="Make a flashcard" onClick={onCard}>
+        <Action label={t("Make a flashcard")} onClick={onCard}>
           <LayersIcon />
         </Action>
       ) : null}
       {onComment ? (
-        <Action label="Comment" onClick={onComment}>
+        <Action label={t("Comment")} onClick={onComment}>
           <MessageSquarePlusIcon />
         </Action>
       ) : null}
       {onDelete ? (
-        <Action label="Delete highlight" onClick={onDelete} destructive>
+        <Action label={t("Delete highlight")} onClick={onDelete} destructive>
           <Trash2Icon />
         </Action>
       ) : null}

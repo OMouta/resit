@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 
 import { EmptyState } from "@resit/ui/components/empty-state";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type EvidenceKind =
@@ -44,22 +45,22 @@ const outcomeMeta: Record<
   { label: string; icon: typeof CheckIcon; className: string }
 > = {
   correct: {
-    label: "Correct",
+    label: msg("Correct"),
     icon: CheckIcon,
     className: "bg-success-soft text-success",
   },
   partial: {
-    label: "Partly",
+    label: msg("Partly"),
     icon: MinusIcon,
     className: "bg-warning-soft text-warning",
   },
   incorrect: {
-    label: "Incorrect",
+    label: msg("Incorrect"),
     icon: XIcon,
     className: "bg-danger-soft text-destructive",
   },
   observed: {
-    label: "Observed",
+    label: msg("Observed"),
     icon: EyeIcon,
     className: "bg-muted text-muted-foreground",
   },
@@ -77,7 +78,7 @@ export function EvidenceRow({
   actions,
   className,
 }: EvidenceRowProps) {
-  const { relative } = useLocale();
+  const { relative, t } = useLocale();
   const KindIcon = kindIcons[kind];
   const meta = outcomeMeta[outcome];
   const OutcomeIcon = meta.icon;
@@ -101,7 +102,7 @@ export function EvidenceRow({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className={cn("font-medium", meta.className.split(" ")[1])}>
-            {meta.label}
+            {t(meta.label)}
           </span>
           {conceptName ? (
             <span className="text-foreground">{conceptName}</span>
@@ -130,12 +131,15 @@ export function EvidenceList({
   children: ReactNode;
   empty?: boolean;
 }) {
+  const { t } = useLocale();
   if (empty)
     return (
       <EmptyState
         size="compact"
-        title="No evidence yet"
-        description="Practice, quizzes, and conversations add evidence here."
+        title={t("No evidence yet")}
+        description={t(
+          "Practice, quizzes, and conversations add evidence here.",
+        )}
       />
     );
   return <div className="flex flex-col gap-0.5">{children}</div>;

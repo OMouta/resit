@@ -5,6 +5,7 @@ import { Badge } from "@resit/ui/components/badge";
 import { Button } from "@resit/ui/components/button";
 import { Checkbox } from "@resit/ui/components/checkbox";
 import { Label } from "@resit/ui/components/label";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
@@ -30,6 +31,7 @@ export function ApprovalCard({
   onReject,
   className,
 }: ApprovalCardProps) {
+  const { t } = useLocale();
   const [always, setAlways] = useState(false);
   const id = useId();
   const Icon = risk ? ShieldAlertIcon : ShieldCheckIcon;
@@ -57,18 +59,22 @@ export function ApprovalCard({
           {risk ? <p className="mt-1 text-xs text-warning">{risk}</p> : null}
         </div>
         {status === "approved" ? (
-          <Badge variant="success">Approved</Badge>
+          <Badge variant="success">{t("Approved")}</Badge>
         ) : null}
-        {status === "rejected" ? <Badge variant="muted">Rejected</Badge> : null}
-        {status === "expired" ? <Badge variant="muted">Expired</Badge> : null}
+        {status === "rejected" ? (
+          <Badge variant="muted">{t("Rejected")}</Badge>
+        ) : null}
+        {status === "expired" ? (
+          <Badge variant="muted">{t("Expired")}</Badge>
+        ) : null}
       </header>
       {status === "pending" ? (
         <footer className="flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => onApprove?.({ always })}>
-            Approve
+            {t("Approve")}
           </Button>
           <Button size="sm" variant="outline" onClick={onReject}>
-            Reject
+            {t("Reject")}
           </Button>
           <span className="flex items-center gap-2">
             <Checkbox
@@ -80,7 +86,7 @@ export function ApprovalCard({
               htmlFor={id}
               className="text-xs font-normal text-muted-foreground"
             >
-              Always allow in this conversation
+              {t("Always allow in this conversation")}
             </Label>
           </span>
         </footer>

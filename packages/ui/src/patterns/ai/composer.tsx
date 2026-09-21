@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface ComposerProps {
@@ -33,12 +34,13 @@ export function Composer({
   onAttach,
   busy = false,
   disabledReason,
-  placeholder = "Ask about what you are studying…",
+  placeholder,
   children,
   start,
   defaultValue = "",
   className,
 }: ComposerProps) {
+  const { t } = useLocale();
   const [value, setValue] = useState(defaultValue);
   const disabled = Boolean(disabledReason);
   const canSend = !disabled && !busy && value.trim().length > 0;
@@ -68,11 +70,13 @@ export function Composer({
     >
       {children ? <div className="px-1 pt-1">{children}</div> : null}
       <textarea
-        aria-label="Message"
+        aria-label={t("Message")}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={disabledReason ?? placeholder}
+        placeholder={
+          disabledReason ?? placeholder ?? t("Ask about what you are studying…")
+        }
         disabled={disabled}
         rows={1}
         className="field-sizing-content max-h-48 min-h-9 w-full resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:text-subtle-foreground disabled:cursor-not-allowed"
@@ -85,14 +89,14 @@ export function Composer({
               <Button
                 variant="subtle"
                 size="icon"
-                aria-label="Attach resource, selection, or region"
+                aria-label={t("Attach resource, selection, or region")}
                 onClick={onAttach}
                 disabled={disabled}
               >
                 <PaperclipIcon />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Attach</TooltipContent>
+            <TooltipContent>{t("Attach")}</TooltipContent>
           </Tooltip>
         ) : null}
         <span className="ml-auto" />
@@ -101,18 +105,18 @@ export function Composer({
             variant="secondary"
             size="sm"
             onClick={onStop}
-            aria-label="Stop the current turn"
+            aria-label={t("Stop the current turn")}
             className="gap-1.5"
           >
             <SquareIcon className="size-3 fill-current" />
-            Stop
+            {t("Stop")}
           </Button>
         ) : (
           <Button
             size="icon"
             onClick={send}
             disabled={!canSend}
-            aria-label="Send message"
+            aria-label={t("Send message")}
           >
             <ArrowUpIcon />
           </Button>

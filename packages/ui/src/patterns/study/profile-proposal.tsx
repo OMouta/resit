@@ -60,14 +60,14 @@ export function ProfileProposal({
   onReject,
   className,
 }: ProfileProposalProps) {
-  const { relative } = useLocale();
+  const { relative, t, tc } = useLocale();
   const [open, setOpen] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [level, setLevel] = useState<ConceptLevel>(to);
   return (
     <section
       data-slot="profile-proposal"
-      aria-label={`Proposal for ${conceptName}`}
+      aria-label={t("Proposal for {name}", { name: conceptName })}
       className={cn(
         "flex flex-col gap-3 rounded-lg border p-3",
         status === "proposed" && "border-primary/30 bg-info-soft/30",
@@ -79,14 +79,19 @@ export function ProfileProposal({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{conceptName}</p>
           <p className="text-xs text-muted-foreground">
-            {subjectName} · proposed {relative(proposedAt, now)}
+            {subjectName} ·{" "}
+            {t("proposed {when}", { when: relative(proposedAt, now) })}
           </p>
         </div>
         {status === "accepted" ? (
-          <Badge variant="success">Accepted</Badge>
+          <Badge variant="success">{t("Accepted")}</Badge>
         ) : null}
-        {status === "rejected" ? <Badge variant="muted">Rejected</Badge> : null}
-        {status === "proposed" ? <Badge variant="info">Proposed</Badge> : null}
+        {status === "rejected" ? (
+          <Badge variant="muted">{t("Rejected")}</Badge>
+        ) : null}
+        {status === "proposed" ? (
+          <Badge variant="info">{t("Proposed")}</Badge>
+        ) : null}
       </header>
       <p className="text-sm">{change}</p>
       <div className="flex flex-wrap items-center gap-2">
@@ -100,7 +105,7 @@ export function ProfileProposal({
             value={level}
             onValueChange={(value) => setLevel(value as ConceptLevel)}
           >
-            <SelectTrigger aria-label="Corrected level" className="w-32">
+            <SelectTrigger aria-label={t("Corrected level")} className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -108,7 +113,7 @@ export function ProfileProposal({
                 .filter((entry) => entry !== "unknown")
                 .map((entry) => (
                   <SelectItem key={entry} value={entry}>
-                    {conceptLevelLabels[entry]}
+                    {t(conceptLevelLabels[entry])}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -123,8 +128,9 @@ export function ProfileProposal({
             aria-expanded={open}
             className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            {evidenceCount} {evidenceCount === 1 ? "piece" : "pieces"} of
-            evidence
+            {evidenceCount === 1
+              ? t("1 piece of evidence")
+              : t("{count} pieces of evidence", { count: evidenceCount })}
             <ChevronRightIcon
               className={cn(
                 "size-3.5 transition-transform",
@@ -141,11 +147,13 @@ export function ProfileProposal({
         <footer className="flex flex-wrap gap-2">
           <Button onClick={() => onAccept?.(id, level)}>
             <CheckIcon />{" "}
-            {correcting ? `Accept as ${conceptLevelLabels[level]}` : "Accept"}
+            {correcting
+              ? t("Accept as {level}", { level: t(conceptLevelLabels[level]) })
+              : t("Accept")}
           </Button>
           {!correcting ? (
             <Button variant="outline" onClick={() => setCorrecting(true)}>
-              <PencilIcon /> Correct
+              <PencilIcon /> {tc("verb", "Correct")}
             </Button>
           ) : (
             <Button
@@ -155,7 +163,7 @@ export function ProfileProposal({
                 setLevel(to);
               }}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
           )}
           <Button
@@ -163,7 +171,7 @@ export function ProfileProposal({
             className="ml-auto"
             onClick={() => onReject?.(id)}
           >
-            <XIcon /> Reject
+            <XIcon /> {t("Reject")}
           </Button>
         </footer>
       ) : null}
@@ -195,7 +203,7 @@ export function ConceptLevelRow({
   onDelete,
   className,
 }: ConceptLevelRowProps) {
-  const { relative } = useLocale();
+  const { relative, t } = useLocale();
   return (
     <div
       className={cn(
@@ -207,9 +215,10 @@ export function ConceptLevelRow({
         <p className="truncate text-sm font-medium">{name}</p>
         <p className="truncate text-xs text-muted-foreground">
           {subjectName}
+          {" · "}
           {lastEvidenceAt
-            ? ` · last evidence ${relative(lastEvidenceAt, now)}`
-            : " · no evidence yet"}
+            ? t("last evidence {when}", { when: relative(lastEvidenceAt, now) })
+            : t("no evidence yet")}
         </p>
       </div>
       <LevelChip level={level} />
@@ -218,7 +227,7 @@ export function ConceptLevelRow({
           <Button
             variant="subtle"
             size="icon-sm"
-            aria-label={`Edit ${name}`}
+            aria-label={t("Edit {name}", { name })}
             onClick={() => onEdit(id)}
           >
             <PencilIcon />
@@ -228,7 +237,7 @@ export function ConceptLevelRow({
           <Button
             variant="subtle"
             size="icon-sm"
-            aria-label={`Delete ${name}`}
+            aria-label={t("Delete {name}", { name })}
             onClick={() => onDelete(id)}
           >
             <Trash2Icon />

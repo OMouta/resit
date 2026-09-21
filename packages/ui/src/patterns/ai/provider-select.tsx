@@ -20,6 +20,8 @@ import {
   ProviderMark,
   providerMarkColor,
 } from "@resit/ui/components/provider-mark";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import type {
   ProviderOption,
@@ -34,18 +36,18 @@ const statusMeta: Record<
     icon: typeof CheckIcon;
   }
 > = {
-  ready: { label: "Ready", variant: "success", icon: CheckIcon },
+  ready: { label: msg("Ready"), variant: "success", icon: CheckIcon },
   "not-installed": {
-    label: "Not installed",
+    label: msg("Not installed"),
     variant: "muted",
     icon: PackageXIcon,
   },
   "not-authenticated": {
-    label: "Sign in needed",
+    label: msg("Sign in needed"),
     variant: "warning",
     icon: KeyRoundIcon,
   },
-  checking: { label: "Checking…", variant: "info", icon: Loader2Icon },
+  checking: { label: msg("Checking…"), variant: "info", icon: Loader2Icon },
 };
 
 export function ProviderStatusBadge({
@@ -55,12 +57,13 @@ export function ProviderStatusBadge({
   status: ProviderStatus;
   version?: string;
 }) {
+  const { t } = useLocale();
   const meta = statusMeta[status];
   const Icon = meta.icon;
   return (
     <Badge variant={meta.variant} className="gap-1">
       <Icon className={cn(status === "checking" && "animate-spin")} />
-      {meta.label}
+      {t(meta.label)}
       {version && status === "ready" ? (
         <span className="opacity-70">{version}</span>
       ) : null}
@@ -103,6 +106,7 @@ export function ProviderModelSelect({
   providerLocked = false,
   className,
 }: ProviderModelSelectProps) {
+  const { t } = useLocale();
   const provider = providers.find((entry) => entry.id === providerId);
   const model = provider?.models.find((entry) => entry.id === modelId);
   const usable = provider?.status === "ready";
@@ -118,7 +122,7 @@ export function ProviderModelSelect({
               "max-w-full gap-1.5",
               compact && "h-8 rounded-control px-2 text-xs",
             )}
-            aria-label="Provider and model"
+            aria-label={t("Provider and model")}
           >
             <ProviderMark
               provider={providerId}
@@ -131,10 +135,10 @@ export function ProviderModelSelect({
             />
             <span className="truncate">
               {compact ? (
-                (model?.name ?? provider?.name ?? "Choose a model")
+                (model?.name ?? provider?.name ?? t("Choose a model"))
               ) : (
                 <>
-                  {provider ? provider.name : "Choose a provider"}
+                  {provider ? provider.name : t("Choose a provider")}
                   {model ? (
                     <span className="text-muted-foreground">
                       {" "}
@@ -149,10 +153,10 @@ export function ProviderModelSelect({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-72">
           <DropdownMenuLabel className="flex flex-col items-start gap-0.5">
-            Provider
+            {t("Provider")}
             {providerLocked ? (
               <span className="text-2xs font-normal text-subtle-foreground">
-                Choosing another starts a new conversation
+                {t("Choosing another starts a new conversation")}
               </span>
             ) : null}
           </DropdownMenuLabel>
@@ -198,12 +202,12 @@ export function ProviderModelSelect({
           {provider ? (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>Model</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("Model")}</DropdownMenuLabel>
               {provider.models.length === 0 ? (
                 <p className="px-2 py-1.5 text-xs text-subtle-foreground">
                   {provider.status === "ready"
-                    ? "Loading models…"
-                    : "Connect this provider to choose a model."}
+                    ? t("Loading models…")
+                    : t("Connect this provider to choose a model.")}
                 </p>
               ) : null}
               {provider.models.map((entry) => (
@@ -240,7 +244,9 @@ export function ProviderModelSelect({
               variant="secondary"
               onClick={() => onConnect(provider.id)}
             >
-              {provider.status === "not-installed" ? "Install" : "Sign in"}
+              {provider.status === "not-installed"
+                ? t("Install")
+                : t("Sign in")}
             </Button>
           ) : null}
         </>

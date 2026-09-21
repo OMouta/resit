@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface PaneHeaderProps {
@@ -67,6 +68,7 @@ export function PaneHeader({
   children,
   className,
 }: PaneHeaderProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="pane-header"
@@ -80,29 +82,29 @@ export function PaneHeader({
       <div className="flex min-w-0 flex-1">{children}</div>
       <div
         role="toolbar"
-        aria-label="Pane"
+        aria-label={t("Pane")}
         className="flex shrink-0 items-center gap-1 border-l px-2"
       >
         {onSplitHorizontal ? (
-          <PaneAction label="Split right" onClick={onSplitHorizontal}>
+          <PaneAction label={t("Split right")} onClick={onSplitHorizontal}>
             <Columns2Icon />
           </PaneAction>
         ) : null}
         {onSplitVertical ? (
-          <PaneAction label="Split down" onClick={onSplitVertical}>
+          <PaneAction label={t("Split down")} onClick={onSplitVertical}>
             <Rows2Icon />
           </PaneAction>
         ) : null}
         {onMaximise ? (
           <PaneAction
-            label={maximised ? "Restore pane" : "Maximise pane"}
+            label={maximised ? t("Restore pane") : t("Maximise pane")}
             onClick={onMaximise}
           >
             {maximised ? <Minimize2Icon /> : <Maximize2Icon />}
           </PaneAction>
         ) : null}
         {onClose ? (
-          <PaneAction label="Close pane" onClick={onClose}>
+          <PaneAction label={t("Close pane")} onClick={onClose}>
             <XIcon />
           </PaneAction>
         ) : null}
@@ -120,11 +122,12 @@ export interface PaneEmptyProps {
 
 /** Body of a pane with no open tabs. */
 export function PaneEmpty({
-  title = "Nothing open",
-  description = "Pick a note or document from the sidebar.",
+  title,
+  description,
   actions,
   className,
 }: PaneEmptyProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="pane-empty"
@@ -132,8 +135,10 @@ export function PaneEmpty({
     >
       <EmptyState
         icon={<FileTextIcon />}
-        title={title}
-        description={description}
+        title={title ?? t("Nothing open")}
+        description={
+          description ?? t("Pick a note or document from the sidebar.")
+        }
         {...(actions ? { actions } : {})}
       />
     </div>

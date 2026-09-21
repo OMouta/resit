@@ -16,6 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { isMac, shortcutLabel } from "@resit/ui/lib/keys";
 import { cn } from "@resit/ui/lib/utils";
 
@@ -60,6 +61,7 @@ export function AppShell({
   children,
   className,
 }: AppShellProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="app-shell"
@@ -76,21 +78,21 @@ export function AppShell({
             <Button
               variant="subtle"
               size="icon"
-              aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              aria-label={sidebarOpen ? t("Hide sidebar") : t("Show sidebar")}
               aria-pressed={sidebarOpen}
               onClick={onToggleSidebar}
             >
               <PanelLeftIcon />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Sidebar</TooltipContent>
+          <TooltipContent>{t("Sidebar")}</TooltipContent>
         </Tooltip>
         {onBack || onForward ? (
           <div className="hidden items-center gap-0.5 @md:flex">
             <Button
               variant="subtle"
               size="icon"
-              aria-label="Back"
+              aria-label={t("Back")}
               disabled={!canGoBack}
               onClick={onBack}
             >
@@ -99,7 +101,7 @@ export function AppShell({
             <Button
               variant="subtle"
               size="icon"
-              aria-label="Forward"
+              aria-label={t("Forward")}
               disabled={!canGoForward}
               onClick={onForward}
             >
@@ -117,7 +119,7 @@ export function AppShell({
             className="gap-2 pr-1.5 pl-2.5 font-normal text-muted-foreground"
           >
             <SearchIcon />
-            <span className="hidden @md:inline">Search</span>
+            <span className="hidden @md:inline">{t("Search")}</span>
             <Kbd className="ml-2 hidden @md:inline-flex">
               {shortcutLabel("mod+K").join(isMac() ? "" : "+")}
             </Kbd>
@@ -130,14 +132,16 @@ export function AppShell({
               <Button
                 variant={aiPanelOpen ? "secondary" : "subtle"}
                 size="icon"
-                aria-label={aiPanelOpen ? "Hide AI panel" : "Show AI panel"}
+                aria-label={
+                  aiPanelOpen ? t("Hide AI panel") : t("Show AI panel")
+                }
                 aria-pressed={aiPanelOpen}
                 onClick={onToggleAiPanel}
               >
                 {aiPanelOpen ? <PanelRightIcon /> : <SparklesIcon />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>AI panel</TooltipContent>
+            <TooltipContent>{t("AI panel")}</TooltipContent>
           </Tooltip>
         ) : null}
         <div aria-hidden className="titlebar-inset-end shrink-0" />
@@ -147,7 +151,7 @@ export function AppShell({
           <>
             <button
               type="button"
-              aria-label="Close sidebar"
+              aria-label={t("Close sidebar")}
               onClick={onToggleSidebar}
               className="absolute inset-0 z-sticky bg-black/20 @3xl:hidden"
             />
@@ -161,7 +165,7 @@ export function AppShell({
           <>
             <button
               type="button"
-              aria-label="Close AI panel"
+              aria-label={t("Close AI panel")}
               onClick={onToggleAiPanel}
               className="absolute inset-0 z-sticky bg-black/20 @5xl:hidden"
             />

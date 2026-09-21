@@ -82,6 +82,7 @@ export function ConflictComparison({
   onKeepBoth,
   className,
 }: ConflictComparisonProps) {
+  const { t, tx } = useLocale();
   const lines = diffLines(mine.text, theirs.text);
   const changed = lines.filter((line) => line.kind !== "same").length;
   return (
@@ -91,13 +92,21 @@ export function ConflictComparison({
     >
       <header className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">
-          {resourceTitle} changed on disk
+          {t("{title} changed on disk", { title: resourceTitle })}
         </h2>
         <p className="text-sm text-muted-foreground">
-          <code className="font-mono text-xs">{path}</code> was edited outside
-          resit while you had unsaved changes. {changed}{" "}
-          {changed === 1 ? "line differs" : "lines differ"}. Whatever you
-          choose, both versions stay in history.
+          {changed === 1
+            ? tx(
+                "{path} was edited outside resit while you had unsaved changes. 1 line differs. Whatever you choose, both versions stay in history.",
+                { path: <code className="font-mono text-xs">{path}</code> },
+              )
+            : tx(
+                "{path} was edited outside resit while you had unsaved changes. {count} lines differ. Whatever you choose, both versions stay in history.",
+                {
+                  path: <code className="font-mono text-xs">{path}</code>,
+                  count: changed,
+                },
+              )}
         </p>
       </header>
       <div
@@ -116,13 +125,13 @@ export function ConflictComparison({
       </div>
       <footer className="flex flex-wrap gap-2">
         <Button onClick={onKeepMine}>
-          <PencilIcon /> Keep my version
+          <PencilIcon /> {t("Keep my version")}
         </Button>
         <Button variant="outline" onClick={onKeepTheirs}>
-          <HardDriveIcon /> Keep the disk version
+          <HardDriveIcon /> {t("Keep the disk version")}
         </Button>
         <Button variant="subtle" onClick={onKeepBoth}>
-          <CopyPlusIcon /> Keep both as separate notes
+          <CopyPlusIcon /> {t("Keep both as separate notes")}
         </Button>
       </footer>
     </div>

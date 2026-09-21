@@ -2,12 +2,13 @@ import { CheckIcon, CopyIcon, TerminalIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 /** Monospace diagnostics block. Belongs in diagnostics views, not the transcript. */
 export function TerminalOutput({
   text,
-  title = "Diagnostics",
+  title,
   maxHeight = 240,
   onCopy,
   className,
@@ -18,6 +19,7 @@ export function TerminalOutput({
   onCopy?: (text: string) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
   return (
     <div
@@ -29,12 +31,12 @@ export function TerminalOutput({
     >
       <div className="flex h-8 items-center gap-2 border-b border-white/10 px-2.5 text-xs text-[#9a9a9a]">
         <TerminalIcon className="size-3.5" />
-        {title}
+        {title ?? t("Diagnostics")}
         <Button
           variant="subtle"
           size="icon-sm"
           className="ml-auto text-[#9a9a9a] hover:bg-white/10 hover:text-white"
-          aria-label="Copy output"
+          aria-label={t("Copy output")}
           onClick={() => {
             onCopy?.(text);
             setCopied(true);

@@ -11,9 +11,11 @@ import { Button } from "@resit/ui/components/button";
 import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
 import { ResitMark } from "@resit/ui/components/resit-mark";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import {
   SUBJECT_COLORS,
   subjectColorClasses,
+  subjectColorLabels,
   type SubjectColor,
 } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
@@ -81,6 +83,7 @@ export function Onboarding({
   onOpenRecent,
   className,
 }: OnboardingProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="onboarding"
@@ -93,38 +96,40 @@ export function Onboarding({
         <header className="flex flex-col gap-3">
           <ResitMark className="size-12" />
           <h1 className="text-3xl font-semibold tracking-[-0.02em]">
-            Open your study workspace
+            {t("Open your study workspace")}
           </h1>
           <p className="max-w-xl text-base text-muted-foreground">
-            Keep your notes and PDFs in a folder on your computer.
+            {t("Keep your notes and PDFs in a folder on your computer.")}
           </p>
         </header>
         <div className="grid gap-3 @lg:grid-cols-3">
           <Choice
             icon={FolderPlusIcon}
-            title="Create workspace"
-            description="Choose a folder and add your first subject."
+            title={t("Create workspace")}
+            description={t("Choose a folder and add your first subject.")}
             onClick={onCreate}
           />
           <Choice
             icon={FolderOpenIcon}
-            title="Open folder"
-            description="Open an existing workspace."
+            title={t("Open folder")}
+            description={t("Open an existing workspace.")}
             onClick={onOpenFolder}
           />
           <Choice
             icon={ArchiveIcon}
-            title="Open .resit archive"
-            description="Restore a workspace exported from another computer."
+            title={t("Open .resit archive")}
+            description={t(
+              "Restore a workspace exported from another computer.",
+            )}
             onClick={onOpenArchive}
             disabled={!archiveAvailable}
-            {...(!archiveAvailable ? { note: "Not available yet." } : {})}
+            {...(!archiveAvailable ? { note: t("Not available yet.") } : {})}
           />
         </div>
         {recent.length > 0 ? (
           <section className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-              Recent
+              {t("Recent")}
             </h2>
             <ul className="overflow-hidden rounded-lg border bg-background">
               {recent.map((workspace) => (
@@ -150,8 +155,8 @@ export function Onboarding({
           </section>
         ) : null}
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <SparklesIcon className="size-3.5" /> For AI chat, connect a provider
-          in Settings.
+          <SparklesIcon className="size-3.5" />{" "}
+          {t("For AI chat, connect a provider in Settings.")}
         </p>
       </div>
     </div>
@@ -179,6 +184,7 @@ export function CreateWorkspaceStep({
   defaultFolder = "",
   className,
 }: CreateWorkspaceStepProps) {
+  const { t } = useLocale();
   const [name, setName] = useState("");
   const [folder, setFolder] = useState(defaultFolder);
   const [subject, setSubject] = useState("");
@@ -206,22 +212,22 @@ export function CreateWorkspaceStep({
       >
         <header className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-            Create a workspace
+            {t("Create a workspace")}
           </h1>
         </header>
         <div className="flex flex-col gap-5 rounded-panel border bg-background p-6 shadow-sm">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ws-name">Workspace name</Label>
+            <Label htmlFor="ws-name">{t("Workspace name")}</Label>
             <Input
               id="ws-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Studies 2026/27"
+              placeholder={t("Studies 2026/27")}
               autoFocus
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ws-folder">Folder</Label>
+            <Label htmlFor="ws-folder">{t("Folder")}</Label>
             <div className="flex gap-2">
               <Input
                 id="ws-folder"
@@ -238,24 +244,24 @@ export function CreateWorkspaceStep({
                   if (chosen) setFolder(chosen);
                 }}
               >
-                <FolderOpenIcon /> Choose…
+                <FolderOpenIcon /> {t("Choose…")}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Your notes and imported files will be saved here.
+              {t("Your notes and imported files will be saved here.")}
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ws-subject">First subject</Label>
+            <Label htmlFor="ws-subject">{t("First subject")}</Label>
             <Input
               id="ws-subject"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
-              placeholder="Mathematics"
+              placeholder={t("Mathematics")}
             />
             <div
               role="radiogroup"
-              aria-label="Subject colour"
+              aria-label={t("Subject colour")}
               className="mt-1 flex flex-wrap gap-1.5"
             >
               {SUBJECT_COLORS.map((entry) => (
@@ -264,7 +270,7 @@ export function CreateWorkspaceStep({
                   type="button"
                   role="radio"
                   aria-checked={color === entry}
-                  aria-label={entry}
+                  aria-label={t(subjectColorLabels[entry])}
                   onClick={() => setColor(entry)}
                   className={cn(
                     "flex size-7 items-center justify-center rounded-md",
@@ -281,18 +287,18 @@ export function CreateWorkspaceStep({
                   />
                 </button>
               ))}
-              <span className="ml-1 self-center text-xs text-muted-foreground capitalize">
-                {color}
+              <span className="ml-1 self-center text-xs text-muted-foreground">
+                {t(subjectColorLabels[color])}
               </span>
             </div>
           </div>
         </div>
         <footer className="flex justify-between">
           <Button type="button" variant="subtle" onClick={onBack}>
-            Back
+            {t("Back")}
           </Button>
           <Button type="submit" disabled={!valid}>
-            Create and open <ArrowRightIcon />
+            {t("Create and open")} <ArrowRightIcon />
           </Button>
         </footer>
       </form>

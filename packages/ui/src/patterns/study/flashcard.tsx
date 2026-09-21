@@ -5,7 +5,9 @@ import { Badge } from "@resit/ui/components/badge";
 import { Button } from "@resit/ui/components/button";
 import { EmptyState } from "@resit/ui/components/empty-state";
 import { Kbd } from "@resit/ui/components/kbd";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { useReducedMotion } from "@resit/ui/hooks/use-reduced-motion";
+import { msg, msgc } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import { MathText } from "@resit/ui/patterns/document/math";
 
@@ -22,8 +24,16 @@ const stateVariant: Record<
   suspended: "muted",
 };
 
+const stateLabels: Record<CardState, string> = {
+  new: msgc("card", "New"),
+  learning: msgc("card", "Learning"),
+  review: msgc("card", "Review"),
+  suspended: msgc("card", "Suspended"),
+};
+
 /** Renders cloze text: `{{c1::answer}}` hidden until revealed. */
 function ClozeText({ text, revealed }: { text: string; revealed: boolean }) {
+  const { t } = useLocale();
   const parts = text.split(/(\{\{c\d+::[^}]+\}\})/g);
   return (
     <span>
@@ -48,7 +58,7 @@ function ClozeText({ text, revealed }: { text: string; revealed: boolean }) {
           <span
             key={index}
             className="mx-0.5 inline-block min-w-12 rounded-sm border-b-2 border-dashed border-foreground/50 align-baseline"
-            aria-label="hidden"
+            aria-label={t("hidden")}
           >
             &nbsp;
           </span>
@@ -86,6 +96,7 @@ export function Flashcard({
   onSuspend,
   className,
 }: FlashcardProps) {
+  const { t } = useLocale();
   const reduced = useReducedMotion();
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === " " && !revealed && state !== "suspended") {
@@ -98,7 +109,9 @@ export function Flashcard({
       data-slot="flashcard"
       tabIndex={0}
       onKeyDown={onKeyDown}
-      aria-label={`Flashcard, ${revealed ? "answer shown" : "question"}`}
+      aria-label={
+        revealed ? t("Flashcard, answer shown") : t("Flashcard, question")
+      }
       className={cn(
         "flex flex-col gap-3 outline-none [perspective:1200px] focus-visible:[&>div]:shadow-focus",
         className,
@@ -113,9 +126,7 @@ export function Flashcard({
         )}
       >
         <header className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant={stateVariant[state]} className="capitalize">
-            {state}
-          </Badge>
+          <Badge variant={stateVariant[state]}>{t(stateLabels[state])}</Badge>
           <span>{subjectName}</span>
           <span className="ml-auto truncate">{sourceTitle}</span>
         </header>
@@ -139,17 +150,18 @@ export function Flashcard({
         {!revealed && state !== "suspended" ? (
           <div className="flex justify-center border-t pt-4">
             <Button onClick={onReveal}>
-              Show answer <Kbd className="bg-white/20 text-white">Space</Kbd>
+              {t("Show answer")}{" "}
+              <Kbd className="bg-white/20 text-white">{t("Space")}</Kbd>
             </Button>
           </div>
         ) : null}
         {state === "suspended" ? (
           <div className="flex items-center justify-center gap-3 border-t pt-4 text-sm text-muted-foreground">
-            <PauseIcon className="size-4" /> This card is suspended and will not
-            be scheduled.
+            <PauseIcon className="size-4" />{" "}
+            {t("This card is suspended and will not be scheduled.")}
             {onResume ? (
               <Button size="sm" variant="secondary" onClick={onResume}>
-                <PlayIcon /> Resume
+                <PlayIcon /> {t("Resume")}
               </Button>
             ) : null}
           </div>
@@ -161,7 +173,7 @@ export function Flashcard({
           onClick={onSuspend}
           className="self-end text-xs text-muted-foreground hover:text-foreground"
         >
-          Suspend card
+          {t("Suspend card")}
         </button>
       ) : null}
     </div>
@@ -181,10 +193,10 @@ const grades: {
   key: string;
   className: string;
 }[] = [
-  { id: "again", label: "Again", key: "1", className: "text-destructive" },
-  { id: "hard", label: "Hard", key: "2", className: "text-warning" },
-  { id: "good", label: "Good", key: "3", className: "text-success" },
-  { id: "easy", label: "Easy", key: "4", className: "text-link" },
+  { id: "again", label: msg("Again"), key: "1", className: "text-destructive" },
+  { id: "hard", label: msg("Hard"), key: "2", className: "text-warning" },
+  { id: "good", label: msg("Good"), key: "3", className: "text-success" },
+  { id: "easy", label: msg("Easy"), key: "4", className: "text-link" },
 ];
 
 /** Again/Hard/Good/Easy with the next interval under each. Keys 1–4. */
@@ -194,6 +206,7 @@ export function ReviewControls({
   disabled = false,
   className,
 }: ReviewControlsProps) {
+  const { t } = useLocale();
   useEffect(() => {
     if (disabled) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -219,7 +232,7 @@ export function ReviewControls({
   return (
     <div
       role="group"
-      aria-label="Rate your recall"
+      aria-label={t("Rate your recall")}
       className={cn("grid grid-cols-4 gap-2", className)}
     >
       {grades.map((grade) => (
@@ -232,7 +245,7 @@ export function ReviewControls({
           className="h-auto flex-col gap-0.5 py-2"
         >
           <span className={cn("text-sm font-semibold", grade.className)}>
-            {grade.label}
+            {t(grade.label)}
           </span>
           <span className="text-xs font-normal text-muted-foreground">
             {intervals[grade.id]}
@@ -244,14 +257,17 @@ export function ReviewControls({
 }
 
 export function EmptyDeck({ onBrowse }: { onBrowse?: () => void }) {
+  const { t } = useLocale();
   return (
     <EmptyState
-      title="Nothing due"
-      description="All cards are scheduled for later. Come back tomorrow or add cards from a note."
+      title={t("Nothing due")}
+      description={t(
+        "All cards are scheduled for later. Come back tomorrow or add cards from a note.",
+      )}
       actions={
         onBrowse ? (
           <Button variant="outline" size="sm" onClick={onBrowse}>
-            Browse cards
+            {t("Browse cards")}
           </Button>
         ) : undefined
       }

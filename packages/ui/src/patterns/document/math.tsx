@@ -2,6 +2,8 @@ import katex from "katex";
 import { AlertCircleIcon } from "lucide-react";
 import { Fragment, useMemo, type ReactNode } from "react";
 
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type MathRender =
@@ -23,7 +25,7 @@ export function renderMath(source: string, displayMode = false): MathRender {
     const message =
       error instanceof Error
         ? error.message.replace(/^KaTeX parse error: /, "")
-        : "Could not render this expression";
+        : msg("Could not render this expression");
     return { ok: false, message };
   }
 }
@@ -37,11 +39,14 @@ function MathError({
   message: string;
   display: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <span
       role="img"
-      aria-label={`Math could not be rendered: ${message}`}
-      title={message}
+      aria-label={t("Math could not be rendered: {message}", {
+        message: t(message),
+      })}
+      title={t(message)}
       className={cn(
         "inline-flex max-w-full items-center gap-1 rounded-sm border border-dashed border-destructive/50 bg-danger-soft px-1 font-mono text-[0.85em] text-destructive",
         display && "my-2 flex w-fit px-2 py-1",

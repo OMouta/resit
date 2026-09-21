@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface ErrorAction {
@@ -36,6 +37,7 @@ export function ErrorPanel({
   actions,
   className,
 }: ErrorPanelProps) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const Icon = tone === "error" ? XCircleIcon : AlertTriangleIcon;
   return (
@@ -74,7 +76,7 @@ export function ErrorPanel({
                   open && "rotate-90",
                 )}
               />{" "}
-              Details
+              {t("Details")}
             </button>
             {open ? (
               <pre className="mt-1 rounded-md bg-background/70 px-2.5 py-2 font-mono text-xs whitespace-pre-wrap">
@@ -136,6 +138,7 @@ export function RecoveryBanner({
   onDismiss?: () => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const { icon: Icon, className: tone } = bannerMeta[kind];
   return (
     <div
@@ -157,7 +160,7 @@ export function RecoveryBanner({
         <Button
           size="icon-sm"
           variant="subtle"
-          aria-label="Dismiss"
+          aria-label={t("Dismiss")}
           onClick={onDismiss}
         >
           <XIcon />

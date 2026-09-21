@@ -9,6 +9,8 @@ import {
 import type { ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type CalloutKind =
@@ -29,37 +31,37 @@ const KINDS: Record<
   }
 > = {
   definition: {
-    label: "Definition",
+    label: msg("Definition"),
     icon: BookOpenIcon,
     className: "border-l-link bg-info-soft",
     iconClassName: "text-link",
   },
   theorem: {
-    label: "Theorem",
+    label: msg("Theorem"),
     icon: SigmaIcon,
     className: "border-l-subject-purple bg-subject-purple-soft",
     iconClassName: "text-subject-purple",
   },
   example: {
-    label: "Example",
+    label: msg("Example"),
     icon: LightbulbIcon,
     className: "border-l-success bg-success-soft",
     iconClassName: "text-success",
   },
   warning: {
-    label: "Warning",
+    label: msg("Warning"),
     icon: AlertTriangleIcon,
     className: "border-l-warning bg-warning-soft",
     iconClassName: "text-warning",
   },
   prerequisite: {
-    label: "Prerequisite",
+    label: msg("Prerequisite"),
     icon: BookmarkIcon,
     className: "border-l-subject-orange bg-subject-orange-soft",
     iconClassName: "text-subject-orange",
   },
   "ai-explanation": {
-    label: "Explanation",
+    label: msg("Explanation"),
     icon: SparklesIcon,
     className: "border-l-subject-pink bg-subject-pink-soft",
     iconClassName: "text-subject-pink",
@@ -90,11 +92,12 @@ export function StudyCallout({
   onDismiss,
   className,
 }: StudyCalloutProps) {
+  const { t } = useLocale();
   const spec = KINDS[kind];
   const Icon = spec.icon;
   const sourceLine =
     source ??
-    (kind === "ai-explanation" ? { label: "From conversation" } : undefined);
+    (kind === "ai-explanation" ? { label: t("From conversation") } : undefined);
 
   return (
     <aside
@@ -112,7 +115,7 @@ export function StudyCallout({
           className={cn("size-3.5 shrink-0", spec.iconClassName)}
           aria-hidden
         />
-        <span>{title ?? spec.label}</span>
+        <span>{title ?? t(spec.label)}</span>
       </p>
       <div className="document max-w-none text-[0.9375rem] [&>:first-child]:mt-0 [&>:last-child]:mb-0">
         {children}
@@ -135,10 +138,10 @@ export function StudyCallout({
           {pending ? (
             <span className="ml-auto flex gap-1">
               <Button size="sm" variant="ghost" onClick={onDismiss}>
-                Dismiss
+                {t("Dismiss")}
               </Button>
               <Button size="sm" variant="secondary" onClick={onAccept}>
-                Keep in note
+                {t("Keep in note")}
               </Button>
             </span>
           ) : null}

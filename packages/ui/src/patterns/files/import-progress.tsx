@@ -5,6 +5,7 @@ import { Button } from "@resit/ui/components/button";
 import { Progress } from "@resit/ui/components/progress";
 import { useLocale } from "@resit/ui/hooks/use-locale";
 import { formatBytes } from "@resit/ui/lib/format-bytes";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type ImportStage =
@@ -31,14 +32,14 @@ export interface ImportJob {
 }
 
 const STAGE_LABEL: Record<ImportStage, string> = {
-  queued: "Queued",
-  copying: "Copying",
-  hashing: "Checking file",
-  extracting: "Extracting text",
-  indexing: "Indexing",
-  done: "Done",
-  failed: "Failed",
-  cancelled: "Cancelled",
+  queued: msg("Queued"),
+  copying: msg("Copying"),
+  hashing: msg("Checking file"),
+  extracting: msg("Extracting text"),
+  indexing: msg("Indexing"),
+  done: msg("Done"),
+  failed: msg("Failed"),
+  cancelled: msg("Cancelled"),
 };
 
 const INDETERMINATE: ReadonlySet<ImportStage> = new Set(["queued", "hashing"]);
@@ -63,10 +64,10 @@ export function ImportJobRow({
   className,
   ...props
 }: ImportJobRowProps) {
-  const { number, percent } = useLocale();
+  const { number, percent, t } = useLocale();
   const running = !FINISHED.has(job.stage);
   const indeterminate = INDETERMINATE.has(job.stage);
-  const stage = STAGE_LABEL[job.stage];
+  const stage = t(STAGE_LABEL[job.stage]);
 
   return (
     <li
@@ -104,7 +105,7 @@ export function ImportJobRow({
           <Button
             variant="subtle"
             size="icon-sm"
-            aria-label={`Cancel import of ${job.fileName}`}
+            aria-label={t("Cancel import of {name}", { name: job.fileName })}
             onClick={() => onCancel?.(job.id)}
           >
             <XIcon />
@@ -121,7 +122,7 @@ export function ImportJobRow({
       {job.stage === "failed" ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <p className="min-w-0 flex-1 text-xs text-destructive">
-            {job.error ?? "Import failed."}
+            {job.error ?? t("Import failed.")}
           </p>
           <div className="flex gap-1">
             <Button
@@ -130,14 +131,14 @@ export function ImportJobRow({
               onClick={() => onRetry?.(job.id)}
             >
               <RotateCcwIcon />
-              Retry
+              {t("Retry")}
             </Button>
             <Button
               variant="subtle"
               size="sm"
               onClick={() => onRemove?.(job.id)}
             >
-              Remove
+              {t("Remove")}
             </Button>
           </div>
         </div>
@@ -145,10 +146,10 @@ export function ImportJobRow({
       {job.stage === "cancelled" ? (
         <div className="flex items-center gap-3">
           <p className="flex-1 text-xs text-muted-foreground">
-            Nothing was added to the workspace.
+            {t("Nothing was added to the workspace.")}
           </p>
           <Button variant="subtle" size="sm" onClick={() => onRemove?.(job.id)}>
-            Remove
+            {t("Remove")}
           </Button>
         </div>
       ) : null}
@@ -173,7 +174,7 @@ export function ImportProgressPanel({
   className,
   ...props
 }: ImportProgressPanelProps) {
-  const { number } = useLocale();
+  const { number, t } = useLocale();
   const done = jobs.filter((job) => job.stage === "done").length;
   const failed = jobs.filter((job) => job.stage === "failed").length;
   const cancelable = jobs.some(
@@ -182,15 +183,22 @@ export function ImportProgressPanel({
 
   const summary =
     jobs.length === 0
-      ? "No imports"
+      ? t("No imports")
       : failed > 0
-        ? `${number(done)} of ${number(jobs.length)} done · ${number(failed)} failed`
-        : `${number(done)} of ${number(jobs.length)} done`;
+        ? t("{done} of {total} done · {failed} failed", {
+            done: number(done),
+            total: number(jobs.length),
+            failed: number(failed),
+          })
+        : t("{done} of {total} done", {
+            done: number(done),
+            total: number(jobs.length),
+          });
 
   return (
     <section
       data-slot="import-progress-panel"
-      aria-label="Imports"
+      aria-label={t("Imports")}
       className={cn(
         "flex flex-col rounded-lg border border-border bg-background",
         className,
@@ -198,7 +206,7 @@ export function ImportProgressPanel({
       {...props}
     >
       <header className="flex h-toolbar items-center gap-2 border-b border-border px-3">
-        <h2 className="flex-1 text-sm font-medium">Importing</h2>
+        <h2 className="flex-1 text-sm font-medium">{t("Importing")}</h2>
         <span
           className="text-xs text-muted-foreground tabular-nums"
           aria-live="polite"
@@ -207,13 +215,13 @@ export function ImportProgressPanel({
         </span>
         {cancelable ? (
           <Button variant="subtle" size="sm" onClick={() => onCancelAll?.()}>
-            Cancel all
+            {t("Cancel all")}
           </Button>
         ) : null}
       </header>
       {jobs.length === 0 ? (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-          Drop PDFs here or use Import to add files.
+          {t("Drop PDFs here or use Import to add files.")}
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">

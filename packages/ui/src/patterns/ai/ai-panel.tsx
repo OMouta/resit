@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 import {
   ProviderMark,
@@ -73,7 +74,7 @@ export interface AiPanelProps {
  * bar, and the composer with the provider and model picker.
  */
 export function AiPanel({
-  title = "Conversation",
+  title: givenTitle,
   provider,
   scope,
   turns,
@@ -96,6 +97,8 @@ export function AiPanel({
   renderText,
   className,
 }: AiPanelProps) {
+  const { t } = useLocale();
+  const title = givenTitle ?? t("Conversation");
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastTurn = turns.at(-1);
   const streamingText = lastTurn?.role === "assistant" ? lastTurn.text : "";
@@ -109,7 +112,7 @@ export function AiPanel({
   const selectedProvider = provider.providers.find(
     (entry) => entry.id === provider.providerId,
   );
-  const providerName = selectedProvider?.name ?? "Assistant";
+  const providerName = selectedProvider?.name ?? t("Assistant");
   const modelName = (model: string | undefined) =>
     model
       ? (selectedProvider?.models.find((entry) => entry.id === model)?.name ??
@@ -140,13 +143,13 @@ export function AiPanel({
                   <Button
                     variant="subtle"
                     size="icon"
-                    aria-label="Context inspector"
+                    aria-label={t("Context inspector")}
                   >
                     <ListTreeIcon />
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent>What the turn included</TooltipContent>
+              <TooltipContent>{t("What the turn included")}</TooltipContent>
             </Tooltip>
             <PopoverContent align="end" className="w-80 p-2">
               <ContextInspector {...context} />
@@ -160,13 +163,13 @@ export function AiPanel({
               <Button
                 variant="subtle"
                 size="icon"
-                aria-label="New conversation"
+                aria-label={t("New conversation")}
                 onClick={onNewConversation}
               >
                 <PlusIcon />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>New conversation</TooltipContent>
+            <TooltipContent>{t("New conversation")}</TooltipContent>
           </Tooltip>
         ) : null}
         {onCollapse ? (
@@ -175,13 +178,13 @@ export function AiPanel({
               <Button
                 variant="subtle"
                 size="icon"
-                aria-label="Collapse panel"
+                aria-label={t("Collapse panel")}
                 onClick={onCollapse}
               >
                 <PanelRightCloseIcon />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Collapse</TooltipContent>
+            <TooltipContent>{t("Collapse")}</TooltipContent>
           </Tooltip>
         ) : null}
       </header>
@@ -195,11 +198,12 @@ export function AiPanel({
             ? (emptyState ?? (
                 <div className="flex flex-col items-center gap-1 py-12 text-center">
                   <p className="text-sm font-medium">
-                    Ask about what you are reading
+                    {t("Ask about what you are reading")}
                   </p>
                   <p className="max-w-60 text-xs text-muted-foreground">
-                    The conversation sees only what is in its scope. Attach a
-                    page, a selection, or a note to be precise.
+                    {t(
+                      "The conversation sees only what is in its scope. Attach a page, a selection, or a note to be precise.",
+                    )}
                   </p>
                 </div>
               ))

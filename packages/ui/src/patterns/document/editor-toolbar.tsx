@@ -39,6 +39,8 @@ import {
   ToggleGroupItem,
 } from "@resit/ui/components/toggle-group";
 import { shortcutLabel } from "@resit/ui/lib/keys";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 import {
@@ -62,12 +64,12 @@ export type EditorBlock =
   | "callout";
 
 const TEXT_STYLES: { value: TextStyle; label: string }[] = [
-  { value: "paragraph", label: "Paragraph" },
-  { value: "heading1", label: "Heading 1" },
-  { value: "heading2", label: "Heading 2" },
-  { value: "heading3", label: "Heading 3" },
-  { value: "quote", label: "Quote" },
-  { value: "code", label: "Code" },
+  { value: "paragraph", label: msg("Paragraph") },
+  { value: "heading1", label: msg("Heading 1") },
+  { value: "heading2", label: msg("Heading 2") },
+  { value: "heading3", label: msg("Heading 3") },
+  { value: "quote", label: msg("Quote") },
+  { value: "code", label: msg("Code") },
 ];
 
 const MARKS: {
@@ -76,21 +78,31 @@ const MARKS: {
   shortcut: string;
   icon: typeof BoldIcon;
 }[] = [
-  { value: "bold", label: "Bold", shortcut: "mod+b", icon: BoldIcon },
-  { value: "italic", label: "Italic", shortcut: "mod+i", icon: ItalicIcon },
+  { value: "bold", label: msg("Bold"), shortcut: "mod+b", icon: BoldIcon },
+  {
+    value: "italic",
+    label: msg("Italic"),
+    shortcut: "mod+i",
+    icon: ItalicIcon,
+  },
   {
     value: "underline",
-    label: "Underline",
+    label: msg("Underline"),
     shortcut: "mod+u",
     icon: UnderlineIcon,
   },
   {
     value: "strike",
-    label: "Strikethrough",
+    label: msg("Strikethrough"),
     shortcut: "mod+shift+s",
     icon: StrikethroughIcon,
   },
-  { value: "code", label: "Inline code", shortcut: "mod+e", icon: CodeIcon },
+  {
+    value: "code",
+    label: msg("Inline code"),
+    shortcut: "mod+e",
+    icon: CodeIcon,
+  },
 ];
 
 const BLOCKS: {
@@ -101,38 +113,38 @@ const BLOCKS: {
 }[] = [
   {
     value: "bulletList",
-    label: "Bullet list",
+    label: msg("Bullet list"),
     shortcut: "mod+shift+8",
     icon: ListIcon,
   },
   {
     value: "orderedList",
-    label: "Numbered list",
+    label: msg("Numbered list"),
     shortcut: "mod+shift+7",
     icon: ListOrderedIcon,
   },
   {
     value: "taskList",
-    label: "Task list",
+    label: msg("Task list"),
     shortcut: "mod+shift+9",
     icon: ListChecksIcon,
   },
   {
     value: "mathInline",
-    label: "Inline math",
+    label: msg("Inline math"),
     shortcut: "mod+m",
     icon: RadicalIcon,
   },
   {
     value: "mathBlock",
-    label: "Math block",
+    label: msg("Math block"),
     shortcut: "mod+shift+m",
     icon: SquareRadicalIcon,
   },
-  { value: "link", label: "Link", shortcut: "mod+k", icon: LinkIcon },
+  { value: "link", label: msg("Link"), shortcut: "mod+k", icon: LinkIcon },
   {
     value: "callout",
-    label: "Callout",
+    label: msg("Callout"),
     shortcut: "mod+shift+c",
     icon: StickyNoteIcon,
   },
@@ -182,6 +194,7 @@ export function EditorToolbar({
   end,
   className,
 }: EditorToolbarProps) {
+  const { t } = useLocale();
   const inlineMarks = minimal ? [] : compact ? MARKS.slice(0, 2) : MARKS;
   const overflowMarks = minimal ? MARKS : compact ? MARKS.slice(2) : [];
   const available = blocks
@@ -192,7 +205,7 @@ export function EditorToolbar({
   return (
     <div
       role="toolbar"
-      aria-label="Formatting"
+      aria-label={t("Formatting")}
       aria-disabled={disabled || undefined}
       className={cn(
         "flex h-toolbar min-w-0 items-center gap-1 bg-background px-3",
@@ -205,7 +218,7 @@ export function EditorToolbar({
         disabled={disabled}
       >
         <SelectTrigger
-          aria-label="Text style"
+          aria-label={t("Text style")}
           className={cn(
             "shrink-0 border-transparent bg-transparent shadow-none dark:bg-transparent",
             compact ? "w-28" : "w-32",
@@ -216,7 +229,7 @@ export function EditorToolbar({
         <SelectContent>
           {TEXT_STYLES.map((style) => (
             <SelectItem key={style.value} value={style.value}>
-              {style.label}
+              {t(style.label)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -234,18 +247,18 @@ export function EditorToolbar({
           if (changed) onToggleMark(changed.value);
         }}
         disabled={disabled}
-        aria-label="Text formatting"
+        aria-label={t("Text formatting")}
         className="gap-0.5"
       >
         {inlineMarks.map((mark) => (
           <ToolbarTooltip
             key={mark.value}
-            label={mark.label}
+            label={t(mark.label)}
             shortcut={mark.shortcut}
           >
             <ToggleGroupItem
               value={mark.value}
-              aria-label={mark.label}
+              aria-label={t(mark.label)}
               className="size-control flex-none rounded-control px-0 first:rounded-control last:rounded-control"
             >
               <mark.icon />
@@ -260,7 +273,7 @@ export function EditorToolbar({
           {inlineBlocks.slice(0, 3).map((block) => (
             <ToolbarButton
               key={block.value}
-              label={block.label}
+              label={t(block.label)}
               shortcut={block.shortcut}
               active={activeBlocks.includes(block.value)}
               disabled={disabled}
@@ -273,7 +286,7 @@ export function EditorToolbar({
           {inlineBlocks.slice(3).map((block) => (
             <ToolbarButton
               key={block.value}
-              label={block.label}
+              label={t(block.label)}
               shortcut={block.shortcut}
               active={activeBlocks.includes(block.value)}
               disabled={disabled}
@@ -291,7 +304,7 @@ export function EditorToolbar({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="More formatting"
+              aria-label={t("More formatting")}
               disabled={disabled}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -306,7 +319,7 @@ export function EditorToolbar({
                 onCheckedChange={() => onToggleMark(mark.value)}
               >
                 <mark.icon />
-                {mark.label}
+                {t(mark.label)}
                 <DropdownMenuShortcut>
                   {shortcutLabel(mark.shortcut).join("")}
                 </DropdownMenuShortcut>
@@ -319,7 +332,7 @@ export function EditorToolbar({
                 onSelect={() => onBlock(block.value)}
               >
                 <block.icon />
-                {block.label}
+                {t(block.label)}
                 <DropdownMenuShortcut>
                   {shortcutLabel(block.shortcut).join("")}
                 </DropdownMenuShortcut>
@@ -332,7 +345,7 @@ export function EditorToolbar({
       <ToolbarSeparator />
 
       <ToolbarButton
-        label="Undo"
+        label={t("Undo")}
         shortcut="mod+z"
         disabled={disabled || !canUndo}
         onClick={onUndo}
@@ -340,7 +353,7 @@ export function EditorToolbar({
         <Undo2Icon />
       </ToolbarButton>
       <ToolbarButton
-        label="Redo"
+        label={t("Redo")}
         shortcut="mod+shift+z"
         disabled={disabled || !canRedo}
         onClick={onRedo}

@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@resit/ui/components/dropdown-menu";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface WorkspaceSummary {
@@ -55,6 +56,7 @@ export function WorkspaceSwitcher({
   onExport,
   className,
 }: WorkspaceSwitcherProps) {
+  const { t } = useLocale();
   const others = recent.filter((entry) => entry.id !== workspace.id);
   return (
     <DropdownMenu>
@@ -67,14 +69,14 @@ export function WorkspaceSwitcher({
         title={workspace.path}
       >
         <span className="truncate">{workspace.name}</span>
-        {readOnly ? <Badge variant="muted">Read-only</Badge> : null}
+        {readOnly ? <Badge variant="muted">{t("Read-only")}</Badge> : null}
         <ChevronDownIcon
           aria-hidden
           className="size-3.5 shrink-0 text-muted-foreground"
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel>Recent</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("Recent")}</DropdownMenuLabel>
         <DropdownMenuItem disabled className="justify-between">
           <span className="flex min-w-0 flex-col">
             <span className="truncate">{workspace.name}</span>
@@ -82,11 +84,11 @@ export function WorkspaceSwitcher({
               {workspace.path}
             </span>
           </span>
-          <CheckIcon aria-label="Current workspace" />
+          <CheckIcon aria-label={t("Current workspace")} />
         </DropdownMenuItem>
         {others.length === 0 ? (
           <div className="px-2 py-1.5 text-xs text-subtle-foreground">
-            No other recent workspaces
+            {t("No other recent workspaces")}
           </div>
         ) : (
           others.map((entry) => (
@@ -107,16 +109,16 @@ export function WorkspaceSwitcher({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onCreate}>
           <PlusIcon />
-          Create workspace
+          {t("Create workspace")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onOpenFolder}>
           <FolderOpenIcon />
-          Open folder
+          {t("Open folder")}
         </DropdownMenuItem>
         {onOpenArchive ? (
           <DropdownMenuItem onSelect={onOpenArchive}>
             <ArchiveIcon />
-            Open .resit archive
+            {t("Open .resit archive")}
           </DropdownMenuItem>
         ) : null}
         {onExport ? (
@@ -124,7 +126,7 @@ export function WorkspaceSwitcher({
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onExport}>
               <DownloadIcon />
-              Export workspace…
+              {t("Export workspace…")}
             </DropdownMenuItem>
           </>
         ) : null}

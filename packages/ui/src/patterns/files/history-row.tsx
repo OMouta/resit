@@ -13,6 +13,7 @@ import { Badge } from "@resit/ui/components/badge";
 import { Button } from "@resit/ui/components/button";
 import { useLocale } from "@resit/ui/hooks/use-locale";
 import { formatBytes } from "@resit/ui/lib/format-bytes";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type RevisionCause =
@@ -36,6 +37,14 @@ const causeIcons: Record<RevisionCause, typeof SaveIcon> = {
   import: DownloadIcon,
 };
 
+const causeLabels: Record<RevisionCause, string> = {
+  "manual save": msg("manual save"),
+  autosave: msg("autosave"),
+  "ai edit": msg("assistant edit"),
+  restore: msg("restore"),
+  import: msg("import"),
+};
+
 export interface HistoryRevisionRowProps {
   revision: HistoryRevision;
   onPreview?: (id: string) => void;
@@ -50,7 +59,7 @@ export function HistoryRevisionRow({
   onRestore,
   className,
 }: HistoryRevisionRowProps) {
-  const { time, number } = useLocale();
+  const { time, number, t } = useLocale();
   const Icon = causeIcons[revision.cause];
   return (
     <div
@@ -65,11 +74,14 @@ export function HistoryRevisionRow({
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 text-sm">
           <span className="truncate font-medium">{revision.summary}</span>
-          {revision.current ? <Badge variant="info">Current</Badge> : null}
+          {revision.current ? (
+            <Badge variant="info">{t("Current")}</Badge>
+          ) : null}
         </p>
         <p className="text-xs text-muted-foreground">
           <span className="tabular-nums">{time(revision.at)}</span> ·{" "}
-          {revision.cause} · revision {number(revision.revision)} ·{" "}
+          {t(causeLabels[revision.cause])} ·{" "}
+          {t("revision {number}", { number: number(revision.revision) })} ·{" "}
           {formatBytes(revision.sizeBytes, number)}
         </p>
       </div>
@@ -80,7 +92,7 @@ export function HistoryRevisionRow({
             size="sm"
             onClick={() => onPreview(revision.id)}
           >
-            <EyeIcon /> Preview
+            <EyeIcon /> {t("Preview")}
           </Button>
         ) : null}
         {onRestore && !revision.current ? (
@@ -89,7 +101,7 @@ export function HistoryRevisionRow({
             size="sm"
             onClick={() => onRestore(revision.id)}
           >
-            <RotateCcwIcon /> Restore as new revision
+            <RotateCcwIcon /> {t("Restore as new revision")}
           </Button>
         ) : null}
       </span>
@@ -109,7 +121,7 @@ export function HistoryList({
   onRestore?: (id: string) => void;
   className?: string;
 }) {
-  const { date } = useLocale();
+  const { date, t } = useLocale();
   const groups = new Map<string, HistoryRevision[]>();
   for (const revision of revisions) {
     const key = date(revision.at);
@@ -123,7 +135,7 @@ export function HistoryList({
           className,
         )}
       >
-        <HistoryIcon className="size-4" /> No saved revisions yet.
+        <HistoryIcon className="size-4" /> {t("No saved revisions yet.")}
       </p>
     );
   return (

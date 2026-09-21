@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 /**
  * Icon button that copies `value` and briefly shows a check. Pass `onCopy`
@@ -21,6 +22,7 @@ export function CopyButton({
   label: string;
   onCopy?: (value: string) => void;
 }) {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -34,7 +36,7 @@ export function CopyButton({
         <Button
           variant="subtle"
           size="icon-sm"
-          aria-label={copied ? "Copied" : label}
+          aria-label={copied ? t("Copied") : label}
           onClick={() => {
             if (onCopy) onCopy(value);
             else void navigator.clipboard?.writeText(value);
@@ -44,7 +46,7 @@ export function CopyButton({
           {copied ? <CheckIcon className="text-success" /> : <CopyIcon />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{copied ? "Copied" : label}</TooltipContent>
+      <TooltipContent>{copied ? t("Copied") : label}</TooltipContent>
     </Tooltip>
   );
 }

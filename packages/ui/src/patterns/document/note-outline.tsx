@@ -2,6 +2,7 @@ import { ListTreeIcon } from "lucide-react";
 import { useRef } from "react";
 
 import { EmptyState } from "@resit/ui/components/empty-state";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { useRovingFocus } from "@resit/ui/hooks/use-roving-focus";
 import { cn } from "@resit/ui/lib/utils";
 
@@ -26,6 +27,7 @@ export function NoteOutline({
   onNavigate,
   className,
 }: NoteOutlineProps) {
+  const { t } = useLocale();
   const listRef = useRef<HTMLUListElement>(null);
   const { onKeyDown } = useRovingFocus(listRef, {
     itemSelector: "[data-outline-item]",
@@ -37,8 +39,8 @@ export function NoteOutline({
       <EmptyState
         size="compact"
         icon={<ListTreeIcon />}
-        title="No headings yet"
-        description="Headings in the note show up here."
+        title={t("No headings yet")}
+        description={t("Headings in the note show up here.")}
         className={className}
       />
     );
@@ -50,7 +52,7 @@ export function NoteOutline({
       : headings[0]?.id;
 
   return (
-    <nav aria-label="Outline" className={cn("min-w-0", className)}>
+    <nav aria-label={t("Outline")} className={cn("min-w-0", className)}>
       <ul
         ref={listRef}
         onKeyDown={onKeyDown}

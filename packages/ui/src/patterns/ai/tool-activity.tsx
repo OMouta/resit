@@ -7,10 +7,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 import type { ToolCall } from "@resit/ui/patterns/ai/types";
 
 function ToolRow({ call }: { call: ToolCall }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const Icon =
     call.status === "running"
@@ -34,7 +36,13 @@ function ToolRow({ call }: { call: ToolCall }) {
             call.status === "done" && "text-success",
             call.status === "failed" && "text-destructive",
           )}
-          aria-label={call.status}
+          aria-label={
+            call.status === "running"
+              ? t("Running")
+              : call.status === "failed"
+                ? t("Failed")
+                : t("Done")
+          }
         />
         <span className="min-w-0 flex-1 truncate text-foreground/90">
           {call.summary}
@@ -78,6 +86,7 @@ export function ToolActivity({
   calls: ToolCall[];
   className?: string;
 }) {
+  const { t } = useLocale();
   const [collapsed, setCollapsed] = useState(false);
   if (calls.length === 0) return null;
   const running = calls.some((call) => call.status === "running");
@@ -96,10 +105,15 @@ export function ToolActivity({
         <WrenchIcon className="size-3.5" />
         <span className="flex-1 text-left">
           {running
-            ? "Working…"
-            : `${calls.length} tool ${calls.length === 1 ? "call" : "calls"}`}
+            ? t("Working…")
+            : calls.length === 1
+              ? t("1 tool call")
+              : t("{count} tool calls", { count: calls.length })}
           {failed > 0 ? (
-            <span className="text-destructive"> · {failed} failed</span>
+            <span className="text-destructive">
+              {" · "}
+              {t("{count} failed", { count: failed })}
+            </span>
           ) : null}
         </span>
         <ChevronRightIcon

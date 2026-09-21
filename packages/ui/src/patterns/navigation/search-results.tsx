@@ -18,6 +18,8 @@ import {
   subjectColorClasses,
   type SubjectColor,
 } from "@resit/ui/lib/subject-color";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type SearchResultKind =
@@ -34,6 +36,15 @@ export interface SearchResult {
   /** Heading or block inside the note. */
   location?: string;
 }
+
+const kindLabels: Record<SearchResultKind, string> = {
+  note: msg("Notes"),
+  pdf: msg("PDFs"),
+  image: msg("Images"),
+  attachment: msg("Attachments"),
+  flashcard: msg("Flashcards"),
+  conversation: msg("Conversations"),
+};
 
 const icons: Record<SearchResultKind, typeof FileTextIcon> = {
   note: FileTextIcon,
@@ -74,6 +85,7 @@ export function SearchResultRow({
   selected?: boolean;
   onOpen: (result: SearchResult) => void;
 }) {
+  const { t } = useLocale();
   const Icon = icons[result.kind];
   const colors = result.subject
     ? subjectColorClasses[result.subject.color]
@@ -101,7 +113,7 @@ export function SearchResultRow({
           <span className="truncate font-medium">{result.title}</span>
           {result.page !== undefined ? (
             <span className="shrink-0 text-xs text-muted-foreground">
-              p. {result.page}
+              {t("p. {page}", { page: result.page })}
             </span>
           ) : null}
           {result.location ? (
@@ -164,9 +176,10 @@ export function SearchResults({
   header,
   className,
 }: SearchResultsProps) {
+  const { t } = useLocale();
   const groups = new Map<string, SearchResult[]>();
   for (const result of results) {
-    const key = result.subject?.name ?? "Library";
+    const key = result.subject?.name ?? t("Library");
     groups.set(key, [...(groups.get(key) ?? []), result]);
   }
   return (
@@ -179,10 +192,10 @@ export function SearchResults({
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Search"
+            aria-label={t("Search")}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search notes, PDFs, flashcards, and conversations"
+            placeholder={t("Search notes, PDFs, flashcards, and conversations")}
             className="h-control-lg pl-9 text-base"
             autoFocus
           />
@@ -196,9 +209,11 @@ export function SearchResults({
             }
             variant="outline"
             size="sm"
-            aria-label="Search scope"
+            aria-label={t("Search scope")}
           >
-            <ToggleGroupItem value="workspace">Whole workspace</ToggleGroupItem>
+            <ToggleGroupItem value="workspace">
+              {t("Whole workspace")}
+            </ToggleGroupItem>
             {scopeLabels?.subject ? (
               <ToggleGroupItem value="subject">
                 {scopeLabels.subject}
@@ -218,12 +233,12 @@ export function SearchResults({
                 onKindsChange(value as SearchResultKind[])
               }
               size="sm"
-              aria-label="Result kinds"
+              aria-label={t("Result kinds")}
               className="ml-auto"
             >
               {kinds.map((kind) => (
-                <ToggleGroupItem key={kind} value={kind} className="capitalize">
-                  {kind === "pdf" ? "PDFs" : `${kind}s`}
+                <ToggleGroupItem key={kind} value={kind}>
+                  {t(kindLabels[kind])}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
@@ -232,16 +247,26 @@ export function SearchResults({
       </div>
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {status === "searching" ? (
-          <p className="px-3 py-6 text-sm text-muted-foreground">Searching…</p>
+          <p className="px-3 py-6 text-sm text-muted-foreground">
+            {t("Searching…")}
+          </p>
         ) : null}
         {status === "done" && results.length === 0 ? (
           <EmptyState
             icon={<SearchIcon />}
-            title={query ? `No results for “${query}”` : "Type to search"}
+            title={
+              query
+                ? t("No results for “{query}”", { query })
+                : t("Type to search")
+            }
             description={
               query
-                ? "Try another spelling, or search inside PDFs by enabling PDFs."
-                : "Search covers note text, PDF text, flashcards, and conversations in the chosen scope."
+                ? t(
+                    "Try another spelling, or search inside PDFs by enabling PDFs.",
+                  )
+                : t(
+                    "Search covers note text, PDF text, flashcards, and conversations in the chosen scope.",
+                  )
             }
           />
         ) : null}

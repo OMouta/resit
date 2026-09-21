@@ -35,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import {
   subjectColorClasses,
   type SubjectColor,
@@ -124,6 +125,7 @@ export function DocumentTabs({
   end,
   className,
 }: DocumentTabsProps) {
+  const { t } = useLocale();
   const stripRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<string[]>([]);
   const [drag, setDrag] = useState<{
@@ -272,7 +274,7 @@ export function DocumentTabs({
       <div
         ref={stripRef}
         role="tablist"
-        aria-label="Open documents"
+        aria-label={t("Open documents")}
         className="scrollbar-none relative flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto px-1.5 py-1.5 [scrollbar-width:none]"
       >
         {tabs.map((tab, index) => {
@@ -288,7 +290,14 @@ export function DocumentTabs({
               role="tab"
               data-tab-id={tab.id}
               aria-selected={active}
-              aria-label={`${tab.title}${tab.subject && tab.showSubject ? `, ${tab.subject.name}` : ""}${tab.dirty ? ", unsaved" : ""}${tab.missing ? ", missing" : ""}`}
+              aria-label={[
+                tab.title,
+                tab.subject && tab.showSubject ? tab.subject.name : null,
+                tab.dirty ? t("unsaved") : null,
+                tab.missing ? t("missing") : null,
+              ]
+                .filter(Boolean)
+                .join(", ")}
               tabIndex={active ? 0 : -1}
               onKeyDown={(event) => onKeyDown(event, index)}
               onPointerDown={(event) => onPointerDown(event, index, tab.id)}
@@ -351,7 +360,7 @@ export function DocumentTabs({
                 <button
                   type="button"
                   tabIndex={-1}
-                  aria-label={`Close ${tab.title}`}
+                  aria-label={t("Close {title}", { title: tab.title })}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -386,7 +395,7 @@ export function DocumentTabs({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={`${hidden.length} more tabs`}
+                  aria-label={t("{count} more tabs", { count: hidden.length })}
                   className="flex h-6 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   <ChevronDownIcon className="size-3.5" />
@@ -415,7 +424,7 @@ export function DocumentTabs({
           {onNewTab ? (
             <button
               type="button"
-              aria-label="New tab"
+              aria-label={t("New tab")}
               onClick={onNewTab}
               className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
             >

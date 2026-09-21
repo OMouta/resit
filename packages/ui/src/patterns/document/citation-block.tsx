@@ -2,6 +2,7 @@ import { AlertTriangleIcon, FileTextIcon, QuoteIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface CitationSource {
@@ -33,6 +34,7 @@ function SourceLine({
   source: CitationSource;
   missing: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <span className="flex min-w-0 items-center gap-1.5 text-xs">
       {missing ? (
@@ -51,7 +53,9 @@ function SourceLine({
         {source.title}
       </span>
       {source.page !== undefined ? (
-        <span className="shrink-0 text-muted-foreground">p. {source.page}</span>
+        <span className="shrink-0 text-muted-foreground">
+          {t("p. {page}", { page: source.page })}
+        </span>
       ) : null}
       {source.subjectName ? (
         <span className="shrink-0 text-subtle-foreground">
@@ -74,6 +78,7 @@ export function CitationBlock({
   onRemove,
   className,
 }: CitationBlockProps) {
+  const { t } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const isLong = typeof quote === "string" && quote.length > 260;
   return (
@@ -108,7 +113,7 @@ export function CitationBlock({
           onClick={() => setExpanded((value) => !value)}
           className="mt-1 text-xs text-muted-foreground hover:text-foreground"
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? t("Show less") : t("Show more")}
         </button>
       ) : null}
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -125,14 +130,14 @@ export function CitationBlock({
         )}
         {missing ? (
           <span className="flex items-center gap-2 text-xs text-warning">
-            Source not found
+            {t("Source not found")}
             {onLocate ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onLocate(source)}
               >
-                Locate…
+                {t("Locate…")}
               </Button>
             ) : null}
             {onRemove ? (
@@ -141,7 +146,7 @@ export function CitationBlock({
                 size="sm"
                 onClick={() => onRemove(source)}
               >
-                Remove link
+                {t("Remove link")}
               </Button>
             ) : null}
           </span>
@@ -163,11 +168,19 @@ export function CitationChip({
   onOpen?: (source: CitationSource) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
       onClick={() => onOpen?.(source)}
-      title={`${source.title}${source.page !== undefined ? `, page ${source.page}` : ""}`}
+      title={
+        source.page !== undefined
+          ? t("{title}, page {page}", {
+              title: source.title,
+              page: source.page,
+            })
+          : source.title
+      }
       className={cn(
         "inline-flex max-w-full items-center gap-1 rounded-md border bg-control px-1.5 py-0.5 text-xs text-foreground shadow-control hover:bg-control-hover focus-visible:shadow-focus focus-visible:outline-none",
         missing && "border-warning/50 text-muted-foreground",
@@ -181,7 +194,9 @@ export function CitationChip({
       )}
       <span className="truncate">{source.title}</span>
       {source.page !== undefined ? (
-        <span className="shrink-0 text-muted-foreground">p. {source.page}</span>
+        <span className="shrink-0 text-muted-foreground">
+          {t("p. {page}", { page: source.page })}
+        </span>
       ) : null}
     </button>
   );

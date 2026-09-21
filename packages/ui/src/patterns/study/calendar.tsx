@@ -14,6 +14,7 @@ import {
 import { cn } from "@resit/ui/lib/utils";
 import {
   activityIcons,
+  agendaStatusLabel,
   type ActivityKind,
   type AgendaStatus,
 } from "@resit/ui/patterns/study/agenda-item";
@@ -42,16 +43,23 @@ export function CalendarActivityCard({
   onOpen,
   className,
 }: CalendarActivityCardProps) {
-  const { time } = useLocale();
+  const { time, t } = useLocale();
   const Icon = activityIcons[kind];
   const colors = subjectColorClasses[subjectColor];
+  const statusLabel = t(agendaStatusLabel(status));
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`${title}, ${subjectName}, ${time(start)} to ${time(end)}, ${status}`}
+          aria-label={t("{title}, {subject}, {start} to {end}, {status}", {
+            title,
+            subject: subjectName,
+            start: time(start),
+            end: time(end),
+            status: statusLabel,
+          })}
           className={cn(
             "flex w-full flex-col gap-0.5 rounded-md border-l-[3px] bg-control px-2 py-1.5 text-left text-xs shadow-control hover:bg-control-hover focus-visible:shadow-focus focus-visible:outline-none",
             colors.border,
@@ -78,7 +86,7 @@ export function CalendarActivityCard({
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {subjectName} · {status}
+        {subjectName} · {statusLabel}
       </TooltipContent>
     </Tooltip>
   );
@@ -99,7 +107,7 @@ export function AssessmentCard({
   onOpen?: () => void;
   className?: string;
 }) {
-  const { date: formatDate } = useLocale();
+  const { date: formatDate, t } = useLocale();
   const target = new Date(date);
   const base = now ?? new Date();
   const days = Math.ceil((target.getTime() - base.getTime()) / 86_400_000);
@@ -123,7 +131,9 @@ export function AssessmentCard({
       </span>
       <span className="shrink-0 text-right">
         <span className="block text-lg font-semibold tabular-nums">{days}</span>
-        <span className="block text-2xs text-muted-foreground">days</span>
+        <span className="block text-2xs text-muted-foreground">
+          {days === 1 ? t("day") : t("days")}
+        </span>
       </span>
     </button>
   );

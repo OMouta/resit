@@ -13,6 +13,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 
 export type SaveState =
@@ -23,36 +25,36 @@ const meta: Record<
   { label: string; icon: typeof CheckIcon; className: string; action?: string }
 > = {
   saved: {
-    label: "Saved",
+    label: msg("Saved"),
     icon: CheckIcon,
     className: "text-muted-foreground",
   },
   saving: {
-    label: "Saving…",
+    label: msg("Saving…"),
     icon: Loader2Icon,
     className: "text-muted-foreground",
   },
   unsaved: {
-    label: "Unsaved changes",
+    label: msg("Unsaved changes"),
     icon: CloudOffIcon,
     className: "text-foreground",
   },
   error: {
-    label: "Not saved",
+    label: msg("Not saved"),
     icon: AlertCircleIcon,
     className: "text-destructive",
-    action: "Retry",
+    action: msg("Retry"),
   },
   "read-only": {
-    label: "Read-only",
+    label: msg("Read-only"),
     icon: LockIcon,
     className: "text-muted-foreground",
   },
   conflict: {
-    label: "Conflict",
+    label: msg("Conflict"),
     icon: GitCompareIcon,
     className: "text-warning",
-    action: "Review",
+    action: msg("Review"),
   },
 };
 
@@ -74,7 +76,10 @@ export function SaveStatus({
   compact = false,
   className,
 }: SaveStatusProps) {
-  const { label, icon: Icon, className: tone, action } = meta[state];
+  const { t } = useLocale();
+  const { icon: Icon, className: tone } = meta[state];
+  const label = t(meta[state].label);
+  const action = meta[state].action ? t(meta[state].action) : undefined;
   const tip = compact ? [label, detail].filter(Boolean).join(". ") : detail;
   const content = (
     <span
@@ -127,7 +132,10 @@ export function SaveStatusLine({
   onAction,
   className,
 }: SaveStatusProps) {
-  const { label, icon: Icon, className: tone, action } = meta[state];
+  const { t } = useLocale();
+  const { icon: Icon, className: tone } = meta[state];
+  const label = t(meta[state].label);
+  const action = meta[state].action ? t(meta[state].action) : undefined;
   return (
     <div
       role="status"

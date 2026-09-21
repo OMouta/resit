@@ -10,6 +10,8 @@ import { useState } from "react";
 
 import { Button } from "@resit/ui/components/button";
 import { Textarea } from "@resit/ui/components/textarea";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import { MathText } from "@resit/ui/patterns/document/math";
 
@@ -30,19 +32,19 @@ const outcomeMeta: Record<
   { label: string; icon: typeof CheckIcon; className: string; icon_: string }
 > = {
   correct: {
-    label: "Correct",
+    label: msg("Correct"),
     icon: CheckIcon,
     className: "border-success/30 bg-success-soft",
     icon_: "bg-success text-success-foreground",
   },
   partial: {
-    label: "Partly right",
+    label: msg("Partly right"),
     icon: MinusIcon,
     className: "border-warning/30 bg-warning-soft",
     icon_: "bg-warning text-warning-foreground",
   },
   incorrect: {
-    label: "Not yet",
+    label: msg("Not yet"),
     icon: XIcon,
     className: "border-destructive/30 bg-danger-soft",
     icon_: "bg-destructive text-destructive-foreground",
@@ -59,6 +61,7 @@ export function AnswerFeedback({
   onNext,
   className,
 }: AnswerFeedbackProps) {
+  const { t } = useLocale();
   const meta = outcomeMeta[outcome];
   const Icon = meta.icon;
   return (
@@ -81,10 +84,10 @@ export function AnswerFeedback({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <p className="text-sm font-medium">
-          {meta.label}
+          {t(meta.label)}
           <span className="font-normal text-muted-foreground">
-            {" "}
-            · you answered{" "}
+            {" · "}
+            {t("you answered")}{" "}
           </span>
           <code className="rounded-xs bg-background/70 px-1 font-mono text-xs">
             {answer}
@@ -97,12 +100,14 @@ export function AnswerFeedback({
           <MathText
             className="text-sm text-muted-foreground"
             paragraphClassName="my-0"
-          >{`Next: ${nextStep}`}</MathText>
+          >
+            {t("Next: {step}", { step: nextStep })}
+          </MathText>
         ) : null}
         <div className="mt-1 flex gap-2">
           {outcome !== "correct" && onTryAgain ? (
             <Button size="sm" variant="secondary" onClick={onTryAgain}>
-              <RotateCcwIcon /> Try again
+              <RotateCcwIcon /> {t("Try again")}
             </Button>
           ) : null}
           {onNext ? (
@@ -111,7 +116,7 @@ export function AnswerFeedback({
               variant={outcome === "correct" ? "default" : "outline"}
               onClick={onNext}
             >
-              Next <ArrowRightIcon />
+              {t("Next")} <ArrowRightIcon />
             </Button>
           ) : null}
         </div>
@@ -156,13 +161,14 @@ export function ExerciseBlock({
   defaultAnswer = "",
   className,
 }: ExerciseBlockProps) {
+  const { t } = useLocale();
   const [answer, setAnswer] = useState(defaultAnswer);
   const [showHint, setShowHint] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   return (
     <section
       data-slot="exercise-block"
-      aria-label={`Exercise: ${conceptName}`}
+      aria-label={t("Exercise: {name}", { name: conceptName })}
       className={cn(
         "flex flex-col gap-4 rounded-panel border bg-background p-5 shadow-sm",
         className,
@@ -177,7 +183,7 @@ export function ExerciseBlock({
           onClick={onOpenSource}
           className="text-xs text-muted-foreground hover:text-foreground hover:underline"
         >
-          From {sourceTitle}
+          {t("From {title}", { title: sourceTitle })}
         </button>
       </header>
       <div className="document max-w-none">
@@ -193,10 +199,10 @@ export function ExerciseBlock({
           }}
         >
           <Textarea
-            aria-label="Your answer"
+            aria-label={t("Your answer")}
             value={answer}
             onChange={(event) => setAnswer(event.target.value)}
-            placeholder="Write your answer, for example (−3, 2)"
+            placeholder={t("Write your answer, for example (−3, 2)")}
             className="min-h-20 font-mono"
             disabled={status === "checking"}
           />
@@ -206,7 +212,7 @@ export function ExerciseBlock({
               loading={status === "checking"}
               disabled={!answer.trim()}
             >
-              Check
+              {t("Check")}
             </Button>
             {hint ? (
               <Button
@@ -216,7 +222,7 @@ export function ExerciseBlock({
                 onClick={() => setShowHint((value) => !value)}
                 aria-expanded={showHint}
               >
-                <LightbulbIcon /> {showHint ? "Hide hint" : "Show hint"}
+                <LightbulbIcon /> {showHint ? t("Hide hint") : t("Show hint")}
               </Button>
             ) : null}
             <Button
@@ -227,7 +233,7 @@ export function ExerciseBlock({
               onClick={() => setShowSolution((value) => !value)}
               aria-expanded={showSolution}
             >
-              {showSolution ? "Hide solution" : "Show solution"}
+              {showSolution ? t("Hide solution") : t("Show solution")}
             </Button>
           </div>
         </form>
@@ -250,7 +256,7 @@ export function ExerciseBlock({
       {showSolution ? (
         <div className="document max-w-none rounded-md bg-muted px-3 py-2 text-sm">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Solution
+            {t("Solution")}
           </p>
           <MathText>{solution}</MathText>
         </div>

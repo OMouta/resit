@@ -102,11 +102,11 @@ export function AttachmentDetails({
   className,
   ...props
 }: AttachmentDetailsProps) {
-  const { number, dateTime } = useLocale();
+  const { number, dateTime, t } = useLocale();
   return (
     <section
       data-slot="attachment-details"
-      aria-label={`Details for ${title}`}
+      aria-label={t("Details for {title}", { title })}
       className={cn("flex flex-col gap-4 p-4", className)}
       {...props}
     >
@@ -118,33 +118,33 @@ export function AttachmentDetails({
           <h2 className="truncate text-base font-semibold" title={title}>
             {title}
           </h2>
-          <p className="text-xs text-muted-foreground">Attachment</p>
+          <p className="text-xs text-muted-foreground">{t("Attachment")}</p>
         </div>
       </header>
 
       <dl className="flex flex-col gap-1.5">
-        <Row label="Path">
-          <Mono value={path} copyLabel="Copy path" onCopy={onCopy} />
+        <Row label={t("Path")}>
+          <Mono value={path} copyLabel={t("Copy path")} onCopy={onCopy} />
         </Row>
-        <Row label="Size">{formatBytes(sizeBytes, number)}</Row>
-        <Row label="Type">
+        <Row label={t("Size")}>{formatBytes(sizeBytes, number)}</Row>
+        <Row label={t("Type")}>
           <code className="font-mono text-xs">{mediaType}</code>
         </Row>
         <Row label="SHA-256">
           <Mono
             value={truncateMiddle(sha256)}
             full={sha256}
-            copyLabel="Copy hash"
+            copyLabel={t("Copy hash")}
             onCopy={onCopy}
           />
         </Row>
-        <Row label="Added">{dateTime(addedAt)}</Row>
-        <Row label="Modified">{dateTime(modifiedAt)}</Row>
+        <Row label={t("Added")}>{dateTime(addedAt)}</Row>
+        <Row label={t("Modified")}>{dateTime(modifiedAt)}</Row>
         {sidecar ? (
-          <Row label="Sidecar">
+          <Row label={t("Sidecar")}>
             <Mono
               value={sidecar}
-              copyLabel="Copy sidecar path"
+              copyLabel={t("Copy sidecar path")}
               onCopy={onCopy}
             />
           </Row>
@@ -153,12 +153,17 @@ export function AttachmentDetails({
 
       <div className="flex flex-col gap-1">
         <h3 className="text-xs font-medium text-muted-foreground">
-          Referenced by
-          {referencedBy.length > 0 ? ` (${number(referencedBy.length)})` : ""}
+          {referencedBy.length > 0
+            ? t("Referenced by ({count})", {
+                count: number(referencedBy.length),
+              })
+            : t("Referenced by")}
         </h3>
         {referencedBy.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No notes link to this file. Moving it to trash breaks nothing.
+            {t(
+              "No notes link to this file. Moving it to trash breaks nothing.",
+            )}
           </p>
         ) : (
           <ul className="flex flex-col">
@@ -184,15 +189,15 @@ export function AttachmentDetails({
       <div className="flex flex-wrap gap-1.5">
         <Button variant="outline" size="sm" onClick={() => onOpen?.()}>
           <ExternalLinkIcon />
-          Open
+          {t("Open")}
         </Button>
         <Button variant="outline" size="sm" onClick={() => onShowInFolder?.()}>
           <FolderOpenIcon />
-          Show in folder
+          {t("Show in folder")}
         </Button>
         <Button variant="outline" size="sm" onClick={() => onReplaceSource?.()}>
           <RefreshCwIcon />
-          Replace source
+          {t("Replace source")}
         </Button>
         <Button
           variant="destructive-outline"
@@ -200,7 +205,7 @@ export function AttachmentDetails({
           onClick={() => onMoveToTrash?.()}
         >
           <Trash2Icon />
-          Move to trash
+          {t("Move to trash")}
         </Button>
       </div>
     </section>

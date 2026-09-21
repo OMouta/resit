@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { Input } from "@resit/ui/components/input";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
@@ -35,6 +36,7 @@ export function PageControls({
   defaultDraft,
   className,
 }: PageControlsProps) {
+  const { t } = useLocale();
   const [draft, setDraft] = useState(defaultDraft ?? String(page));
   useEffect(() => {
     setDraft(String(page));
@@ -50,11 +52,11 @@ export function PageControls({
   return (
     <div
       role="group"
-      aria-label="Page"
+      aria-label={t("Page")}
       className={cn("flex items-center gap-0.5", className)}
     >
       <ToolbarButton
-        label="First page"
+        label={t("First page")}
         shortcut="home"
         disabled={disabled || page <= 1}
         onClick={() => onPageChange(1)}
@@ -62,7 +64,7 @@ export function PageControls({
         <ChevronsLeftIcon />
       </ToolbarButton>
       <ToolbarButton
-        label="Previous page"
+        label={t("Previous page")}
         shortcut="arrowleft"
         disabled={disabled || page <= 1}
         onClick={() => onPageChange(page - 1)}
@@ -71,10 +73,12 @@ export function PageControls({
       </ToolbarButton>
       <span className="flex items-center gap-1 px-1 text-sm tabular-nums">
         <Input
-          aria-label="Page number"
+          aria-label={t("Page number")}
           aria-invalid={invalid || undefined}
           title={
-            invalid ? `Enter a page between 1 and ${pageCount}` : undefined
+            invalid
+              ? t("Enter a page between 1 and {count}", { count: pageCount })
+              : undefined
           }
           inputMode="numeric"
           value={draft}
@@ -98,7 +102,7 @@ export function PageControls({
         </span>
       </span>
       <ToolbarButton
-        label="Next page"
+        label={t("Next page")}
         shortcut="arrowright"
         disabled={disabled || page >= pageCount}
         onClick={() => onPageChange(page + 1)}
@@ -106,7 +110,7 @@ export function PageControls({
         <ChevronRightIcon />
       </ToolbarButton>
       <ToolbarButton
-        label="Last page"
+        label={t("Last page")}
         shortcut="end"
         disabled={disabled || page >= pageCount}
         onClick={() => onPageChange(pageCount)}

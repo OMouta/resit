@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@resit/ui/components/dialog";
 import { Label } from "@resit/ui/components/label";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 export interface UnsavedFile {
   id: string;
@@ -37,6 +38,7 @@ export function UnsavedChangesDialog({
   onDiscard,
   onCancel,
 }: UnsavedChangesDialogProps) {
+  const { t } = useLocale();
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(files.map((file) => file.id)),
   );
@@ -48,13 +50,19 @@ export function UnsavedChangesDialog({
         <DialogHeader>
           <DialogTitle>
             {multiple
-              ? `Save changes to ${files.length} notes?`
-              : `Save changes to ${single?.title ?? "this note"}?`}
+              ? t("Save changes to {count} notes?", { count: files.length })
+              : single
+                ? t("Save changes to {title}?", { title: single.title })
+                : t("Save changes to this note?")}
           </DialogTitle>
           <DialogDescription>
             {multiple
-              ? "Unsaved notes are listed below. Unchecked notes keep their draft in the recovery folder."
-              : "If you don’t save, the draft stays in the recovery folder until you reopen the note."}
+              ? t(
+                  "Unsaved notes are listed below. Unchecked notes keep their draft in the recovery folder.",
+                )
+              : t(
+                  "If you don’t save, the draft stays in the recovery folder until you reopen the note.",
+                )}
           </DialogDescription>
         </DialogHeader>
         {multiple ? (
@@ -93,17 +101,19 @@ export function UnsavedChangesDialog({
         ) : null}
         <DialogFooter className="sm:justify-between">
           <Button variant="destructive-outline" onClick={onDiscard}>
-            Don’t save
+            {t("Don’t save")}
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onCancel}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               onClick={() => onSave(Array.from(selected))}
               disabled={multiple && selected.size === 0}
             >
-              {multiple ? `Save ${selected.size}` : "Save"}
+              {multiple
+                ? t("Save {count}", { count: selected.size })
+                : t("Save")}
             </Button>
           </div>
         </DialogFooter>

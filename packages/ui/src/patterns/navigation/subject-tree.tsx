@@ -18,6 +18,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { useRovingFocus } from "@resit/ui/hooks/use-roving-focus";
 import {
   subjectColorClasses,
@@ -300,6 +301,7 @@ export function SubjectTree({
   draggingId,
   className,
 }: SubjectTreeProps) {
+  const { t } = useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const [internalSelected, setInternalSelected] = useState<string | undefined>(
     () => selectedId ?? subjects[0]?.id,
@@ -421,7 +423,7 @@ export function SubjectTree({
     <div
       ref={ref}
       role="tree"
-      aria-label="Subjects"
+      aria-label={t("Subjects")}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
       className={cn("group/tree flex flex-col gap-px px-2", className)}
@@ -445,7 +447,13 @@ export function SubjectTree({
               onSelect={() => select(resource.id)}
               onActivate={() => onOpenResource(resource.id)}
               typeahead={resource.title}
-              label={`${resource.title}${resource.missing ? ", missing" : ""}${resource.dirty ? ", unsaved changes" : ""}`}
+              label={[
+                resource.title,
+                resource.missing ? t("missing") : null,
+                resource.dirty ? t("unsaved changes") : null,
+              ]
+                .filter(Boolean)
+                .join(", ")}
               actions={renderActions?.(row)}
               drag={dragging(row)}
               className={cn(resource.missing && "text-muted-foreground")}
@@ -468,11 +476,13 @@ export function SubjectTree({
               {resource.dirty ? (
                 <span
                   className="size-1.5 shrink-0 rounded-full bg-foreground/70"
-                  title="Unsaved changes"
+                  title={t("Unsaved changes")}
                 />
               ) : null}
               {resource.missing ? (
-                <span className="shrink-0 text-2xs text-warning">Missing</span>
+                <span className="shrink-0 text-2xs text-warning">
+                  {t("Missing")}
+                </span>
               ) : null}
             </TreeRow>
           );
@@ -500,7 +510,15 @@ export function SubjectTree({
                 onSelect={() => select(id)}
                 onToggle={() => onExpandedChange(id, !open)}
                 typeahead={name}
-                label={`${name} folder${node.folder.linked ? `, ${node.folder.linked}` : ""}, ${node.total} items`}
+                label={[
+                  t("{name} folder", { name }),
+                  node.folder.linked ?? null,
+                  node.total === 1
+                    ? t("1 item")
+                    : t("{count} items", { count: node.total }),
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
                 actions={renderActions?.(row)}
                 drag={dragging(row)}
               >
@@ -521,7 +539,9 @@ export function SubjectTree({
               </TreeRow>
               {open ? (
                 node.children.length === 0 && node.items.length === 0 ? (
-                  <EmptyRow level={level + 1}>Nothing in here yet</EmptyRow>
+                  <EmptyRow level={level + 1}>
+                    {t("Nothing in here yet")}
+                  </EmptyRow>
                 ) : (
                   <>
                     {node.children.map((child) =>
@@ -547,7 +567,14 @@ export function SubjectTree({
               onSelect={() => select(subject.id)}
               onToggle={() => onExpandedChange(subject.id, !expanded)}
               typeahead={subject.name}
-              label={`${subject.name}${subject.archived ? ", archived" : ""}${subject.linked ? `, ${subject.linked}` : ""}, ${count} resources`}
+              label={[
+                subject.name,
+                subject.archived ? t("archived") : null,
+                subject.linked ?? null,
+                count === 1 ? t("1 item") : t("{count} items", { count }),
+              ]
+                .filter(Boolean)
+                .join(", ")}
               actions={renderActions?.({ kind: "subject", id: subject.id })}
               drag={dragging({ kind: "subject", id: subject.id })}
               className={cn(
@@ -571,7 +598,7 @@ export function SubjectTree({
               <span className="flex-1" />
               {subject.archived ? (
                 <span className="shrink-0 text-2xs font-normal text-subtle-foreground">
-                  Archived
+                  {t("Archived")}
                 </span>
               ) : null}
               <span className="shrink-0 text-2xs font-normal tabular-nums text-subtle-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
@@ -581,7 +608,7 @@ export function SubjectTree({
             {expanded ? (
               <>
                 {count === 0 && tree.length === 0 ? (
-                  <EmptyRow level={2}>No resources yet</EmptyRow>
+                  <EmptyRow level={2}>{t("Nothing in here yet")}</EmptyRow>
                 ) : null}
                 {tree.map((node) => renderFolder(node, 2))}
                 {roots.map((item) => renderResource(item, 2))}

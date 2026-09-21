@@ -14,11 +14,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import { MathText } from "@resit/ui/patterns/document/math";
 
 export type QuizQuestionStatus =
   "unanswered" | "answered" | "flagged" | "current";
+
+const statusLabels: Record<QuizQuestionStatus, string> = {
+  answered: msg("answered"),
+  unanswered: msg("unanswered"),
+  flagged: msg("flagged"),
+  current: msg("current"),
+};
 
 export interface QuizNavigationProps {
   questions: { id: string; number: number; status: QuizQuestionStatus }[];
@@ -44,6 +53,7 @@ export function QuizNavigation({
   timeRemaining,
   className,
 }: QuizNavigationProps) {
+  const { t } = useLocale();
   const index = questions.findIndex((question) => question.id === currentId);
   const current = questions[index];
   const answered = questions.filter(
@@ -56,7 +66,7 @@ export function QuizNavigation({
       className={cn("flex flex-col gap-3", className)}
     >
       <div className="flex flex-wrap items-center gap-3">
-        <ol aria-label="Questions" className="flex flex-wrap gap-1">
+        <ol aria-label={t("Questions")} className="flex flex-wrap gap-1">
           {questions.map((question) => {
             const isCurrent = question.id === currentId;
             return (
@@ -66,7 +76,10 @@ export function QuizNavigation({
                     <button
                       type="button"
                       aria-current={isCurrent ? "step" : undefined}
-                      aria-label={`Question ${question.number}, ${question.status === "flagged" ? "flagged" : question.status}`}
+                      aria-label={t("Question {number}, {status}", {
+                        number: question.number,
+                        status: t(statusLabels[question.status]),
+                      })}
                       onClick={() => onSelect(question.id)}
                       className={cn(
                         "relative flex size-8 items-center justify-center rounded-md border text-sm font-medium tabular-nums transition-colors",
@@ -90,7 +103,10 @@ export function QuizNavigation({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Question {question.number} · {question.status}
+                    {t("Question {number} · {status}", {
+                      number: question.number,
+                      status: t(statusLabels[question.status]),
+                    })}
                   </TooltipContent>
                 </Tooltip>
               </li>
@@ -98,7 +114,10 @@ export function QuizNavigation({
           })}
         </ol>
         <span className="text-xs text-muted-foreground">
-          {answered} of {questions.length} answered
+          {t("{answered} of {total} answered", {
+            answered,
+            total: questions.length,
+          })}
         </span>
         {timeRemaining ? (
           <span className="ml-auto flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
@@ -108,14 +127,14 @@ export function QuizNavigation({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" onClick={onPrevious} disabled={index <= 0}>
-          <ChevronLeftIcon /> Previous
+          <ChevronLeftIcon /> {t("Previous")}
         </Button>
         <Button
           variant="outline"
           onClick={onNext}
           disabled={index >= questions.length - 1}
         >
-          Next <ChevronRightIcon />
+          {t("Next")} <ChevronRightIcon />
         </Button>
         <Button
           variant={current?.status === "flagged" ? "secondary" : "subtle"}
@@ -125,10 +144,12 @@ export function QuizNavigation({
           <FlagIcon
             className={cn(current?.status === "flagged" && "fill-current")}
           />{" "}
-          {current?.status === "flagged" ? "Flagged" : "Flag"}
+          {current?.status === "flagged" ? t("Flagged") : t("Flag")}
         </Button>
         <Button className="ml-auto" onClick={onSubmit}>
-          Submit{unanswered > 0 ? ` (${unanswered} unanswered)` : ""}
+          {unanswered > 0
+            ? t("Submit ({count} unanswered)", { count: unanswered })
+            : t("Submit")}
         </Button>
       </div>
     </div>
@@ -155,15 +176,16 @@ export function QuizQuestion({
   onChange,
   className,
 }: QuizQuestionProps) {
+  const { t } = useLocale();
   return (
     <fieldset
       data-slot="quiz-question"
       className={cn("flex flex-col gap-4", className)}
     >
-      <legend className="sr-only">Question {number}</legend>
+      <legend className="sr-only">{t("Question {number}", { number })}</legend>
       <div className="document max-w-none">
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          Question {number}
+          {t("Question {number}", { number })}
         </p>
         <MathText>{text}</MathText>
       </div>
@@ -194,10 +216,10 @@ export function QuizQuestion({
         </RadioGroup>
       ) : (
         <Textarea
-          aria-label={`Answer to question ${number}`}
+          aria-label={t("Answer to question {number}", { number })}
           value={value ?? ""}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Write your answer. Use $…$ for mathematics."
+          placeholder={t("Write your answer. Use $…$ for mathematics.")}
           className="min-h-28"
         />
       )}

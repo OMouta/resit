@@ -1,4 +1,5 @@
 import { ResitMark } from "@resit/ui/components/resit-mark";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export interface SplashProps {
@@ -11,6 +12,7 @@ export interface SplashProps {
 
 /** The window while resit reads its settings and the last workspace. */
 export function Splash({ message, leaving = false, className }: SplashProps) {
+  const { t } = useLocale();
   return (
     <div
       data-slot="splash"
@@ -30,7 +32,7 @@ export function Splash({ message, leaving = false, className }: SplashProps) {
             resit
           </span>
           <span className="text-xs text-muted-foreground">
-            {message ?? "Opening your workspace…"}
+            {message ?? t("Opening your workspace…")}
           </span>
         </div>
       </div>

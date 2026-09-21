@@ -76,7 +76,7 @@ export function TrashRow({
   onDeletePermanently,
   className,
 }: TrashRowProps) {
-  const { relative } = useLocale();
+  const { relative, t } = useLocale();
   const [confirm, setConfirm] = useState(false);
   const Icon = icons[item.kind];
   return (
@@ -93,15 +93,17 @@ export function TrashRow({
         <p className="truncate text-sm font-medium">{item.title}</p>
         <p className="truncate text-xs text-muted-foreground">
           {item.kind === "subject"
-            ? `Subject · ${item.ownedCount ?? 0} resources inside`
-            : (item.subjectName ?? "Library")}{" "}
-          · deleted {relative(item.deletedAt, now)} ·{" "}
+            ? t("Subject · {count} notes and files", {
+                count: item.ownedCount ?? 0,
+              })
+            : (item.subjectName ?? t("Library"))}{" "}
+          · {t("deleted {when}", { when: relative(item.deletedAt, now) })} ·{" "}
           <code className="font-mono">{item.originalPath}</code>
         </p>
       </div>
       <span className="flex shrink-0 items-center gap-1 opacity-0 group-hover/trash:opacity-100 group-focus-within/trash:opacity-100">
         <Button variant="outline" size="sm" onClick={() => onRestore(item.id)}>
-          <RotateCcwIcon /> Restore
+          <RotateCcwIcon /> {t("Restore")}
         </Button>
         {onDeletePermanently ? (
           <Button
@@ -109,7 +111,7 @@ export function TrashRow({
             size="sm"
             onClick={() => setConfirm(true)}
           >
-            <Trash2Icon /> Delete permanently
+            <Trash2Icon /> {t("Delete permanently")}
           </Button>
         ) : null}
       </span>
@@ -117,16 +119,19 @@ export function TrashRow({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete “{item.title}” permanently?
+              {t("Delete “{title}” permanently?", { title: item.title })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {item.kind === "subject"
-                ? `The subject and its ${item.ownedCount ?? 0} resources will be removed from disk. History for these files is kept.`
-                : "The file will be removed from disk. Its history revisions are kept."}
+                ? t(
+                    "The subject and its {count} notes and files are removed from disk. This cannot be undone.",
+                    { count: item.ownedCount ?? 0 },
+                  )
+                : t("It is removed from disk. This cannot be undone.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -134,7 +139,7 @@ export function TrashRow({
                 onDeletePermanently?.(item.id);
               }}
             >
-              Delete permanently
+              {t("Delete permanently")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -158,12 +163,15 @@ export function TrashList({
   onEmpty?: () => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   if (items.length === 0)
     return (
       <EmptyState
         icon={<Trash2Icon />}
-        title="Trash is empty"
-        description="Deleted notes, documents, and subjects wait here until you delete them permanently."
+        title={t("Trash is empty")}
+        description={t(
+          "Deleted notes, documents, and subjects wait here until you delete them permanently.",
+        )}
         size="compact"
       />
     );
@@ -171,11 +179,13 @@ export function TrashList({
     <div className={cn("flex flex-col gap-1", className)}>
       <div className="flex items-center justify-between px-2.5 pb-1">
         <p className="text-xs text-muted-foreground">
-          {items.length} {items.length === 1 ? "item" : "items"}
+          {items.length === 1
+            ? t("1 item")
+            : t("{count} items", { count: items.length })}
         </p>
         {onEmpty ? (
           <Button variant="subtle" size="sm" onClick={onEmpty}>
-            Empty trash
+            {t("Empty trash")}
           </Button>
         ) : null}
       </div>

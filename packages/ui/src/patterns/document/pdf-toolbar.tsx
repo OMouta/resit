@@ -39,6 +39,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { cn } from "@resit/ui/lib/utils";
 import { PageControls } from "@resit/ui/patterns/document/page-controls";
 import {
@@ -51,6 +53,7 @@ export type AnnotationTool =
   "select" | "highlight" | "underline" | "region" | "comment";
 export type AnnotationColor = "yellow" | "green" | "blue" | "pink";
 
+/** Each highlight colour's `label` is English. Show it through `t`. */
 export const annotationColorClasses: Record<
   AnnotationColor,
   { swatch: string; fill: string; label: string }
@@ -58,22 +61,22 @@ export const annotationColorClasses: Record<
   yellow: {
     swatch: "bg-subject-yellow",
     fill: "bg-subject-yellow/35",
-    label: "Yellow",
+    label: msg("Yellow"),
   },
   green: {
     swatch: "bg-subject-green",
     fill: "bg-subject-green/35",
-    label: "Green",
+    label: msg("Green"),
   },
   blue: {
     swatch: "bg-subject-blue",
     fill: "bg-subject-blue/35",
-    label: "Blue",
+    label: msg("Blue"),
   },
   pink: {
     swatch: "bg-subject-pink",
     fill: "bg-subject-pink/35",
-    label: "Pink",
+    label: msg("Pink"),
   },
 };
 
@@ -83,16 +86,31 @@ const tools: {
   icon: typeof MousePointer2Icon;
   key: string;
 }[] = [
-  { id: "select", label: "Select", icon: MousePointer2Icon, key: "V" },
-  { id: "highlight", label: "Highlight", icon: HighlighterIcon, key: "H" },
-  { id: "underline", label: "Underline", icon: UnderlineIcon, key: "U" },
-  { id: "region", label: "Region", icon: SquareDashedIcon, key: "R" },
-  { id: "comment", label: "Comment", icon: MessageSquarePlusIcon, key: "C" },
+  { id: "select", label: msg("Select"), icon: MousePointer2Icon, key: "V" },
+  {
+    id: "highlight",
+    label: msg("Highlight"),
+    icon: HighlighterIcon,
+    key: "H",
+  },
+  {
+    id: "underline",
+    label: msg("Underline"),
+    icon: UnderlineIcon,
+    key: "U",
+  },
+  { id: "region", label: msg("Region"), icon: SquareDashedIcon, key: "R" },
+  {
+    id: "comment",
+    label: msg("Comment"),
+    icon: MessageSquarePlusIcon,
+    key: "C",
+  },
 ];
 
 const zoomOptions: { value: string; label: string }[] = [
-  { value: "fit-width", label: "Fit width" },
-  { value: "fit-page", label: "Fit page" },
+  { value: "fit-width", label: msg("Fit width") },
+  { value: "fit-page", label: msg("Fit page") },
   ...[0.5, 0.75, 1, 1.25, 1.5, 2].map((zoom) => ({
     value: String(zoom),
     label: `${Math.round(zoom * 100)}%`,
@@ -151,6 +169,7 @@ export function PdfToolbar({
   end,
   className,
 }: PdfToolbarProps) {
+  const { t } = useLocale();
   const zoomNumber = typeof zoom === "number" ? zoom : 1;
   const annotation =
     tool && onToolChange && color && onColorChange
@@ -160,7 +179,7 @@ export function PdfToolbar({
   return (
     <div
       role="toolbar"
-      aria-label="PDF tools"
+      aria-label={t("PDF tools")}
       className={cn(
         "flex h-toolbar min-w-0 items-center gap-1 border-b bg-background px-3 @container",
         className,
@@ -168,7 +187,7 @@ export function PdfToolbar({
     >
       {onToggleSidebar ? (
         <ToolbarButton
-          label="Side panel"
+          label={t("Side panel")}
           active={sidebarOpen}
           onClick={onToggleSidebar}
           disabled={disabled}
@@ -186,7 +205,7 @@ export function PdfToolbar({
       {!compact ? (
         <>
           <ToolbarButton
-            label="Zoom out"
+            label={t("Zoom out")}
             shortcut="Mod+-"
             disabled={disabled || zoomNumber <= 0.5}
             onClick={() =>
@@ -202,19 +221,23 @@ export function PdfToolbar({
             onValueChange={(value) => onZoomChange(valueToZoom(value))}
             disabled={disabled}
           >
-            <SelectTrigger size="sm" aria-label="Zoom" className="w-[6.5rem]">
+            <SelectTrigger
+              size="sm"
+              aria-label={t("Zoom")}
+              className="w-[6.5rem]"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {zoomOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.label)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <ToolbarButton
-            label="Zoom in"
+            label={t("Zoom in")}
             shortcut="Mod+="
             disabled={disabled || zoomNumber >= 2}
             onClick={() =>
@@ -227,7 +250,7 @@ export function PdfToolbar({
           </ToolbarButton>
           {onRotate ? (
             <ToolbarButton
-              label="Rotate"
+              label={t("Rotate")}
               onClick={onRotate}
               disabled={disabled}
             >
@@ -239,7 +262,7 @@ export function PdfToolbar({
       ) : null}
       {onToggleSearch ? (
         <ToolbarButton
-          label="Search in document"
+          label={t("Search in document")}
           shortcut="Mod+F"
           active={searchOpen}
           onClick={onToggleSearch}
@@ -255,7 +278,7 @@ export function PdfToolbar({
           onValueChange={(value) =>
             value && annotation.onToolChange(value as AnnotationTool)
           }
-          aria-label="Annotation tool"
+          aria-label={t("Annotation tool")}
           disabled={disabled}
           className="ml-auto"
         >
@@ -264,14 +287,14 @@ export function PdfToolbar({
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={id}
-                  aria-label={label}
+                  aria-label={t(label)}
                   className="px-0 [&_svg]:size-4"
                 >
                   <Icon />
                 </ToggleGroupItem>
               </TooltipTrigger>
               <TooltipContent>
-                {label} · {key}
+                {t(label)} · {key}
               </TooltipContent>
             </Tooltip>
           ))}
@@ -287,7 +310,9 @@ export function PdfToolbar({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    aria-label={`Annotation colour: ${colors.label}`}
+                    aria-label={t("Annotation colour: {color}", {
+                      color: t(colors.label),
+                    })}
                     disabled={disabled}
                     className="ml-1 flex size-8 items-center justify-center rounded-control hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none disabled:opacity-50"
                   >
@@ -300,10 +325,12 @@ export function PdfToolbar({
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>Colour: {colors.label}</TooltipContent>
+              <TooltipContent>
+                {t("Colour: {color}", { color: t(colors.label) })}
+              </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("Annotation colour")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={annotation.color}
                 onValueChange={(value) =>
@@ -319,7 +346,7 @@ export function PdfToolbar({
                           annotationColorClasses[key].swatch,
                         )}
                       />
-                      {annotationColorClasses[key].label}
+                      {t(annotationColorClasses[key].label)}
                     </DropdownMenuRadioItem>
                   ),
                 )}
@@ -332,7 +359,7 @@ export function PdfToolbar({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="More tools"
+              aria-label={t("More tools")}
               disabled={disabled}
               className="ml-1 flex size-8 items-center justify-center rounded-control text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:shadow-focus focus-visible:outline-none"
             >
@@ -340,27 +367,27 @@ export function PdfToolbar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel>Zoom</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("Zoom")}</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={zoomToValue(zoom)}
               onValueChange={(value) => onZoomChange(valueToZoom(value))}
             >
               {zoomOptions.map((option) => (
                 <DropdownMenuRadioItem key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.label)}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
             {onRotate ? (
               <DropdownMenuItem onSelect={onRotate}>
-                <RotateCwIcon /> Rotate
+                <RotateCwIcon /> {t("Rotate")}
               </DropdownMenuItem>
             ) : null}
             {annotation ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>Annotation colour</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("Annotation colour")}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={annotation.color}
                   onValueChange={(value) =>
@@ -377,7 +404,7 @@ export function PdfToolbar({
                           annotationColorClasses[key].swatch,
                         )}
                       />
-                      {annotationColorClasses[key].label}
+                      {t(annotationColorClasses[key].label)}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>

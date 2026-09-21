@@ -40,11 +40,11 @@ export function UserMessage({
   at: string | Date;
   className?: string;
 }) {
-  const { time } = useLocale();
+  const { time, t } = useLocale();
   return (
     <article
       data-slot="user-message"
-      aria-label="Your message"
+      aria-label={t("Your message")}
       className={cn("flex flex-col items-end gap-1.5", className)}
     >
       {attachments && attachments.length > 0 ? (
@@ -74,11 +74,15 @@ export function CitationMarker({
   citation: Citation;
   onOpen?: (citation: Citation) => void;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
       onClick={() => onOpen?.(citation)}
-      aria-label={`Citation ${index}: ${citation.label}`}
+      aria-label={t("Citation {number}: {label}", {
+        number: index,
+        label: citation.label,
+      })}
       className="inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-info-soft px-1 align-text-top text-2xs font-medium text-link hover:underline"
     >
       {index}
@@ -93,9 +97,10 @@ export function CitationList({
   citations: Citation[];
   onOpen?: (citation: Citation) => void;
 }) {
+  const { t } = useLocale();
   if (citations.length === 0) return null;
   return (
-    <ol aria-label="Sources" className="flex flex-col gap-1 border-t pt-2">
+    <ol aria-label={t("Sources")} className="flex flex-col gap-1 border-t pt-2">
       {citations.map((citation, index) => (
         <li key={citation.id} className="flex items-center gap-2 text-xs">
           <span className="flex h-4 min-w-4 items-center justify-center rounded-sm bg-info-soft px-1 text-2xs font-medium text-link">
@@ -115,12 +120,12 @@ export function CitationList({
             <span className="truncate">{citation.label}</span>
             {citation.page !== undefined ? (
               <span className="shrink-0 text-muted-foreground">
-                p. {citation.page}
+                {t("p. {page}", { page: citation.page })}
               </span>
             ) : null}
           </button>
           {citation.missing ? (
-            <span className="shrink-0 text-warning">not found</span>
+            <span className="shrink-0 text-warning">{t("not found")}</span>
           ) : null}
         </li>
       ))}
@@ -139,6 +144,7 @@ export function TurnErrorCard({
   onDiagnostics?: () => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   return (
     <div
       role="alert"
@@ -154,12 +160,12 @@ export function TurnErrorCard({
         <div className="flex gap-2">
           {error.retryable && onRetry ? (
             <Button size="sm" variant="secondary" onClick={onRetry}>
-              <RefreshCwIcon /> Retry
+              <RefreshCwIcon /> {t("Retry")}
             </Button>
           ) : null}
           {onDiagnostics ? (
             <Button size="sm" variant="subtle" onClick={onDiagnostics}>
-              Show diagnostics
+              {t("Show diagnostics")}
             </Button>
           ) : null}
         </div>
@@ -169,8 +175,12 @@ export function TurnErrorCard({
 }
 
 function TypingDots() {
+  const { t } = useLocale();
   return (
-    <span className="inline-flex items-center gap-0.5" aria-label="Writing">
+    <span
+      className="inline-flex items-center gap-0.5"
+      aria-label={t("Writing…")}
+    >
       {[0, 1, 2].map((index) => (
         <span
           key={index}
@@ -212,7 +222,7 @@ export interface AssistantMessageProps {
 export function AssistantMessage({
   status,
   text,
-  providerName = "Assistant",
+  providerName: givenProviderName,
   modelName,
   avatar,
   tools,
@@ -230,13 +240,14 @@ export function AssistantMessage({
   renderText,
   className,
 }: AssistantMessageProps) {
-  const { time } = useLocale();
+  const { time, t } = useLocale();
+  const providerName = givenProviderName ?? t("Assistant");
   const [copied, setCopied] = useState(false);
   return (
     <article
       data-slot="assistant-message"
       data-status={status}
-      aria-label={`${providerName} message`}
+      aria-label={t("Message from {provider}", { provider: providerName })}
       aria-busy={status === "streaming"}
       className={cn("group/message flex gap-2.5", className)}
     >
@@ -262,10 +273,10 @@ export function AssistantMessage({
         ) : null}
         {status === "stopped" ? (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <SquareIcon className="size-3" /> Stopped by you
+            <SquareIcon className="size-3" /> {t("Stopped by you")}
             {onResume ? (
               <Button size="sm" variant="subtle" onClick={onResume}>
-                <PlayIcon /> Resume
+                <PlayIcon /> {t("Resume")}
               </Button>
             ) : null}
           </p>
@@ -286,14 +297,16 @@ export function AssistantMessage({
         ) : null}
         <footer className="flex h-6 items-center gap-1 text-2xs text-subtle-foreground">
           {status === "streaming" ? (
-            <span className="text-muted-foreground">Writing…</span>
+            <span className="text-muted-foreground">{t("Writing…")}</span>
           ) : (
             <>
               <span>{modelName ?? providerName}</span>
               <span>·</span>
               <time>{time(at)}</time>
               {status === "awaiting-review" ? (
-                <span className="ml-1 text-link">· Awaiting your review</span>
+                <span className="ml-1 text-link">
+                  · {t("Awaiting your review")}
+                </span>
               ) : null}
               <span className="ml-auto flex items-center opacity-0 transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100">
                 {onCopy && text ? (
@@ -302,7 +315,7 @@ export function AssistantMessage({
                       <Button
                         variant="subtle"
                         size="icon-sm"
-                        aria-label="Copy message"
+                        aria-label={t("Copy message")}
                         onClick={() => {
                           onCopy(text);
                           setCopied(true);
@@ -312,7 +325,7 @@ export function AssistantMessage({
                         {copied ? <CheckIcon /> : <CopyIcon />}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Copy</TooltipContent>
+                    <TooltipContent>{t("Copy")}</TooltipContent>
                   </Tooltip>
                 ) : null}
                 {onInsert && text ? (
@@ -321,13 +334,13 @@ export function AssistantMessage({
                       <Button
                         variant="subtle"
                         size="icon-sm"
-                        aria-label="Insert into note"
+                        aria-label={t("Insert into note")}
                         onClick={() => onInsert(text)}
                       >
                         <FileTextIcon />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Insert into note</TooltipContent>
+                    <TooltipContent>{t("Insert into note")}</TooltipContent>
                   </Tooltip>
                 ) : null}
                 {onRegenerate ? (
@@ -336,13 +349,13 @@ export function AssistantMessage({
                       <Button
                         variant="subtle"
                         size="icon-sm"
-                        aria-label="Regenerate"
+                        aria-label={t("Regenerate")}
                         onClick={onRegenerate}
                       >
                         <RefreshCwIcon />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Regenerate</TooltipContent>
+                    <TooltipContent>{t("Regenerate")}</TooltipContent>
                   </Tooltip>
                 ) : null}
               </span>

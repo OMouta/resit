@@ -13,6 +13,7 @@ import {
 import { Button } from "@resit/ui/components/button";
 import { Progress } from "@resit/ui/components/progress";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import {
   subjectColorClasses,
   type SubjectColor,
@@ -38,12 +39,15 @@ export const activityIcons: Record<ActivityKind, typeof BookOpenIcon> = {
 };
 
 const statusMeta: Record<AgendaStatus, { label: string; className: string }> = {
-  scheduled: { label: "Scheduled", className: "text-muted-foreground" },
-  "in-progress": { label: "In progress", className: "text-link" },
-  completed: { label: "Done", className: "text-success" },
-  overdue: { label: "Overdue", className: "text-warning" },
-  suspended: { label: "Suspended", className: "text-subtle-foreground" },
-  skipped: { label: "Skipped", className: "text-subtle-foreground" },
+  scheduled: { label: msg("Scheduled"), className: "text-muted-foreground" },
+  "in-progress": { label: msg("In progress"), className: "text-link" },
+  completed: { label: msg("Done"), className: "text-success" },
+  overdue: { label: msg("Overdue"), className: "text-warning" },
+  suspended: {
+    label: msg("Suspended"),
+    className: "text-subtle-foreground",
+  },
+  skipped: { label: msg("Skipped"), className: "text-subtle-foreground" },
 };
 
 export interface AgendaItemProps {
@@ -65,6 +69,11 @@ export interface AgendaItemProps {
   className?: string;
 }
 
+/** A status's name in English. Show it through `t`. */
+export function agendaStatusLabel(status: AgendaStatus): string {
+  return statusMeta[status].label;
+}
+
 /** One planned study activity. Overdue items offer a new time; nothing moves on its own. */
 export function AgendaItem({
   id,
@@ -84,7 +93,7 @@ export function AgendaItem({
   onResume,
   className,
 }: AgendaItemProps) {
-  const { time } = useLocale();
+  const { time, t } = useLocale();
   const Icon = activityIcons[kind];
   const colors = subjectColorClasses[subjectColor];
   const meta = statusMeta[status];
@@ -130,7 +139,7 @@ export function AgendaItem({
             </p>
           </div>
           <span className={cn("shrink-0 text-xs font-medium", meta.className)}>
-            {meta.label}
+            {t(meta.label)}
           </span>
         </div>
         {progress ? (
@@ -139,7 +148,7 @@ export function AgendaItem({
               value={(progress.done / progress.total) * 100}
               className="h-1"
               tone={status === "completed" ? "success" : "default"}
-              aria-label="Progress"
+              aria-label={t("Progress")}
             />
             <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
               {progress.done}/{progress.total}
@@ -149,14 +158,14 @@ export function AgendaItem({
         <div className="flex flex-wrap gap-1.5">
           {status === "scheduled" && onStart ? (
             <Button size="sm" onClick={() => onStart(id)}>
-              <PlayIcon /> Start
+              <PlayIcon /> {t("Start")}
             </Button>
           ) : null}
           {status === "in-progress" ? (
             <>
               {onContinue ? (
                 <Button size="sm" onClick={() => onContinue(id)}>
-                  Continue
+                  {t("Continue")}
                 </Button>
               ) : null}
               {onComplete ? (
@@ -165,7 +174,7 @@ export function AgendaItem({
                   variant="outline"
                   onClick={() => onComplete(id)}
                 >
-                  <CheckIcon /> Mark done
+                  <CheckIcon /> {t("Mark done")}
                 </Button>
               ) : null}
             </>
@@ -178,7 +187,7 @@ export function AgendaItem({
                   variant="secondary"
                   onClick={() => onReschedule(id)}
                 >
-                  <CalendarClockIcon /> Propose new time
+                  <CalendarClockIcon /> {t("Propose new time")}
                 </Button>
               ) : null}
               {onComplete ? (
@@ -187,19 +196,19 @@ export function AgendaItem({
                   variant="subtle"
                   onClick={() => onComplete(id)}
                 >
-                  <CheckIcon /> Already done
+                  <CheckIcon /> {t("Already done")}
                 </Button>
               ) : null}
             </>
           ) : null}
           {status === "suspended" && onResume ? (
             <Button size="sm" variant="outline" onClick={() => onResume(id)}>
-              <PlayIcon /> Resume
+              <PlayIcon /> {t("Resume")}
             </Button>
           ) : null}
           {status === "suspended" ? (
             <span className="flex items-center gap-1 text-xs text-subtle-foreground">
-              <PauseIcon className="size-3.5" /> Not scheduled
+              <PauseIcon className="size-3.5" /> {t("Not scheduled")}
             </span>
           ) : null}
         </div>

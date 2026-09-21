@@ -1,3 +1,5 @@
+import { msg } from "@resit/ui/lib/i18n";
+
 export const SUBJECT_COLORS = [
   "gray",
   "brown",
@@ -11,6 +13,19 @@ export const SUBJECT_COLORS = [
 ] as const;
 
 export type SubjectColor = (typeof SUBJECT_COLORS)[number];
+
+/** Each colour's name in English. Show it through `t`. */
+export const subjectColorLabels: Record<SubjectColor, string> = {
+  gray: msg("Grey"),
+  brown: msg("Brown"),
+  orange: msg("Orange"),
+  yellow: msg("Yellow"),
+  green: msg("Green"),
+  blue: msg("Blue"),
+  purple: msg("Purple"),
+  pink: msg("Pink"),
+  red: msg("Red"),
+};
 
 /** Tailwind classes for the strong and soft variants of a subject colour. */
 export const subjectColorClasses: Record<

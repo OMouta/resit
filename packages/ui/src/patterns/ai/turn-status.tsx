@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@resit/ui/components/button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 
 export type PanelStatus =
@@ -32,6 +33,7 @@ export function TurnStatusBar({
   onConnect,
   className,
 }: TurnStatusBarProps) {
+  const { t } = useLocale();
   const base = "flex h-10 items-center gap-2 px-4 text-xs";
   switch (status.kind) {
     case "idle":
@@ -45,10 +47,10 @@ export function TurnStatusBar({
         >
           <Loader2Icon className="size-3.5 animate-spin text-primary" />
           {status.phase === "thinking"
-            ? "Thinking…"
+            ? t("Thinking…")
             : status.phase === "tools"
-              ? "Using study tools…"
-              : "Writing…"}
+              ? t("Using study tools…")
+              : t("Writing…")}
         </div>
       );
     case "awaiting-review":
@@ -58,8 +60,9 @@ export function TurnStatusBar({
           className={cn(base, "bg-info-soft/60 text-foreground", className)}
         >
           <AlertCircleIcon className="size-3.5 text-link" />
-          {status.pending}{" "}
-          {status.pending === 1 ? "edit awaits" : "edits await"} your review
+          {status.pending === 1
+            ? t("1 edit awaits your review")
+            : t("{count} edits await your review", { count: status.pending })}
           {onReview ? (
             <Button
               size="sm"
@@ -67,7 +70,7 @@ export function TurnStatusBar({
               className="ml-auto"
               onClick={onReview}
             >
-              Review
+              {t("Review")}
             </Button>
           ) : null}
         </div>
@@ -78,7 +81,7 @@ export function TurnStatusBar({
           role="status"
           className={cn(base, "text-muted-foreground", className)}
         >
-          <SquareIcon className="size-3" /> Stopped
+          <SquareIcon className="size-3" /> {t("Stopped")}
         </div>
       );
     case "failed":
@@ -91,7 +94,7 @@ export function TurnStatusBar({
           <span className="min-w-0 flex-1 truncate">{status.message}</span>
           {onRetry ? (
             <Button size="sm" variant="secondary" onClick={onRetry}>
-              Retry
+              {t("Retry")}
             </Button>
           ) : null}
         </div>
@@ -105,12 +108,14 @@ export function TurnStatusBar({
           <PlugZapIcon className="size-3.5 text-warning" />
           <span className="min-w-0 flex-1 truncate">
             {status.providerName
-              ? `${status.providerName} is not connected`
-              : "No AI provider connected"}
+              ? t("{provider} is not connected", {
+                  provider: status.providerName,
+                })
+              : t("No AI provider connected")}
           </span>
           {onConnect ? (
             <Button size="sm" variant="secondary" onClick={onConnect}>
-              Connect
+              {t("Connect")}
             </Button>
           ) : null}
         </div>

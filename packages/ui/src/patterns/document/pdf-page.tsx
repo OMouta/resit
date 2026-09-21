@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { Button } from "@resit/ui/components/button";
 import { Skeleton } from "@resit/ui/components/skeleton";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 import { cn } from "@resit/ui/lib/utils";
 import {
   annotationColorClasses,
@@ -45,11 +46,12 @@ export function PdfPageFrame({
   current = false,
   className,
 }: PdfPageFrameProps) {
+  const { t } = useLocale();
   return (
     <figure
       data-slot="pdf-page"
       data-page={pageNumber}
-      aria-label={`Page ${pageNumber}`}
+      aria-label={t("Page {page}", { page: pageNumber })}
       className={cn("relative mx-auto flex w-full flex-col gap-1.5", className)}
       style={{ maxWidth: width }}
     >
@@ -81,10 +83,10 @@ export function PdfPageFrame({
           >
             <AlertTriangleIcon className="size-5 text-warning" />
             <p className="text-sm font-medium">
-              Could not render page {pageNumber}
+              {t("Could not render page {page}", { page: pageNumber })}
             </p>
             <p className="text-xs text-[#5a5a5a]">
-              The page data is damaged or the renderer stopped.
+              {t("The page data is damaged or the renderer stopped.")}
             </p>
             {onRetry ? (
               <Button
@@ -93,7 +95,7 @@ export function PdfPageFrame({
                 onClick={onRetry}
                 className="mt-1"
               >
-                Retry
+                {t("Retry")}
               </Button>
             ) : null}
           </div>
@@ -195,12 +197,13 @@ export function SelectionRegion({
   color?: AnnotationColor;
   onSelect?: () => void;
 }) {
+  const { t } = useLocale();
   const colors = annotationColorClasses[color];
   return (
     <button
       type="button"
       role="img"
-      aria-label={`Selected region: ${description}`}
+      aria-label={t("Selected region: {description}", { description })}
       onClick={onSelect}
       className={cn(
         "absolute rounded-[3px] border-2 border-dashed outline-none focus-visible:ring-2 focus-visible:ring-ring",

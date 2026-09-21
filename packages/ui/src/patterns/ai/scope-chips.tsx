@@ -18,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@resit/ui/components/tooltip";
+import { useLocale, type LocaleFormatters } from "@resit/ui/hooks/use-locale";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import type { ScopeItem } from "@resit/ui/patterns/ai/types";
@@ -47,24 +48,32 @@ function iconFor(item: ScopeItem) {
   }
 }
 
-function describe(item: ScopeItem): string {
+function describe(item: ScopeItem, t: LocaleFormatters["t"]): string {
   switch (item.kind) {
     case "subject":
-      return `Subject: ${item.label}`;
+      return t("Subject: {name}", { name: item.label });
     case "project":
-      return `Project: ${item.label}`;
+      return t("Project: {name}", { name: item.label });
     case "resource":
-      return `${item.label}${item.retrievable ? " (large, available by retrieval)" : ""}`;
+      return item.retrievable
+        ? t("{name} (large, available by retrieval)", { name: item.label })
+        : item.label;
     case "page":
-      return `Page ${item.page}`;
+      return t("Page {page}", { page: item.page });
     case "region":
-      return `Region on page ${item.page}: ${item.description}`;
+      return t("Region on page {page}: {description}", {
+        page: item.page,
+        description: item.description,
+      });
     case "selection":
-      return `Selection: “${item.text}”`;
+      return t("Selection: “{text}”", { text: item.text });
     case "annotation":
-      return `Highlight on page ${item.page}: “${item.text}”`;
+      return t("Highlight on page {page}: “{text}”", {
+        page: item.page,
+        text: item.text,
+      });
     case "block":
-      return `Block: ${item.label}`;
+      return t("Block: {name}", { name: item.label });
   }
 }
 
@@ -82,12 +91,13 @@ export function ScopeChip({
   onOpen,
   className,
 }: ScopeChipProps) {
+  const { t } = useLocale();
   const Icon = iconFor(item);
   const colors =
     item.kind === "subject" ? subjectColorClasses[item.color] : null;
   const label =
     item.kind === "page"
-      ? `p. ${item.page}`
+      ? t("p. {page}", { page: item.page })
       : item.kind === "selection"
         ? `“${item.text}”`
         : item.label;
@@ -126,13 +136,13 @@ export function ScopeChip({
             type="button"
             className="min-w-0 truncate text-left outline-none focus-visible:underline"
             onClick={() => onOpen?.(item)}
-            aria-label={describe(item)}
+            aria-label={describe(item, t)}
           >
             {label}
           </button>
           {item.kind === "resource" && item.retrievable ? (
             <span className="shrink-0 text-2xs text-subtle-foreground">
-              retrieval
+              {t("retrieval")}
             </span>
           ) : null}
           {onRemove ? (
@@ -140,7 +150,7 @@ export function ScopeChip({
               variant="subtle"
               size="icon-sm"
               className="size-5 rounded-sm"
-              aria-label={`Remove ${item.label} from scope`}
+              aria-label={t("Remove {name} from scope", { name: item.label })}
               onClick={() => onRemove(item)}
             >
               <XIcon />
@@ -148,7 +158,7 @@ export function ScopeChip({
           ) : null}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{describe(item)}</TooltipContent>
+      <TooltipContent>{describe(item, t)}</TooltipContent>
     </Tooltip>
   );
 }
@@ -175,16 +185,20 @@ export function ScopeChipList({
   onOpen,
   onShowAll,
   add,
-  emptyLabel = "No scope. The conversation sees nothing until you add a subject, project, or resource.",
+  emptyLabel,
   className,
 }: ScopeChipListProps) {
+  const { t } = useLocale();
   const visible = items.slice(0, max);
   const hidden = items.length - visible.length;
   if (items.length === 0) {
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {emptyLabel}
+          {emptyLabel ??
+            t(
+              "No scope. The conversation sees nothing until you add a subject, project, or resource.",
+            )}
         </p>
         {add}
       </div>
@@ -192,7 +206,7 @@ export function ScopeChipList({
   }
   return (
     <ul
-      aria-label="Conversation scope"
+      aria-label={t("Conversation scope")}
       className={cn("flex flex-wrap items-center gap-1.5", className)}
     >
       {visible.map((item) => (
@@ -232,6 +246,7 @@ export function ScopeMismatchNotice({
   onDismiss?: () => void;
   className?: string;
 }) {
+  const { t, tx } = useLocale();
   return (
     <div
       role="status"
@@ -241,15 +256,16 @@ export function ScopeMismatchNotice({
       )}
     >
       <p>
-        <span className="font-medium">{title}</span> is not included in this
-        conversation.
+        {tx("{title} is not included in this conversation.", {
+          title: <span className="font-medium">{title}</span>,
+        })}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={onAddToScope}>
-          Add to scope
+          {t("Add to scope")}
         </Button>
         <Button size="sm" variant="outline" onClick={onNewConversation}>
-          New conversation for {subjectName}
+          {t("New conversation for {subject}", { subject: subjectName })}
         </Button>
         {onDismiss ? (
           <Button
@@ -258,7 +274,7 @@ export function ScopeMismatchNotice({
             onClick={onDismiss}
             className="ml-auto"
           >
-            Keep as is
+            {t("Keep as is")}
           </Button>
         ) : null}
       </div>

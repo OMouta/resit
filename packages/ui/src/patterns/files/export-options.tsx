@@ -77,7 +77,7 @@ export function ExportOptions({
   const [scopeId, setScopeId] = useState(defaultScopeId ?? scopes[0]?.id ?? "");
   const [destination, setDestination] = useState(defaultDestination);
   const id = useId();
-  const { number } = useLocale();
+  const { number, t, tx } = useLocale();
   const busy = status.kind === "exporting";
   return (
     <form
@@ -89,7 +89,7 @@ export function ExportOptions({
       }}
     >
       <fieldset className="flex flex-col gap-2" disabled={busy}>
-        <legend className="mb-1 text-sm font-medium">Format</legend>
+        <legend className="mb-1 text-sm font-medium">{t("Format")}</legend>
         <RadioGroup
           value={formatId}
           onValueChange={setFormatId}
@@ -113,7 +113,7 @@ export function ExportOptions({
                 <span className="flex items-center gap-2 text-sm font-medium">
                   {format.label}
                   {format.recommended ? (
-                    <Badge variant="info">Recommended</Badge>
+                    <Badge variant="info">{t("Recommended")}</Badge>
                   ) : null}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -126,7 +126,7 @@ export function ExportOptions({
       </fieldset>
       <div className="grid gap-4 @md:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`${id}-scope`}>What to include</Label>
+          <Label htmlFor={`${id}-scope`}>{t("What to include")}</Label>
           <Select value={scopeId} onValueChange={setScopeId} disabled={busy}>
             <SelectTrigger id={`${id}-scope`} className="w-full">
               <SelectValue />
@@ -141,18 +141,20 @@ export function ExportOptions({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            About {formatBytes(estimateBytes, number)}. Machine settings and
-            provider logins are never included.
+            {t(
+              "About {size}. Machine settings and provider logins are never included.",
+              { size: formatBytes(estimateBytes, number) },
+            )}
           </p>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`${id}-dest`}>Save to</Label>
+          <Label htmlFor={`${id}-dest`}>{t("Save to")}</Label>
           <div className="flex gap-2">
             <Input
               id={`${id}-dest`}
               value={destination}
               onChange={(event) => setDestination(event.target.value)}
-              placeholder="Choose a folder"
+              placeholder={t("Choose a folder")}
               className="font-mono text-xs"
               disabled={busy}
             />
@@ -162,7 +164,7 @@ export function ExportOptions({
               onClick={onChooseDestination}
               disabled={busy}
             >
-              <FolderOpenIcon /> Choose…
+              <FolderOpenIcon /> {t("Choose…")}
             </Button>
           </div>
         </div>
@@ -173,14 +175,14 @@ export function ExportOptions({
           className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3"
         >
           <div className="flex items-center justify-between text-sm">
-            <span>Exporting…</span>
+            <span>{t("Exporting…")}</span>
             <span className="tabular-nums text-muted-foreground">
               {Math.round(status.progress * 100)}%
             </span>
           </div>
           <Progress
             value={status.progress * 100}
-            aria-label="Export progress"
+            aria-label={t("Export progress")}
           />
         </div>
       ) : null}
@@ -191,7 +193,9 @@ export function ExportOptions({
         >
           <CheckCircle2Icon className="size-4 text-success" />
           <span className="min-w-0 flex-1 truncate">
-            Exported to <code className="font-mono text-xs">{status.path}</code>
+            {tx("Exported to {path}", {
+              path: <code className="font-mono text-xs">{status.path}</code>,
+            })}
           </span>
           {onShowInFolder ? (
             <Button
@@ -200,7 +204,7 @@ export function ExportOptions({
               variant="secondary"
               onClick={() => onShowInFolder(status.path)}
             >
-              Show in folder
+              {t("Show in folder")}
             </Button>
           ) : null}
         </div>
@@ -217,11 +221,11 @@ export function ExportOptions({
       <footer className="flex justify-end gap-2">
         {busy ? (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t("Cancel")}
           </Button>
         ) : (
           <Button type="submit" disabled={!destination.trim()}>
-            {status.kind === "failed" ? "Try again" : "Export"}
+            {status.kind === "failed" ? t("Try again") : t("Export")}
           </Button>
         )}
       </footer>
