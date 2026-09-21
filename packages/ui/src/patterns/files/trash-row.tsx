@@ -3,6 +3,7 @@ import {
   FolderIcon,
   FoldersIcon,
   ImageIcon,
+  ClipboardListIcon,
   MessageSquareIcon,
   PaperclipIcon,
   RotateCcwIcon,
@@ -35,7 +36,8 @@ export interface TrashItem {
     | "attachment"
     | "subject"
     | "folder"
-    | "conversation";
+    | "conversation"
+    | "quiz";
   subjectName: string | null;
   deletedAt: string | Date;
   originalPath: string;
@@ -51,6 +53,7 @@ const icons = {
   subject: FoldersIcon,
   folder: FolderIcon,
   conversation: MessageSquareIcon,
+  quiz: ClipboardListIcon,
 };
 
 export interface TrashRowProps {

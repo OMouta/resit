@@ -72,6 +72,8 @@ interface FolderEntry {
 
 /** Areas inside a subject. The folder a student sees sits below one of them. */
 const AREAS = ["notes", "documents", "images"];
+/** Directories in a subject that hold resit's records rather than files. */
+const RESERVED_DIRS = new Set(["annotations", "practice"]);
 
 function folderKey(subjectId: string, path: string): string {
   return `${subjectId}/${path}`;
@@ -288,7 +290,7 @@ async function scanSubjectFiles(scan: SubjectScan, dir: string): Promise<void> {
     if (entry.name.startsWith(".")) continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (dir === subjectDir && entry.name === "annotations") continue;
+      if (dir === subjectDir && RESERVED_DIRS.has(entry.name)) continue;
       const nested = folderPath(subjectDir, path);
       if (nested) {
         const existing = folders.get(folderKey(scan.subjectId, nested));
@@ -603,7 +605,7 @@ export async function subjectSidecars(
 }
 
 /** Moves files into `.resit/trash` with a record of where they came from. */
-async function moveToTrash(
+export async function moveToTrash(
   workspace: OpenWorkspace,
   paths: string[],
   record: Record<string, unknown>,
@@ -1251,6 +1253,14 @@ export function activitiesPath(
   subjectId: string,
 ): string {
   return join(subjectEntry(workspace, subjectId).dir, ACTIVITIES_FILE);
+}
+
+/** A subject's cards, reviews, and quizzes, whether or not any exist yet. */
+export function practiceDir(
+  workspace: OpenWorkspace,
+  subjectId: string,
+): string {
+  return join(subjectEntry(workspace, subjectId).dir, "practice");
 }
 
 /** Where one document's annotations live, whether or not the file exists. */

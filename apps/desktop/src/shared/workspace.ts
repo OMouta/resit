@@ -130,7 +130,8 @@ export interface RecentWorkspace {
   path: string;
 }
 
-export type TrashKind = ResourceKind | "subject" | "folder" | "conversation";
+export type TrashKind =
+  ResourceKind | "subject" | "folder" | "conversation" | "quiz";
 
 /** One deletion sitting in `.resit/trash`. */
 export interface TrashEntry {
