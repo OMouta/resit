@@ -1,4 +1,5 @@
 import {
+  CalendarIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
@@ -40,7 +41,7 @@ export interface QuickOpenCommand {
   id: string;
   label: string;
   shortcut?: string;
-  icon: "new-note" | "new-subject" | "graph" | "settings";
+  icon: "new-note" | "new-subject" | "graph" | "schedule" | "settings";
   run: () => void;
 }
 
@@ -48,6 +49,7 @@ const commandIcons = {
   "new-note": PlusIcon,
   "new-subject": FolderPlusIcon,
   graph: WaypointsIcon,
+  schedule: CalendarIcon,
   settings: SettingsIcon,
 };
 

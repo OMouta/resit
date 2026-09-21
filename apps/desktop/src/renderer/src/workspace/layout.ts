@@ -28,6 +28,7 @@ export type Layout = z.infer<typeof layoutSchema>;
 
 /** The graph opens in a tab of its own rather than as a file. */
 export const GRAPH_TAB_ID = "resit:graph";
+export const SCHEDULE_TAB_ID = "resit:schedule";
 
 const newId = () => crypto.randomUUID();
 

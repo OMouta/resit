@@ -49,6 +49,7 @@ import {
   GRAPH_TAB_ID,
   layoutReducer,
   restoreLayout,
+  SCHEDULE_TAB_ID,
   type Layout,
 } from "./layout";
 import { MoodleDialog } from "./moodle-dialog";
@@ -545,6 +546,12 @@ export function WorkspaceView({
     },
     openGraph: () =>
       dispatch({ type: "open", resourceId: GRAPH_TAB_ID, title: "Graph" }),
+    openSchedule: () =>
+      dispatch({
+        type: "open",
+        resourceId: SCHEDULE_TAB_ID,
+        title: "Schedule",
+      }),
     openTrash: () => setTrashOpen(true),
     openSettings: () => onOpenSettings(),
   };
@@ -639,10 +646,12 @@ export function WorkspaceView({
       canClose={layout.panes.length > 1}
       resources={resources}
       subjects={subjects}
+      moodle={moodle}
       dispatch={dispatch}
       onRename={renameResource}
       onOpenLink={openLink}
       onCite={cite}
+      onOpenSettings={() => onOpenSettings("moodle")}
     />
   ));
 
@@ -734,6 +743,12 @@ export function WorkspaceView({
             shortcut: "Ctrl+Shift+G",
             icon: "graph",
             run: actions.openGraph,
+          },
+          {
+            id: "schedule",
+            label: "Open the schedule",
+            icon: "schedule",
+            run: actions.openSchedule,
           },
           {
             id: "settings",

@@ -1,5 +1,6 @@
 import {
   AlertTriangleIcon,
+  CalendarIcon,
   ChevronDownIcon,
   FileTextIcon,
   ImageIcon,
@@ -39,7 +40,15 @@ import { cn } from "@resit/ui/lib/utils";
 export interface DocumentTabItem {
   id: string;
   title: string;
-  kind: "note" | "pdf" | "image" | "attachment" | "project" | "study" | "graph";
+  kind:
+    | "note"
+    | "pdf"
+    | "image"
+    | "attachment"
+    | "project"
+    | "study"
+    | "graph"
+    | "schedule";
   subject?: { name: string; color: SubjectColor };
   /** Show the subject beside the title (title collision or foreign subject). */
   showSubject?: boolean;
@@ -84,6 +93,7 @@ const icons = {
   project: FileTextIcon,
   study: FileTextIcon,
   graph: WaypointsIcon,
+  schedule: CalendarIcon,
 };
 
 /**

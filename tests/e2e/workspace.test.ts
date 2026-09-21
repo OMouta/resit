@@ -435,6 +435,12 @@ describe("desktop workspace", () => {
     await page.getByRole("tab", { name: "Ficha 1", exact: true }).waitFor();
   });
 
+  it("opens the schedule, which waits for a followed course", async () => {
+    await page.getByRole("button", { name: "Schedule", exact: true }).click();
+    await page.getByRole("tab", { name: "Schedule" }).waitFor();
+    await page.getByText("No subject follows a Moodle course").waitFor();
+  });
+
   it("sends the student to settings before following a Moodle course", async () => {
     await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
     await page.getByRole("button", { name: "Subject actions" }).first().click();

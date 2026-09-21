@@ -73,7 +73,7 @@ const allDestinations: {
   { id: "graph", label: "Graph", icon: WaypointsIcon },
   { id: "library", label: "Library", icon: LibraryIcon },
   { id: "study", label: "Study", icon: BookOpenIcon },
-  { id: "calendar", label: "Calendar", icon: CalendarIcon },
+  { id: "calendar", label: "Schedule", icon: CalendarIcon },
   { id: "profile", label: "Learner profile", icon: UserRoundIcon },
   { id: "conversations", label: "Conversations", icon: MessageSquareIcon },
   { id: "trash", label: "Trash", icon: Trash2Icon },

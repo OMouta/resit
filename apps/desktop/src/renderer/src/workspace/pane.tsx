@@ -12,6 +12,7 @@ import {
   PaneHeader,
 } from "@resit/ui/patterns/navigation/pane-header";
 
+import type { MoodleConnection } from "../../../shared/moodle";
 import type {
   ResourceInfo,
   SubjectInfo,
@@ -21,8 +22,15 @@ import { NoteView } from "../editor/note-view";
 import { AttachmentView, ImageView } from "../views/file-views";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
+import { ScheduleView } from "../views/schedule-view";
 import type { DocumentTarget } from "../views/view-registry";
-import { GRAPH_TAB_ID, type LayoutAction, type Pane } from "./layout";
+import {
+  GRAPH_TAB_ID,
+  SCHEDULE_TAB_ID,
+  type LayoutAction,
+  type Pane,
+  type Tab,
+} from "./layout";
 
 export interface PaneProps {
   pane: Pane;
@@ -32,10 +40,12 @@ export interface PaneProps {
   canClose: boolean;
   resources: ReadonlyMap<string, ResourceInfo>;
   subjects: ReadonlyMap<string, SubjectInfo>;
+  moodle: MoodleConnection;
   dispatch: Dispatch<LayoutAction>;
   onRename: (resourceId: string, title: string) => Promise<void>;
   onOpenLink: (resourceId: string, target: DocumentTarget) => void;
   onCite: (markdown: string) => void;
+  onOpenSettings: () => void;
 }
 
 function ResourceView({
@@ -81,14 +91,23 @@ export function WorkspacePane({
   canClose,
   resources,
   subjects,
+  moodle,
   dispatch,
   onRename,
   onOpenLink,
   onCite,
+  onOpenSettings,
 }: PaneProps) {
+  const openResource = (resourceId: string) => {
+    const target = resources.get(resourceId);
+    if (target) dispatch({ type: "open", resourceId, title: target.title });
+  };
+
   const items: DocumentTabItem[] = pane.tabs.map((tab) => {
     if (tab.resourceId === GRAPH_TAB_ID)
       return { id: tab.id, title: "Graph", kind: "graph" };
+    if (tab.resourceId === SCHEDULE_TAB_ID)
+      return { id: tab.id, title: "Schedule", kind: "schedule" };
     const resource = resources.get(tab.resourceId);
     const subject = resource ? subjects.get(resource.subjectId) : undefined;
     return {
@@ -102,6 +121,43 @@ export function WorkspacePane({
     };
   });
   const collisions = tabsNeedingSubject(items);
+
+  const tabContent = (
+    tab: Tab,
+    resource: ResourceInfo | undefined,
+    active: boolean,
+  ) => {
+    if (tab.resourceId === GRAPH_TAB_ID)
+      return <GraphView snapshot={snapshot} onOpenResource={openResource} />;
+    if (tab.resourceId === SCHEDULE_TAB_ID)
+      return (
+        <ScheduleView
+          snapshot={snapshot}
+          moodle={moodle}
+          active={active}
+          onOpenSettings={onOpenSettings}
+        />
+      );
+    if (resource)
+      return (
+        <ResourceView
+          resource={resource}
+          subject={subjects.get(resource.subjectId)}
+          active={active}
+          onRename={(title) => onRename(resource.id, title)}
+          onOpenLink={onOpenLink}
+          onCite={onCite}
+        />
+      );
+    return (
+      <EmptyState
+        className="h-full"
+        icon={<FileQuestionIcon />}
+        title={`${tab.title} is no longer in the workspace`}
+        description="It was moved to the trash or deleted outside resit."
+      />
+    );
+  };
 
   return (
     <section
@@ -148,47 +204,17 @@ export function WorkspacePane({
           <PaneEmpty description="Pick a note or document from the sidebar, or press Ctrl+K to find one." />
         ) : null}
         {pane.tabs.map((tab) => {
-          const graph = tab.resourceId === GRAPH_TAB_ID;
           const resource = resources.get(tab.resourceId);
           const active = tab.id === pane.activeTabId;
           return (
             <div
               key={tab.id}
               role="tabpanel"
-              aria-label={graph ? "Graph" : (resource?.title ?? tab.title)}
+              aria-label={resource?.title ?? tab.title}
               hidden={!active}
               className="absolute inset-0 flex flex-col"
             >
-              {graph ? (
-                <GraphView
-                  snapshot={snapshot}
-                  onOpenResource={(resourceId) => {
-                    const target = resources.get(resourceId);
-                    if (target)
-                      dispatch({
-                        type: "open",
-                        resourceId,
-                        title: target.title,
-                      });
-                  }}
-                />
-              ) : resource ? (
-                <ResourceView
-                  resource={resource}
-                  subject={subjects.get(resource.subjectId)}
-                  active={active}
-                  onRename={(title) => onRename(resource.id, title)}
-                  onOpenLink={onOpenLink}
-                  onCite={onCite}
-                />
-              ) : (
-                <EmptyState
-                  className="h-full"
-                  icon={<FileQuestionIcon />}
-                  title={`${tab.title} is no longer in the workspace`}
-                  description="It was moved to the trash or deleted outside resit."
-                />
-              )}
+              {tabContent(tab, resource, active)}
             </div>
           );
         })}
