@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { extname } from "node:path";
-import { dialog, nativeTheme, shell, type BrowserWindow } from "electron";
+import { app, dialog, nativeTheme, shell, type BrowserWindow } from "electron";
 import { z } from "zod";
 
 import { liveContextSchema } from "../shared/context";
@@ -24,7 +24,11 @@ import {
   questionKindSchema,
   ratingSchema,
 } from "../shared/practice";
-import { providerIdSchema, settingsPatchSchema } from "../shared/settings";
+import {
+  providerIdSchema,
+  resolveLocale,
+  settingsPatchSchema,
+} from "../shared/settings";
 import {
   annotationColorSchema,
   annotationSegmentSchema,
@@ -62,6 +66,7 @@ import {
   updateConversation,
 } from "./conversations/store";
 import { checkHealth } from "./health";
+import { setLocale } from "./i18n";
 import { handle, id, title } from "./ipc";
 import { MoodleError, userCourses } from "./moodle/client";
 import {
@@ -335,6 +340,7 @@ export function registerHandlers(
     async (patch) => {
       const settings = await updateSettings(patch);
       nativeTheme.themeSource = settings.theme;
+      setLocale(resolveLocale(settings.language, app.getLocale()));
       if (patch.reminders) void refreshReminders();
       if (patch.claude && "executablePath" in patch.claude)
         void claudeStatus(true);

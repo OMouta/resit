@@ -75,6 +75,7 @@ export async function updateSettings(
   return save({
     ...current,
     ...(patch.theme ? { theme: patch.theme } : {}),
+    ...(patch.language ? { language: patch.language } : {}),
     ...(patch.reduceMotion === undefined
       ? {}
       : { reduceMotion: patch.reduceMotion }),

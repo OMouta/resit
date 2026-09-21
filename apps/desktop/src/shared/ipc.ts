@@ -78,6 +78,8 @@ export interface HealthCheckResult {
 
 export interface AppState {
   settings: AppSettings;
+  /** The computer's language, for when the setting follows it. */
+  systemLocale: string;
   recent: RecentWorkspace[];
   /** The stored Moodle account, without contacting the site. */
   moodle: MoodleConnection;

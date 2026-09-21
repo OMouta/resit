@@ -4,6 +4,19 @@ import { annotationColorSchema } from "./workspace";
 
 export const themeSchema = z.enum(["system", "light", "dark"]);
 
+/** The interface language. "system" follows the computer's own. */
+export const languageSchema = z.enum(["system", "en", "pt-PT"]);
+export type Language = z.infer<typeof languageSchema>;
+
+/** The language the interface shows: the chosen one, or the computer's. */
+export function resolveLocale(
+  language: Language,
+  systemLocale: string,
+): "en" | "pt-PT" {
+  if (language !== "system") return language;
+  return systemLocale.toLowerCase().startsWith("pt") ? "pt-PT" : "en";
+}
+
 export const recentWorkspaceSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -104,6 +117,7 @@ const PDF_DEFAULTS: PdfSettings = {
 
 export const appSettingsSchema = z.object({
   theme: themeSchema.catch("system"),
+  language: languageSchema.catch("system"),
   /** Cuts animation down for anyone who asks for it here rather than in the OS. */
   reduceMotion: z.boolean().catch(false),
   /** Open the last workspace when resit starts. */
@@ -136,6 +150,7 @@ export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 export const settingsPatchSchema = z.object({
   theme: themeSchema.optional(),
+  language: languageSchema.optional(),
   reduceMotion: z.boolean().optional(),
   reopenLastWorkspace: z.boolean().optional(),
   document: documentSettingsSchema.partial().optional(),

@@ -2,8 +2,10 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, nativeTheme, net, session } from "electron";
 import { EVENT_CHANNEL } from "../shared/ipc";
+import { resolveLocale } from "../shared/settings";
 import { abortAllTurns } from "./agent/turns";
 import { registerHandlers } from "./handlers";
+import { setLocale } from "./i18n";
 import { setIpcContext } from "./ipc";
 import { useNetworkFetch } from "./moodle/client";
 import { startReminders } from "./planning/reminders";
@@ -66,6 +68,7 @@ function titleBarOverlay(): Electron.TitleBarOverlayOptions {
 async function createWindow(): Promise<void> {
   const settings = await loadSettings();
   nativeTheme.themeSource = settings.theme;
+  setLocale(resolveLocale(settings.language, app.getLocale()));
   const window = new BrowserWindow({
     title: "resit",
     width: 1360,

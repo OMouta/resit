@@ -17,10 +17,11 @@ import { Splash } from "@resit/ui/patterns/screens/splash";
 import type { ProviderId, ProviderState } from "../../shared/conversations";
 import type { AppState, LockedWorkspace } from "../../shared/ipc";
 import type { MoodleConnection } from "../../shared/moodle";
-import type { SettingsPatch } from "../../shared/settings";
+import { resolveLocale, type SettingsPatch } from "../../shared/settings";
 import type { WorkspaceSnapshot } from "../../shared/workspace";
 import { ChatPanel } from "./chat/chat-panel";
 import { api } from "./lib/api";
+import { setLocale } from "./lib/locale";
 import { useNotices } from "./lib/notices";
 import { SettingsProvider } from "./lib/settings-context";
 import { EditorSettings } from "./settings/editor-settings";
@@ -112,6 +113,13 @@ export function App() {
       (error: unknown) => notices.fail("resit could not start", error),
     );
   }, [apply, notices]);
+
+  const language = state?.settings.language;
+  const systemLocale = state?.systemLocale;
+  useEffect(() => {
+    if (language && systemLocale)
+      setLocale(resolveLocale(language, systemLocale));
+  }, [language, systemLocale]);
 
   const theme = state?.settings.theme ?? "system";
   const reducedMotion = state?.settings.reduceMotion ?? false;

@@ -1,5 +1,6 @@
 import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
+import { app } from "electron";
 
 import type { AppState, DesktopEvent, LockedWorkspace } from "../shared/ipc";
 import { abandonRenders } from "./agent/render";
@@ -218,6 +219,7 @@ export async function appState(extra?: {
   const settings = await loadSettings();
   return {
     settings,
+    systemLocale: app.getLocale(),
     recent: settings.recent,
     moodle: await moodleConnection(),
     workspace: current ? snapshot(current) : null,

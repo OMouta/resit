@@ -12,6 +12,7 @@ import type {
   AppSettings,
   DocumentFont,
   DocumentWidth,
+  Language,
   SettingsPatch,
 } from "../../../shared/settings";
 import { SettingRow, SettingsSection } from "./settings-dialog";
@@ -61,6 +62,25 @@ export function GeneralSettings({
             checked={settings.reduceMotion}
             onCheckedChange={(checked) => onChange({ reduceMotion: checked })}
           />
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection title="Language">
+        <SettingRow label="Interface language">
+          <Select
+            value={settings.language}
+            onValueChange={(value) => onChange({ language: value as Language })}
+          >
+            <SelectTrigger aria-label="Interface language" className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="system">System</SelectItem>
+              {/* Each language is named in itself. */}
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="pt-PT">Português (Portugal)</SelectItem>
+            </SelectContent>
+          </Select>
         </SettingRow>
       </SettingsSection>
 

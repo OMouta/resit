@@ -6,11 +6,14 @@ import {
   type ReactNode,
 } from "react";
 
-export const LOCALES = ["en", "pt-PT"] as const;
-export type Locale = (typeof LOCALES)[number];
+import { translate, type Locale, type MessageValues } from "@resit/ui/lib/i18n";
+
+export { LOCALES, type Locale } from "@resit/ui/lib/i18n";
 
 export interface LocaleFormatters {
   locale: Locale;
+  /** English text in the current language. See `translate`. */
+  t: (text: string, values?: MessageValues) => string;
   date: (value: Date | string, options?: Intl.DateTimeFormatOptions) => string;
   time: (value: Date | string) => string;
   dateTime: (value: Date | string) => string;
@@ -47,6 +50,7 @@ export function createFormatters(locale: Locale): LocaleFormatters {
   });
   return {
     locale,
+    t: (text, values) => translate(locale, text, values),
     date: (value, options) =>
       new Intl.DateTimeFormat(locale, {
         day: "numeric",
