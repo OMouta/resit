@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { setImmediate as yieldToEvents } from "node:timers/promises";
 
 import type { ResourceInfo } from "../../shared/workspace";
-import { pdfPages } from "./pdf-text";
+import { readablePages } from "./ocr";
 import { readNote, type OpenWorkspace } from "./workspace";
 
 export interface SearchHit {
@@ -256,7 +256,7 @@ async function sync(
         pages = [note.body];
         revision = note.revision;
       } else {
-        pages = await pdfPages(workspace, info.id);
+        pages = await readablePages(workspace, info.id);
       }
     } catch {
       // Recorded with no text, so an unreadable file is not read again
@@ -266,6 +266,15 @@ async function sync(
     store(index, info.id, revision, pages, info.kind === "pdf");
     await yieldToEvents();
   }
+}
+
+/** Reads one file into the index again, such as when its pages were read. */
+export function reindexResource(
+  workspace: OpenWorkspace,
+  resourceId: string,
+): Promise<void> {
+  forget(indexFor(workspace), resourceId);
+  return updateSearchIndex(workspace);
 }
 
 /**

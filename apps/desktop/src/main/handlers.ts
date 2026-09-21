@@ -128,6 +128,12 @@ import {
 import { claudeModels, claudeStatus } from "./providers/claude";
 import { codexModels, codexStatus } from "./providers/codex";
 import { loadSettings, updateSettings } from "./settings";
+import {
+  startTextRecognition,
+  stopTextRecognition,
+  textRecognitionProgress,
+} from "./text-recognition";
+import { recognitionState } from "./workspace/ocr";
 import { workspaceLinks } from "./workspace/links";
 import { searchWorkspace } from "./workspace/search";
 import {
@@ -649,6 +655,28 @@ export function registerHandlers(
     CHANNELS.deleteAnnotation,
     z.tuple([z.object({ documentId: id, id })]),
     (input) => deleteAnnotation(currentWorkspace(), input),
+  );
+
+  handle(CHANNELS.getTextRecognition, z.tuple([id]), async (resourceId) => {
+    const state = await recognitionState(currentWorkspace(), resourceId);
+    return {
+      pageCount: state.pageCount,
+      waiting: state.waiting.length,
+      recognized: state.recognized,
+      running: textRecognitionProgress(resourceId),
+    };
+  });
+
+  handle(CHANNELS.recognizeText, z.tuple([id]), (resourceId) => {
+    const workspace = currentWorkspace();
+    return startTextRecognition(workspace, resourceId, {
+      emit: emitEvent,
+      stillOpen: () => hasWorkspace() && currentWorkspace() === workspace,
+    });
+  });
+
+  handle(CHANNELS.stopTextRecognition, z.tuple([]), () =>
+    stopTextRecognition(),
   );
 
   handle(CHANNELS.readResourceBytes, z.tuple([id]), (resourceId) =>

@@ -51,7 +51,7 @@ import {
 import { assertInsideWorkspace } from "../workspace/files";
 import { saveNoteWithHistory } from "../workspace/history";
 import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
-import { pdfPages } from "../workspace/pdf-text";
+import { readablePages, recognizedPages } from "../workspace/ocr";
 import { foldText, searchWorkspace } from "../workspace/search";
 import {
   createNote,
@@ -555,7 +555,7 @@ export function studyTools(
       async ({ documentId, page, as }) => {
         const info = pdf(documentId);
         if ("content" in info) return info;
-        const pages = await pdfPages(workspace, documentId);
+        const pages = await readablePages(workspace, documentId);
         if (page > pages.length)
           return failure("NOT_FOUND", `The PDF has ${pages.length} pages.`);
         const about = {
@@ -592,12 +592,16 @@ export function studyTools(
           }
         }
         const text = pages[page - 1] ?? "";
+        const recognized = (await recognizedPages(workspace, documentId)).has(
+          page,
+        );
         const empty = canSeeImages
           ? '(No text on this page. Read it again with as: "image" to look at it.)'
           : "(No extractable text on this page. It may be a scan or a diagram.)";
         return ok({
           ...about,
-          extraction: "text",
+          // Text recognized on a scanned page can misread symbols.
+          extraction: recognized ? "ocr" : "text",
           text: text ? text.slice(0, MAX_PAGE_CHARS) : empty,
         });
       },
@@ -613,7 +617,7 @@ export function studyTools(
       async ({ documentId, query, limit }) => {
         const info = pdf(documentId);
         if ("content" in info) return info;
-        const pages = await pdfPages(workspace, documentId);
+        const pages = await readablePages(workspace, documentId);
         const terms = foldText(query).split(/\s+/).filter(Boolean);
         const matches: { page: number; snippet: string }[] = [];
         pages.forEach((text, index) => {

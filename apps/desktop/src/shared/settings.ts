@@ -36,6 +36,9 @@ export const pdfPanelSchema = z.enum([
   "highlights",
 ]);
 export type PdfPanel = z.infer<typeof pdfPanelSchema>;
+/** Languages text recognition reads scanned pages in, by Tesseract code. */
+export const ocrLanguageSchema = z.enum(["eng", "por"]);
+export type OcrLanguage = z.infer<typeof ocrLanguageSchema>;
 
 const documentSettingsSchema = z.object({
   font: documentFontSchema.catch("sans"),
@@ -61,6 +64,7 @@ const pdfSettingsSchema = z.object({
   /** Tone pages down in the dark theme so a white page is not a lamp. */
   dimInDark: z.boolean().catch(true),
   highlightColor: annotationColorSchema.catch("yellow"),
+  ocrLanguages: z.array(ocrLanguageSchema).min(1).max(2).catch(["eng", "por"]),
 });
 export type PdfSettings = z.infer<typeof pdfSettingsSchema>;
 
@@ -95,6 +99,7 @@ const PDF_DEFAULTS: PdfSettings = {
   panel: "none",
   dimInDark: true,
   highlightColor: "yellow",
+  ocrLanguages: ["eng", "por"],
 };
 
 export const appSettingsSchema = z.object({

@@ -101,6 +101,24 @@ export interface NoteDocument {
   revision: string;
 }
 
+/** Reading the text of a PDF's scanned pages. */
+export interface TextRecognitionProgress {
+  resourceId: string;
+  /** Fetching language data, counted in bytes, then reading pages. */
+  phase: "downloading" | "reading";
+  done: number;
+  total: number;
+}
+
+export interface TextRecognition {
+  pageCount: number;
+  /** Pages with no text that have not been read yet. */
+  waiting: number;
+  /** Pages whose text was read from the page image. */
+  recognized: number;
+  running: TextRecognitionProgress | null;
+}
+
 /** One PDF page drawn by the window, for an assistant that can see images. */
 export interface RenderedPage {
   /** The image itself, base64 encoded. */
@@ -134,6 +152,15 @@ export type DesktopEvent =
   | { type: "show-schedule" }
   /** The learner profile changed, in the window or through the assistant. */
   | { type: "learner-changed" }
+  | ({ type: "ocr-progress" } & TextRecognitionProgress)
+  | {
+      type: "ocr-finished";
+      resourceId: string;
+      status: "done" | "cancelled" | "failed";
+      /** Pages read before it finished or stopped. */
+      recognized: number;
+      message?: string;
+    }
   | {
       type: "moodle-progress";
       subjectId: string;
@@ -287,6 +314,12 @@ export interface DesktopApi {
     comment?: string;
   }): Promise<Annotation>;
   deleteAnnotation(input: { documentId: string; id: string }): Promise<void>;
+
+  /** Which pages of a PDF have no text, and whether they are being read. */
+  getTextRecognition(resourceId: string): Promise<TextRecognition>;
+  /** Starts reading the text of a PDF's scanned pages on this computer. */
+  recognizeText(resourceId: string): Promise<void>;
+  stopTextRecognition(): Promise<void>;
 
   readResourceBytes(id: string): Promise<Uint8Array>;
   openResourceExternally(id: string): Promise<void>;
@@ -484,6 +517,9 @@ export const CHANNELS = {
   createAnnotation: "resit:annotation-create",
   updateAnnotation: "resit:annotation-update",
   deleteAnnotation: "resit:annotation-delete",
+  getTextRecognition: "resit:ocr-status",
+  recognizeText: "resit:ocr-start",
+  stopTextRecognition: "resit:ocr-stop",
   readResourceBytes: "resit:resource-bytes",
   openResourceExternally: "resit:resource-open-external",
   search: "resit:search",

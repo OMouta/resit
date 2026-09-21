@@ -5,6 +5,7 @@ import type { AppState, DesktopEvent, LockedWorkspace } from "../shared/ipc";
 import { abandonRenders } from "./agent/render";
 import { abortAllTurns } from "./agent/turns";
 import { setLiveContext } from "./context";
+import { stopTextRecognition } from "./text-recognition";
 import { moodleConnection } from "./moodle/credentials";
 import { refreshReminders } from "./planning/reminders";
 import {
@@ -129,6 +130,7 @@ async function indexInBackground(workspace: OpenWorkspace): Promise<void> {
 }
 
 async function activateWorkspace(workspace: OpenWorkspace): Promise<void> {
+  stopTextRecognition();
   if (current && current.root !== workspace.root) {
     closeSearchIndex(current);
     await releaseLock(current.root).catch(() => undefined);
@@ -195,6 +197,7 @@ export function releaseWorkspaceSync(): void {
 }
 
 export async function closeCurrentWorkspace(): Promise<void> {
+  stopTextRecognition();
   stopWatching();
   abortAllTurns();
   abandonRenders();
