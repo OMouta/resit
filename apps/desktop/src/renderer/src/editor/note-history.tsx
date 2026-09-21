@@ -15,6 +15,8 @@ import {
   HistoryList,
   type HistoryRevision,
 } from "@resit/ui/patterns/files/history-row";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 import type { NoteDocument } from "../../../shared/ipc";
 import type { NoteRevision } from "../../../shared/workspace";
@@ -23,9 +25,9 @@ import { useNotices } from "../lib/notices";
 
 /** What the kept copy was taken before. */
 const SUMMARIES: Record<NoteRevision["cause"], string> = {
-  edit: "Before your changes",
-  assistant: "Before the assistant's changes",
-  restore: "Before a restore",
+  edit: msg("Before your changes"),
+  assistant: msg("Before the assistant's changes"),
+  restore: msg("Before a restore"),
 };
 
 const CAUSES: Record<NoteRevision["cause"], HistoryRevision["cause"]> = {
@@ -51,6 +53,7 @@ export function NoteHistory({
   onOpenChange,
   onRestored,
 }: NoteHistoryProps) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [revisions, setRevisions] = useState<NoteRevision[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -71,13 +74,13 @@ export function NoteHistory({
       (error: unknown) => {
         if (cancelled) return;
         setRevisions([]);
-        notices.fail("The note's history could not be read", error);
+        notices.fail(t("The note's history could not be read"), error);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [open, noteId, notices]);
+  }, [t, open, noteId, notices]);
 
   useEffect(() => {
     if (!selected) return;
@@ -88,13 +91,14 @@ export function NoteHistory({
         if (!cancelled) setBody(revision.body);
       },
       (error: unknown) => {
-        if (!cancelled) notices.fail("That version could not be read", error);
+        if (!cancelled)
+          notices.fail(t("That version could not be read"), error);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [selected, noteId, notices]);
+  }, [t, selected, noteId, notices]);
 
   const restore = async (revisionId: string) => {
     try {
@@ -103,11 +107,11 @@ export function NoteHistory({
       onOpenChange(false);
       notices.notify({
         tone: "success",
-        title: "The earlier version is back",
-        detail: "The text it replaced was kept, so you can undo this too.",
+        title: t("The earlier version is back"),
+        detail: t("The text it replaced was kept, so you can undo this too."),
       });
     } catch (error) {
-      notices.fail("That version was not restored", error);
+      notices.fail(t("That version was not restored"), error);
     }
   };
 
@@ -117,7 +121,7 @@ export function NoteHistory({
     revision: total - index,
     at: revision.at,
     cause: CAUSES[revision.cause],
-    summary: SUMMARIES[revision.cause],
+    summary: t(SUMMARIES[revision.cause]),
     sizeBytes: revision.size,
   }));
 
@@ -125,7 +129,7 @@ export function NoteHistory({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Version history</DialogTitle>
+          <DialogTitle>{t("Version history")}</DialogTitle>
           <DialogDescription>
             resit keeps a copy of this note before you or the assistant change
             it. Restoring one keeps the text it replaces.
@@ -148,15 +152,19 @@ export function NoteHistory({
           </ScrollArea>
           {selected === null ? (
             <EmptyState
-              title="Nothing to compare yet"
-              description="Versions appear here as you and the assistant change this note."
+              title={t("Nothing to compare yet")}
+              description={t(
+                "Versions appear here as you and the assistant change this note.",
+              )}
             />
           ) : body === null ? (
             <Skeleton className="h-40 w-full" />
           ) : (
             <div className="flex min-w-0 flex-col gap-2 border-t pt-3">
               <p className="text-xs text-muted-foreground">
-                Restoring replaces the lines marked − with the lines marked +.
+                {t(
+                  "Restoring replaces the lines marked − with the lines marked +.",
+                )}
               </p>
               <DiffView
                 before={current}

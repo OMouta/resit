@@ -12,6 +12,7 @@ import {
 import { Label } from "@resit/ui/components/label";
 import { Textarea } from "@resit/ui/components/textarea";
 import { MathBlock, MathInline } from "@resit/ui/patterns/document/math";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 export interface MathRequest {
   display: boolean;
@@ -32,6 +33,7 @@ export function MathDialog({
   onDelete: (request: MathRequest) => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const [latex, setLatex] = useState("");
 
   useEffect(() => {
@@ -57,10 +59,10 @@ export function MathDialog({
           >
             <DialogHeader>
               <DialogTitle>
-                {request.display ? "Math block" : "Inline math"}
+                {request.display ? t("Math block") : t("Inline math")}
               </DialogTitle>
               <DialogDescription>
-                Write LaTeX. Press Ctrl+Enter to apply.
+                {t("Write LaTeX. Press Ctrl+Enter to apply.")}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
@@ -85,7 +87,7 @@ export function MathDialog({
               />
             </div>
             <div
-              aria-label="Preview"
+              aria-label={t("Preview")}
               className="flex min-h-16 items-center justify-center overflow-x-auto rounded-lg border bg-background px-4 py-3"
             >
               {latex.trim() ? (
@@ -95,7 +97,9 @@ export function MathDialog({
                   <MathInline>{latex}</MathInline>
                 )
               ) : (
-                <span className="text-sm text-subtle-foreground">Preview</span>
+                <span className="text-sm text-subtle-foreground">
+                  {t("Preview")}
+                </span>
               )}
             </div>
             <DialogFooter>
@@ -109,14 +113,14 @@ export function MathDialog({
                     onClose();
                   }}
                 >
-                  Remove
+                  {t("Remove")}
                 </Button>
               ) : null}
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={!latex.trim()}>
-                {request.pos === null ? "Insert" : "Apply"}
+                {request.pos === null ? t("Insert") : t("Apply")}
               </Button>
             </DialogFooter>
           </form>

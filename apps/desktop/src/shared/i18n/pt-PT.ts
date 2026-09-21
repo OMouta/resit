@@ -32,6 +32,8 @@ export const messages: Record<string, string> = {
   "{count} minutes before": "{count} minutos antes",
   "{count} new": "{count} novos",
   "{count} updated": "{count} atualizados",
+  "{count} word": "{count} palavra",
+  "{count} words": "{count} palavras",
   "{done} of {total}": "{done} de {total}",
   "{provider} {version} at {path}": "{provider} {version} em {path}",
   "{provider} is installed but not signed in.":
@@ -46,17 +48,23 @@ export const messages: Record<string, string> = {
   "A project gathers subjects and files for work that spans them. Nothing is copied.":
     "Um projeto junta disciplinas e ficheiros para trabalhos que as atravessam. Nada é copiado.",
   Account: "Conta",
+  "Add link": "Adicionar ligação",
+  Address: "Endereço",
   "AI providers": "Fornecedores de IA",
   "An hour before": "Uma hora antes",
+  Apply: "Aplicar",
   "Before a newer copy replaced it":
     "Antes de uma cópia mais recente o substituir",
   "Before a restore": "Antes de um restauro",
+  "Before the assistant's changes": "Antes das alterações do assistente",
+  "Before your changes": "Antes das suas alterações",
   "Check again": "Verificar de novo",
   "Check spelling": "Verificar a ortografia",
   "Checking {provider}…": "A verificar o {provider}…",
   "Choose folder…": "Escolher pasta…",
   "Choose the Moodle course this subject follows.":
     "Escolha a unidade curricular do Moodle que esta disciplina acompanha.",
+  "Close find": "Fechar a pesquisa",
   "Codex home": "Pasta do Codex",
   Colour: "Cor",
   "Colour to start with": "Cor inicial",
@@ -80,13 +88,18 @@ export const messages: Record<string, string> = {
   "Deleted notes, documents, subjects, and conversations stay in the workspace folder until you remove them yourself.":
     "Os apontamentos, documentos, disciplinas e conversas eliminados ficam na pasta do espaço de trabalho até os remover.",
   "Dim pages in the dark theme": "Escurecer as páginas no tema escuro",
+  Discard: "Descartar",
   Disconnect: "Desligar",
   "Document text": "Texto dos documentos",
   "Download {count}": "Transferir {count}",
   "Downloading from Moodle": "A transferir do Moodle",
   "Downloading…": "A transferir…",
+  "Edit as Markdown": "Editar como Markdown",
+  "Edit as rich text": "Editar como texto formatado",
+  "Edit link": "Editar ligação",
   "Edit project": "Editar projeto",
   "Edit subject": "Editar disciplina",
+  "Editing mode": "Modo de edição",
   Editor: "Editor",
   "Empty the trash?": "Esvaziar o lixo?",
   English: "Inglês",
@@ -107,10 +120,13 @@ export const messages: Record<string, string> = {
   Exporting: "A exportar",
   "File actions": "Ações do ficheiro",
   "Files from other subjects": "Ficheiros de outras disciplinas",
+  Find: "Procurar",
   "Find a file": "Procurar um ficheiro",
   "Find a note or document, search inside them, or run a command":
     "Encontre um apontamento ou documento, pesquise dentro deles ou execute um comando",
   "Find a note, PDF, or command…": "Procurar um apontamento, PDF ou comando…",
+  "Find and replace": "Procurar e substituir",
+  "Find in note": "Procurar no apontamento",
   "Folder actions": "Ações da pasta",
   Follow: "Acompanhar",
   "Follow the system setting, or pick one.":
@@ -118,6 +134,8 @@ export const messages: Record<string, string> = {
   "Follow your Moodle courses and download their files into subjects.":
     "Acompanhe as suas unidades curriculares do Moodle e transfira os ficheiros delas para as disciplinas.",
   "Found automatically": "Encontrado automaticamente",
+  "From {time}. Restoring it replaces what the note says now, which stays in Version history.":
+    "De {time}. Repô-lo substitui o que o apontamento diz agora, que fica no Histórico de versões.",
   General: "Geral",
   "Go to": "Ir para",
   "Highlight colour": "Cor do realce",
@@ -132,6 +150,7 @@ export const messages: Record<string, string> = {
   "In {place}": "Em {place}",
   "In workspace": "No espaço de trabalho",
   Include: "Incluir",
+  Insert: "Inserir",
   "Inside notes and PDFs": "Dentro de apontamentos e PDFs",
   "Install it from claude.com/claude-code, or set its path below.":
     "Instale-o a partir de claude.com/claude-code, ou indique o caminho abaixo.",
@@ -163,6 +182,8 @@ export const messages: Record<string, string> = {
   "Lists the note's headings beside it. Toggle it per note with Ctrl+Shift+O.":
     "Lista os títulos do apontamento ao lado. Ative ou desative em cada apontamento com Ctrl+Shift+O.",
   Markdown: "Markdown",
+  "Markdown source": "Código-fonte Markdown",
+  "Match case": "Maiúsculas e minúsculas",
   Monospace: "Monoespaçada",
   Moodle: "Moodle",
   "Moodle address": "Endereço do Moodle",
@@ -184,17 +205,21 @@ export const messages: Record<string, string> = {
   "New project": "Novo projeto",
   "New quiz": "Novo questionário",
   "New subject": "Nova disciplina",
+  "Next match": "Resultado seguinte",
   "No course matches that.": "Nenhuma unidade curricular corresponde.",
   "No file matches.": "Nenhum ficheiro corresponde.",
   None: "Nenhum",
   Normal: "Normal",
   "Not linked": "Sem ligação",
+  "Note outline": "Estrutura do apontamento",
+  "Note text": "Texto do apontamento",
   "Notes and documents": "Apontamentos e documentos",
   "Notes whose Markdown the rich editor would change always open as Markdown.":
     "Os apontamentos cujo Markdown o editor visual alteraria abrem sempre em Markdown.",
   "Notes, PDF quotations, and AI replies.":
     "Apontamentos, citações de PDF e respostas da IA.",
   "Nothing matches.": "Nada corresponde.",
+  "Nothing to compare yet": "Ainda não há nada para comparar",
   "Nothing was downloaded": "Nada foi transferido",
   "Numerical simulation": "Simulação numérica",
   "Open “{workspace}”": "Abrir “{workspace}”",
@@ -217,6 +242,7 @@ export const messages: Record<string, string> = {
   "Pick a note or document from the sidebar, or press Ctrl+K to find one.":
     "Escolha um apontamento ou documento na barra lateral, ou prima Ctrl+K para procurar.",
   Portuguese: "Português",
+  "Previous match": "Resultado anterior",
   "Quoted in {title}": "Citado em {title}",
   "Reads the text on scanned pages so search and the assistant can find it. It runs on this computer and downloads each language once.":
     "Lê o texto das páginas digitalizadas para que a pesquisa e o assistente o encontrem. Funciona neste computador e transfere cada língua uma vez.",
@@ -226,10 +252,17 @@ export const messages: Record<string, string> = {
   "Rename folder": "Mudar o nome da pasta",
   "Rename or recolour…": "Mudar o nome ou a cor…",
   "Rename…": "Mudar o nome…",
+  Replace: "Substituir",
+  "Replace all": "Substituir tudo",
+  "Replace with": "Substituir por",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
   "resit keeps a copy of {file} before a newer one replaces it. Restoring one keeps the copy it replaces.":
     "O resit guarda uma cópia de {file} antes de uma mais recente o substituir. Restaurar uma guarda a cópia que substitui.",
+  "Restore it": "Repor",
+  "Restoring replaces the lines marked − with the lines marked +.":
+    "Restaurar substitui as linhas marcadas com − pelas linhas marcadas com +.",
+  Rich: "Formatado",
   "Rich text": "Texto formatado",
   "Run `claude` in a terminal and sign in, then check again.":
     "Execute `claude` num terminal e inicie sessão; depois verifique de novo.",
@@ -259,9 +292,13 @@ export const messages: Record<string, string> = {
   "Text recognition": "Reconhecimento de texto",
   "Text recognition languages": "Línguas do reconhecimento de texto",
   "Text size": "Tamanho do texto",
+  "Text you had not saved was kept":
+    "O texto que não tinha guardado foi mantido",
   "That copy was not restored": "Essa cópia não foi restaurada",
   "That link points to a file that is no longer here":
     "Essa ligação aponta para um ficheiro que já não está aqui",
+  "That version could not be read": "Não foi possível ler essa versão",
+  "That version was not restored": "Essa versão não foi restaurada",
   "The {count} items in the trash are removed from disk.":
     "Os {count} itens no lixo são removidos do disco.",
   "The archive was not opened": "O arquivo não foi aberto",
@@ -270,6 +307,9 @@ export const messages: Record<string, string> = {
   "The course was not linked": "A unidade curricular não foi ligada",
   "The download stopped": "A transferência parou",
   "The earlier copy is back": "A cópia anterior está de volta",
+  "The earlier version is back": "A versão anterior está de volta",
+  "The file is no longer in the workspace. Copy your text before closing this tab.":
+    "O ficheiro já não está no espaço de trabalho. Copie o seu texto antes de fechar este separador.",
   "The file was not moved": "O ficheiro não foi movido",
   "The file was not moved to the trash":
     "O ficheiro não foi movido para o lixo",
@@ -285,6 +325,8 @@ export const messages: Record<string, string> = {
   "The item in the trash is removed from disk.":
     "O item no lixo é removido do disco.",
   "The note was not created": "O apontamento não foi criado",
+  "The note's history could not be read":
+    "Não foi possível ler o histórico do apontamento",
   "The notes were not exported": "Os apontamentos não foram exportados",
   "The project goes to the trash. Its subjects and files stay where they are.":
     "O projeto vai para o lixo. As disciplinas e os ficheiros ficam onde estão.",
@@ -299,6 +341,9 @@ export const messages: Record<string, string> = {
   "The subject was not moved to the trash":
     "A disciplina não foi movida para o lixo",
   "The subjects were not reordered": "A ordem das disciplinas não foi alterada",
+  "The text it replaced was kept, so you can undo this too.":
+    "O texto que substituiu foi guardado, por isso também pode desfazer isto.",
+  "The text was not put back": "O texto não foi reposto",
   "The trash could not be read": "Não foi possível ler o lixo",
   "The trash was not emptied": "O lixo não foi esvaziado",
   "The workspace was exported": "O espaço de trabalho foi exportado",
@@ -313,9 +358,17 @@ export const messages: Record<string, string> = {
     "Esta pasta tem {count} ficheiro transferido da unidade curricular do Moodle. Vai para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-o de novo.",
   "This folder holds {count} files downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.":
     "Esta pasta tem {count} ficheiros transferidos da unidade curricular do Moodle. Vão para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-os de novo.",
+  "This note changed on disk while you were editing":
+    "Este apontamento mudou no disco enquanto o editava",
+  "This note could not be opened": "Não foi possível abrir este apontamento",
+  "This note uses Markdown the rich editor would change, so it opens as source.":
+    "Este apontamento usa Markdown que o editor visual alteraria, por isso abre como código-fonte.",
   Title: "Título",
   Typeface: "Tipo de letra",
+  "Untitled heading": "Título vazio",
+  Update: "Atualizar",
   Updated: "Atualizado",
+  "Use the version on disk": "Usar a versão do disco",
   "Use your Claude Code account for AI chat.":
     "Use a sua conta do Claude Code para conversar com a IA.",
   "Use your Codex account for AI chat.":
@@ -325,10 +378,18 @@ export const messages: Record<string, string> = {
     "Usa as línguas configuradas no seu sistema.",
   "Version history": "Histórico de versões",
   "Version history…": "Histórico de versões…",
+  "Versions appear here as you and the assistant change this note.":
+    "As versões aparecem aqui quando este apontamento é alterado por si ou pelo assistente.",
   "When it starts": "Quando começa",
   "When resit starts": "Ao iniciar o resit",
   Wide: "Larga",
   Worksheets: "Fichas de exercícios",
   workspace: "espaço de trabalho",
+  "Write here. Type $x^2$ for math, or $$ and Enter for a block.":
+    "Escreva aqui. Escreva $x^2$ para matemática, ou $$ e Enter para um bloco.",
+  "Write LaTeX. Press Ctrl+Enter to apply.":
+    "Escreva LaTeX. Prima Ctrl+Enter para aplicar.",
   Writing: "Escrita",
+  "Your text has not been saved. Choose which version to keep.":
+    "O seu texto não foi guardado. Escolha que versão manter.",
 };

@@ -82,6 +82,7 @@ export interface NoteViewProps {
 
 /** Loads a note and remounts the editor whenever the text is replaced from disk. */
 export function NoteView(props: NoteViewProps) {
+  const { t } = useLocale();
   const [document, setDocument] = useState<NoteDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -118,7 +119,7 @@ export function NoteView(props: NoteViewProps) {
     return (
       <EmptyState
         className="h-full"
-        title="This note could not be opened"
+        title={t("This note could not be opened")}
         description={error}
       />
     );
@@ -158,7 +159,7 @@ interface DocumentSummary {
 }
 
 /** The note's headings and its length, in one pass over the text. */
-function summarise(editor: Editor): DocumentSummary {
+function summarise(editor: Editor, untitled: string): DocumentSummary {
   const headings: OutlineHeading[] = [];
   let words = 0;
   editor.state.doc.descendants((node, pos) => {
@@ -169,7 +170,7 @@ function summarise(editor: Editor): DocumentSummary {
       headings.push({
         id: String(pos),
         level: Number(node.attrs.level ?? 1),
-        text: text || "Untitled heading",
+        text: text || untitled,
       });
     return false;
   });
@@ -192,7 +193,7 @@ function NoteEditor({
 }: NoteEditorProps) {
   const settings = useSettings();
   const notices = useNotices();
-  const { dateTime } = useLocale();
+  const { t, dateTime } = useLocale();
   const [mode, setMode] = useState<"rich" | "source">(settings.editor.mode);
   const [source, setSource] = useState(initial.body);
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -261,7 +262,9 @@ function NoteEditor({
           setSaveState("conflict");
         } else {
           setSaveError(
-            "The file is no longer in the workspace. Copy your text before closing this tab.",
+            t(
+              "The file is no longer in the workspace. Copy your text before closing this tab.",
+            ),
           );
           setSaveState("error");
         }
@@ -275,7 +278,7 @@ function NoteEditor({
     saving.current = null;
     if (edits.current !== savedEdits.current && !conflictRef.current)
       timer.current = window.setTimeout(() => void save(), SAVE_DELAY_MS);
-  }, [resource]);
+  }, [t, resource]);
 
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -321,15 +324,22 @@ function NoteEditor({
     return true;
   };
 
+  const placeholder = t(
+    "Write here. Type $x^2$ for math, or $$ and Enter for a block.",
+  );
   const editor = useEditor(
     {
-      extensions: useMemo(() => noteExtensions(() => handlers.current), []),
+      // Made once, with the editor.
+      extensions: useMemo(
+        () => noteExtensions(() => handlers.current, placeholder),
+        [],
+      ),
       content: initial.body,
       contentType: "markdown",
       editorProps: {
         attributes: {
           class: "document note-content",
-          "aria-label": "Note text",
+          "aria-label": t("Note text"),
           spellcheck: "true",
         },
         handleClick: (_view, _pos, event) => followLink(event),
@@ -435,7 +445,7 @@ function NoteEditor({
   // The outline only follows the note while it is on screen.
   useEffect(() => {
     if (!showOutline || mode === "source") return;
-    const update = () => setSummary(summarise(editor));
+    const update = () => setSummary(summarise(editor, t("Untitled heading")));
     update();
     editor.on("update", update);
     editor.on("selectionUpdate", update);
@@ -443,14 +453,14 @@ function NoteEditor({
       editor.off("update", update);
       editor.off("selectionUpdate", update);
     };
-  }, [editor, showOutline, mode]);
+  }, [t, editor, showOutline, mode]);
 
   const openFind = (replacing: boolean) => {
     setFind((current) =>
       current ? { replacing: current.replacing || replacing } : { replacing },
     );
     rootRef.current
-      ?.querySelector<HTMLInputElement>('input[aria-label="Find in note"]')
+      ?.querySelector<HTMLInputElement>("input[data-find-input]")
       ?.select();
   };
 
@@ -535,11 +545,11 @@ function NoteEditor({
       case "link": {
         const current = editor.getAttributes("link").href as string | undefined;
         setPrompt({
-          title: current ? "Edit link" : "Add link",
-          label: "Address",
+          title: current ? t("Edit link") : t("Add link"),
+          label: t("Address"),
           placeholder: "https://",
           ...(current ? { initialValue: current } : {}),
-          submitLabel: current ? "Update" : "Add link",
+          submitLabel: current ? t("Update") : t("Add link"),
           onSubmit: (href) => {
             editor
               .chain()
@@ -635,7 +645,7 @@ function NoteEditor({
                 : {})}
             />
             <ToolbarButton
-              label="Find and replace"
+              label={t("Find and replace")}
               active={find !== null}
               disabled={mode === "source"}
               onClick={() => (find ? setFind(null) : openFind(false))}
@@ -643,14 +653,14 @@ function NoteEditor({
               <SearchIcon />
             </ToolbarButton>
             <ToolbarButton
-              label="Outline"
+              label={t("Outline")}
               active={outlineOpen}
               onClick={() => setOutlineOpen((open) => !open)}
             >
               <ListTreeIcon />
             </ToolbarButton>
             <ToolbarButton
-              label="Version history"
+              label={t("Version history")}
               onClick={() => {
                 // The history compares against the file on disk.
                 void saveRef.current().then(() => setHistoryOpen(true));
@@ -661,7 +671,9 @@ function NoteEditor({
             {narrow ? (
               <ToolbarButton
                 label={
-                  mode === "source" ? "Edit as rich text" : "Edit as Markdown"
+                  mode === "source"
+                    ? t("Edit as rich text")
+                    : t("Edit as Markdown")
                 }
                 active={mode === "source"}
                 onClick={() =>
@@ -677,12 +689,12 @@ function NoteEditor({
                   switchMode(value as "rich" | "source")
                 }
               >
-                <TabsList aria-label="Editing mode">
+                <TabsList aria-label={t("Editing mode")}>
                   <TabsTrigger value="rich" className="text-xs">
-                    Rich
+                    {t("Rich")}
                   </TabsTrigger>
                   <TabsTrigger value="source" className="text-xs">
-                    Markdown
+                    {t("Markdown")}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -693,30 +705,32 @@ function NoteEditor({
       {conflict ? (
         <InlineMessage
           tone="warning"
-          title="This note changed on disk while you were editing"
+          title={t("This note changed on disk while you were editing")}
           className="mx-4 mt-3"
           actions={
             <>
               <Button size="sm" onClick={() => resolveConflict("mine")}>
-                Keep my version
+                {t("Keep my version")}
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => resolveConflict("disk")}
               >
-                Use the version on disk
+                {t("Use the version on disk")}
               </Button>
             </>
           }
         >
-          <p>Your text has not been saved. Choose which version to keep.</p>
+          <p>
+            {t("Your text has not been saved. Choose which version to keep.")}
+          </p>
         </InlineMessage>
       ) : null}
       {draft && !conflict ? (
         <InlineMessage
           tone="info"
-          title="Text you had not saved was kept"
+          title={t("Text you had not saved was kept")}
           className="mx-4 mt-3"
           actions={
             <>
@@ -730,12 +744,12 @@ function NoteEditor({
                       onDraftSettled();
                       onReplace(restored);
                     } catch (reason) {
-                      notices.fail("The text was not put back", reason);
+                      notices.fail(t("The text was not put back"), reason);
                     }
                   })()
                 }
               >
-                Restore it
+                {t("Restore it")}
               </Button>
               <Button
                 size="sm"
@@ -745,22 +759,25 @@ function NoteEditor({
                   void api.discardDraft(resource.id).catch(() => undefined);
                 }}
               >
-                Discard
+                {t("Discard")}
               </Button>
             </>
           }
         >
           <p>
-            From {dateTime(draft.savedAt)}. Restoring it replaces what the note
-            says now, which stays in Version history.
+            {t(
+              "From {time}. Restoring it replaces what the note says now, which stays in Version history.",
+              { time: dateTime(draft.savedAt) },
+            )}
           </p>
         </InlineMessage>
       ) : null}
       {lossy && mode === "source" ? (
         <InlineMessage tone="info" className="mx-4 mt-3">
           <p>
-            This note uses Markdown the rich editor would change, so it opens as
-            source.
+            {t(
+              "This note uses Markdown the rich editor would change, so it opens as source.",
+            )}
           </p>
         </InlineMessage>
       ) : null}
@@ -789,7 +806,7 @@ function NoteEditor({
               ) : (
                 <textarea
                   id={`source-${resource.id}`}
-                  aria-label="Markdown source"
+                  aria-label={t("Markdown source")}
                   value={source}
                   spellCheck={false}
                   onChange={(event) => {
@@ -805,7 +822,7 @@ function NoteEditor({
         </ScrollArea>
         {showOutline && mode === "rich" ? (
           <aside
-            aria-label="Note outline"
+            aria-label={t("Note outline")}
             className="flex w-60 shrink-0 flex-col border-l bg-sidebar"
           >
             <ScrollArea className="min-h-0 flex-1">
@@ -824,7 +841,9 @@ function NoteEditor({
               />
             </ScrollArea>
             <div className="border-t px-3 py-2 text-xs text-muted-foreground">
-              {summary.words} {summary.words === 1 ? "word" : "words"}
+              {summary.words === 1
+                ? t("{count} word", { count: 1 })
+                : t("{count} words", { count: summary.words })}
             </div>
           </aside>
         ) : null}

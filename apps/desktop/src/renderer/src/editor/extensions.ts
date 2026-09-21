@@ -62,7 +62,10 @@ function mathTyping(handlers: () => MathHandlers) {
   });
 }
 
-export function noteExtensions(handlers: () => MathHandlers): Extensions {
+export function noteExtensions(
+  handlers: () => MathHandlers,
+  placeholder: string,
+): Extensions {
   return [
     StarterKit.configure({
       // `resit:` links point at a page or highlight in this workspace, and
@@ -89,10 +92,7 @@ export function noteExtensions(handlers: () => MathHandlers): Extensions {
     }),
     mathTyping(handlers),
     Find,
-    Placeholder.configure({
-      placeholder:
-        "Write here. Type $x^2$ for math, or $$ and Enter for a block.",
-    }),
+    Placeholder.configure({ placeholder }),
     Markdown,
   ];
 }

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@resit/ui/components/button";
 import { Input } from "@resit/ui/components/input";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import {
   clearSearch,
@@ -37,6 +38,7 @@ export function FindBar({
   replacing,
   onReplacingChange,
 }: FindBarProps) {
+  const { t } = useLocale();
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -70,8 +72,9 @@ export function FindBar({
       >
         <Input
           autoFocus
-          aria-label="Find in note"
-          placeholder="Find"
+          aria-label={t("Find in note")}
+          data-find-input
+          placeholder={t("Find")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
@@ -87,28 +90,28 @@ export function FindBar({
           {query ? `${status.current}/${status.count}` : ""}
         </span>
         <ToolbarButton
-          label="Previous match"
+          label={t("Previous match")}
           disabled={status.count === 0}
           onClick={() => step(-1)}
         >
           <ChevronUpIcon />
         </ToolbarButton>
         <ToolbarButton
-          label="Next match"
+          label={t("Next match")}
           disabled={status.count === 0}
           onClick={() => step(1)}
         >
           <ChevronDownIcon />
         </ToolbarButton>
         <ToolbarButton
-          label="Match case"
+          label={t("Match case")}
           active={caseSensitive}
           onClick={() => setCaseSensitive((value) => !value)}
         >
           <CaseSensitiveIcon />
         </ToolbarButton>
         <ToolbarButton
-          label="Replace"
+          label={t("Replace")}
           active={replacing}
           onClick={() => onReplacingChange(!replacing)}
         >
@@ -118,7 +121,7 @@ export function FindBar({
           type="button"
           size="icon-sm"
           variant="subtle"
-          aria-label="Close find"
+          aria-label={t("Close find")}
           className="ml-auto"
           onClick={close}
         >
@@ -128,8 +131,8 @@ export function FindBar({
       {replacing ? (
         <div className="flex items-center gap-2">
           <Input
-            aria-label="Replace with"
-            placeholder="Replace with"
+            aria-label={t("Replace with")}
+            placeholder={t("Replace with")}
             value={replacement}
             onChange={(event) => setReplacement(event.target.value)}
             onKeyDown={(event) => {
@@ -150,7 +153,7 @@ export function FindBar({
               setStatus(findStatus(editor));
             }}
           >
-            Replace
+            {t("Replace")}
           </Button>
           <Button
             size="sm"
@@ -161,7 +164,7 @@ export function FindBar({
               setStatus(findStatus(editor));
             }}
           >
-            Replace all
+            {t("Replace all")}
           </Button>
         </div>
       ) : null}
