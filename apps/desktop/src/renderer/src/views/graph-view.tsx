@@ -25,6 +25,7 @@ import { Input } from "@resit/ui/components/input";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { ResourceLink } from "../../../shared/ipc";
 import {
@@ -185,6 +186,7 @@ export interface GraphViewProps {
  * the links notes make to them. Searching lights up what matches.
  */
 export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [links, setLinks] = useState<ResourceLink[]>([]);
@@ -623,14 +625,14 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div
         role="toolbar"
-        aria-label="Graph tools"
+        aria-label={t("Graph tools")}
         className="flex h-toolbar shrink-0 items-center gap-2 border-b bg-background px-3"
       >
         <div className="relative w-full max-w-80">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle-foreground" />
           <Input
-            aria-label="Search the graph"
-            placeholder="Search notes, PDFs, and subjects"
+            aria-label={t("Search the graph")}
+            placeholder={t("Search notes, PDFs, and subjects")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
@@ -652,19 +654,23 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
         <div className="ml-auto flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="subtle" size="icon" aria-label="What to show">
+              <Button
+                variant="subtle"
+                size="icon"
+                aria-label={t("What to show")}
+              >
                 <SlidersHorizontalIcon />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel>Show</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("Show")}</DropdownMenuLabel>
               <DropdownMenuCheckboxItem
                 checked={filters.subjects}
                 onCheckedChange={(checked) =>
                   setFilters((current) => ({ ...current, subjects: checked }))
                 }
               >
-                Subjects
+                {t("Subjects")}
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={filters.documents}
@@ -672,7 +678,7 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
                   setFilters((current) => ({ ...current, documents: checked }))
                 }
               >
-                PDFs and other files
+                {t("PDFs and other files")}
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={filters.unlinked}
@@ -680,17 +686,17 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
                   setFilters((current) => ({ ...current, unlinked: checked }))
                 }
               >
-                Files nothing links to
+                {t("Files nothing links to")}
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <ToolbarButton label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
+          <ToolbarButton label={t("Zoom out")} onClick={() => zoomBy(1 / 1.25)}>
             <ZoomOutIcon />
           </ToolbarButton>
-          <ToolbarButton label="Zoom in" onClick={() => zoomBy(1.25)}>
+          <ToolbarButton label={t("Zoom in")} onClick={() => zoomBy(1.25)}>
             <ZoomInIcon />
           </ToolbarButton>
-          <ToolbarButton label="Fit to view" onClick={fit}>
+          <ToolbarButton label={t("Fit to view")} onClick={fit}>
             <MaximizeIcon />
           </ToolbarButton>
         </div>
@@ -698,7 +704,10 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
       <div ref={wrapRef} className="relative min-h-0 flex-1 bg-canvas">
         <canvas
           ref={canvasRef}
-          aria-label={`Workspace graph: ${nodes.length} nodes, ${edges.length} connections`}
+          aria-label={t("Workspace graph: {nodes} nodes, {edges} connections", {
+            nodes: nodes.length,
+            edges: edges.length,
+          })}
           className="absolute inset-0 size-full touch-none"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -730,8 +739,10 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
           <div className="absolute inset-0 flex items-center justify-center">
             <EmptyState
               icon={<WaypointsIcon />}
-              title="Nothing to show yet"
-              description="Add notes and files, or turn some of them back on in the show menu."
+              title={t("Nothing to show yet")}
+              description={t(
+                "Add notes and files, or turn some of them back on in the show menu.",
+              )}
             />
           </div>
         ) : null}
@@ -754,14 +765,14 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {selected.kind === "subject"
-                    ? "Subject"
-                    : (subjectNames.get(selected.subjectId) ?? "No subject")}
+                    ? t("Subject")
+                    : (subjectNames.get(selected.subjectId) ?? t("No subject"))}
                 </span>
               </div>
               <Button
                 variant="subtle"
                 size="icon-sm"
-                aria-label="Close details"
+                aria-label={t("Close details")}
                 onClick={() => setSelectedId(null)}
               >
                 <XIcon />
@@ -769,17 +780,21 @@ export function GraphView({ snapshot, onOpenResource }: GraphViewProps) {
             </div>
             {selected.kind === "subject" ? null : (
               <Button size="sm" onClick={() => open(selected)}>
-                Open
+                {t("Open")}
               </Button>
             )}
             <div className="flex flex-col gap-1">
               <span className="text-2xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-                Connected ({selectedNeighbours.length})
+                {t("Connected ({count})", {
+                  count: selectedNeighbours.length,
+                })}
               </span>
               <div className="flex max-h-40 flex-col gap-px overflow-y-auto">
                 {selectedNeighbours.length === 0 ? (
                   <p className="py-1 text-xs text-muted-foreground">
-                    Nothing links here yet. Quote this in a note to connect it.
+                    {t(
+                      "Nothing links here yet. Quote this in a note to connect it.",
+                    )}
                   </p>
                 ) : null}
                 {selectedNeighbours.map((node) => {

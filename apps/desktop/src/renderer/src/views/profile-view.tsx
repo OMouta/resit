@@ -25,6 +25,7 @@ import { Switch } from "@resit/ui/components/switch";
 import { Tabs, TabsList, TabsTrigger } from "@resit/ui/components/tabs";
 import { Textarea } from "@resit/ui/components/textarea";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
@@ -47,9 +48,9 @@ import { SettingRow } from "../settings/settings-dialog";
 
 const NO_SUBJECT = "none";
 const LEVEL_LABELS: Record<TopicLevel, string> = {
-  gap: "Gap",
-  developing: "Developing",
-  secure: "Secure",
+  gap: msg("Gap"),
+  developing: msg("Developing"),
+  secure: msg("Secure"),
 };
 
 function SectionTitle({
@@ -76,6 +77,7 @@ interface TopicRequest {
 
 /** How the student likes to learn and how well they know each topic. */
 export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const { profile, error } = useLearner();
   const [topicRequest, setTopicRequest] = useState<TopicRequest | null>(null);
@@ -97,7 +99,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
       <EmptyState
         className="h-full"
         icon={<UserRoundIcon />}
-        title="The profile could not be read"
+        title={t("The profile could not be read")}
         description={error}
       />
     );
@@ -129,12 +131,12 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     try {
       await api.updatePreferences(patch);
     } catch (reason) {
-      notices.fail("The preference was not saved", reason);
+      notices.fail(t("The preference was not saved"), reason);
     }
   };
 
   const subjectName = (id: string | undefined) =>
-    id ? (subjects.get(id)?.name ?? "Deleted subject") : "No subject";
+    id ? (subjects.get(id)?.name ?? t("Deleted subject")) : t("No subject");
 
   return (
     <>
@@ -143,23 +145,27 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
             <div className="flex min-w-64 flex-1 flex-col gap-1">
               <h1 className="text-3xl font-bold tracking-[-0.025em]">
-                Learner profile
+                {t("Learner profile")}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {file.personalization
-                  ? "The assistant reads what you accept here, for the subjects in each conversation."
-                  : "The assistant reads nothing from here and cannot suggest changes."}
+                  ? t(
+                      "The assistant reads what you accept here, for the subjects in each conversation.",
+                    )
+                  : t(
+                      "The assistant reads nothing from here and cannot suggest changes.",
+                    )}
               </p>
             </div>
             <label className="flex h-control items-center gap-2 text-sm">
-              Share with the assistant
+              {t("Share with the assistant")}
               <Switch
                 checked={file.personalization}
                 onCheckedChange={(checked) =>
                   void api
                     .setPersonalization(checked)
                     .catch((reason: unknown) =>
-                      notices.fail("The setting was not saved", reason),
+                      notices.fail(t("The setting was not saved"), reason),
                     )
                 }
               />
@@ -167,14 +173,19 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           </header>
 
           {waiting.length > 0 ? (
-            <section aria-label="Suggestions" className="flex flex-col gap-3">
-              <SectionTitle>Waiting for you · {waiting.length}</SectionTitle>
+            <section
+              aria-label={t("Suggestions")}
+              className="flex flex-col gap-3"
+            >
+              <SectionTitle>
+                {t("Waiting for you · {count}", { count: waiting.length })}
+              </SectionTitle>
               {waiting.map((proposal) => {
                 const current = proposal.topicId
                   ? file.topics.find((topic) => topic.id === proposal.topicId)
                   : undefined;
                 const found = evidenceFor(proposal.name, proposal.subjectId);
-                const line = evidenceLine(found);
+                const line = evidenceLine(found, t);
                 return (
                   <ProfileProposal
                     key={proposal.id}
@@ -196,7 +207,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         })
                         .catch((reason: unknown) =>
                           notices.fail(
-                            "The suggestion was not accepted",
+                            t("The suggestion was not accepted"),
                             reason,
                           ),
                         )
@@ -206,7 +217,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         .resolveTopicProposal({ id, accept: false })
                         .catch((reason: unknown) =>
                           notices.fail(
-                            "The suggestion was not rejected",
+                            t("The suggestion was not rejected"),
                             reason,
                           ),
                         )
@@ -217,7 +228,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         kind={found.answered > 0 ? "quiz" : "flashcard"}
                         outcome="observed"
                         summary={line}
-                        sourceTitle="Your practice in the last 30 days"
+                        sourceTitle={t("Your practice in the last 30 days")}
                         at={found.lastAt ?? proposal.createdAt}
                       />
                     ) : null}
@@ -227,26 +238,29 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
             </section>
           ) : null}
 
-          <section aria-label="Preferences" className="flex flex-col gap-4">
-            <SectionTitle>How you like to learn</SectionTitle>
+          <section
+            aria-label={t("Preferences")}
+            className="flex flex-col gap-4"
+          >
+            <SectionTitle>{t("How you like to learn")}</SectionTitle>
             <div className="flex flex-col gap-4 px-2">
-              <SettingRow label="Explanations">
+              <SettingRow label={t("Explanations")}>
                 <Tabs
                   value={preferences.detail}
                   onValueChange={(value) =>
                     void save({ detail: value as Detail })
                   }
                 >
-                  <TabsList aria-label="Explanations">
-                    <TabsTrigger value="brief">Brief</TabsTrigger>
-                    <TabsTrigger value="standard">Standard</TabsTrigger>
-                    <TabsTrigger value="thorough">Thorough</TabsTrigger>
+                  <TabsList aria-label={t("Explanations")}>
+                    <TabsTrigger value="brief">{t("Brief")}</TabsTrigger>
+                    <TabsTrigger value="standard">{t("Standard")}</TabsTrigger>
+                    <TabsTrigger value="thorough">{t("Thorough")}</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </SettingRow>
               <SettingRow
-                label="Hints before solutions"
-                description="Asking for the solution still gets it."
+                label={t("Hints before solutions")}
+                description={t("Asking for the solution still gets it.")}
                 htmlFor="hints-first"
               >
                 <Switch
@@ -258,7 +272,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                 />
               </SettingRow>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="profile-about">About you</Label>
+                <Label htmlFor="profile-about">{t("About you")}</Label>
                 <Textarea
                   id="profile-about"
                   value={about}
@@ -267,12 +281,14 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                     if (about.trim() !== (preferences.about ?? ""))
                       void save({ about });
                   }}
-                  placeholder="First year of Electrical Engineering. Resitting Calculus I."
+                  placeholder={t(
+                    "First year of Electrical Engineering. Resitting Calculus I.",
+                  )}
                   className="min-h-16"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="profile-goals">Goals</Label>
+                <Label htmlFor="profile-goals">{t("Goals")}</Label>
                 <Textarea
                   id="profile-goals"
                   value={goals}
@@ -281,18 +297,20 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                     if (goals.trim() !== (preferences.goals ?? ""))
                       void save({ goals });
                   }}
-                  placeholder="Pass the resit in January with time to spare."
+                  placeholder={t(
+                    "Pass the resit in January with time to spare.",
+                  )}
                   className="min-h-16"
                 />
               </div>
             </div>
           </section>
 
-          <section aria-label="Topics" className="flex flex-col gap-1">
+          <section aria-label={t("Topics")} className="flex flex-col gap-1">
             <SectionTitle
               action={
                 <Button variant="subtle" onClick={() => setTopicRequest({})}>
-                  <PlusIcon /> Add topic
+                  <PlusIcon /> {t("Add topic")}
                 </Button>
               }
             >
@@ -300,7 +318,7 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
             </SectionTitle>
             {file.topics.length === 0 ? (
               <p className="px-2 text-sm text-muted-foreground">
-                Add the topics you find hard or know well.
+                {t("Add the topics you find hard or know well.")}
               </p>
             ) : (
               <ul className="flex flex-col">
@@ -328,7 +346,10 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         void api
                           .deleteTopic(topic.id)
                           .catch((reason: unknown) =>
-                            notices.fail("The topic was not removed", reason),
+                            notices.fail(
+                              t("The topic was not removed"),
+                              reason,
+                            ),
                           )
                       }
                     />
@@ -339,10 +360,10 @@ export function ProfileView({ snapshot }: { snapshot: WorkspaceSnapshot }) {
 
           {unlisted.length > 0 ? (
             <section
-              aria-label="From your practice"
+              aria-label={t("From your practice")}
               className="flex flex-col gap-1"
             >
-              <SectionTitle>From your practice</SectionTitle>
+              <SectionTitle>{t("From your practice")}</SectionTitle>
               <ul className="flex flex-col">
                 {unlisted.map((entry) => (
                   <TopicRow
@@ -393,8 +414,8 @@ function TopicRow({
   onDelete?: () => void;
   onAdd?: () => void;
 }) {
-  const { relative } = useLocale();
-  const line = evidenceLine(evidence);
+  const { t, relative } = useLocale();
+  const line = evidenceLine(evidence, t);
   return (
     <li className="group/topic flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent">
       <span
@@ -411,7 +432,7 @@ function TopicRow({
         <span className="truncate text-xs text-muted-foreground">
           {[
             subject?.name,
-            line || (level ? "No practice on it lately" : null),
+            line || (level ? t("No practice on it lately") : null),
             evidence?.lastAt ? relative(evidence.lastAt) : null,
           ]
             .filter(Boolean)
@@ -426,18 +447,21 @@ function TopicRow({
       {level ? <LevelChip level={level} /> : null}
       {onAdd ? (
         <Button variant="secondary" onClick={onAdd}>
-          <PlusIcon /> Add
+          <PlusIcon /> {t("Add")}
         </Button>
       ) : null}
       {onEdit || onDelete ? (
         <span className="flex items-center opacity-0 group-focus-within/topic:opacity-100 group-hover/topic:opacity-100">
           {onEdit ? (
-            <ToolbarButton label={`Edit ${name}`} onClick={onEdit}>
+            <ToolbarButton label={t("Edit {name}", { name })} onClick={onEdit}>
               <PencilIcon />
             </ToolbarButton>
           ) : null}
           {onDelete ? (
-            <ToolbarButton label={`Remove ${name}`} onClick={onDelete}>
+            <ToolbarButton
+              label={t("Remove {name}", { name })}
+              onClick={onDelete}
+            >
               <Trash2Icon />
             </ToolbarButton>
           ) : null}
@@ -456,6 +480,7 @@ function TopicDialog({
   subjects: SubjectInfo[];
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [name, setName] = useState("");
   const [subjectId, setSubjectId] = useState(NO_SUBJECT);
@@ -491,7 +516,7 @@ function TopicDialog({
       });
       onClose();
     } catch (reason) {
-      notices.fail("The topic was not saved", reason);
+      notices.fail(t("The topic was not saved"), reason);
     } finally {
       setBusy(false);
     }
@@ -510,21 +535,21 @@ function TopicDialog({
           >
             <DialogHeader>
               <DialogTitle>
-                {existing ? "Edit topic" : "Add a topic"}
+                {existing ? t("Edit topic") : t("Add a topic")}
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="topic-name">Topic</Label>
+              <Label htmlFor="topic-name">{t("Topic")}</Label>
               <Input
                 id="topic-name"
                 autoFocus
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Limits"
+                placeholder={t("Limits")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="topic-subject">Subject</Label>
+              <Label htmlFor="topic-subject">{t("Subject")}</Label>
               <Select value={subjectId} onValueChange={setSubjectId}>
                 <SelectTrigger id="topic-subject" className="w-full">
                   <SelectValue />
@@ -535,41 +560,43 @@ function TopicDialog({
                       {subject.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value={NO_SUBJECT}>No subject</SelectItem>
+                  <SelectItem value={NO_SUBJECT}>{t("No subject")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">How well you know it</span>
+              <span className="text-sm font-medium">
+                {t("How well you know it")}
+              </span>
               <Tabs
                 value={level}
                 onValueChange={(value) => setLevel(value as TopicLevel)}
               >
-                <TabsList aria-label="How well you know it">
+                <TabsList aria-label={t("How well you know it")}>
                   {(Object.keys(LEVEL_LABELS) as TopicLevel[]).map((entry) => (
                     <TabsTrigger key={entry} value={entry}>
-                      {LEVEL_LABELS[entry]}
+                      {t(LEVEL_LABELS[entry])}
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </Tabs>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="topic-note">Note</Label>
+              <Label htmlFor="topic-note">{t("Note")}</Label>
               <Textarea
                 id="topic-note"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="I mix up the squeeze theorem and L'Hôpital."
+                placeholder={t("I mix up the squeeze theorem and L'Hôpital.")}
                 className="min-h-14"
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={busy || !name.trim()}>
-                {existing ? "Save" : "Add topic"}
+                {existing ? t("Save") : t("Add topic")}
               </Button>
             </DialogFooter>
           </form>

@@ -80,7 +80,7 @@ export function MoodleDialog({
   onOpenSettings: () => void;
 }) {
   const notices = useNotices();
-  const { t, number } = useLocale();
+  const { t, tc, number } = useLocale();
   const [view, setView] = useState<View>({ kind: "loading" });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [query, setQuery] = useState("");
@@ -265,14 +265,20 @@ export function MoodleDialog({
                 {waiting.length === 0
                   ? t("Everything in this course is already here.")
                   : [
-                      waiting.length - updated > 0
-                        ? t("{count} new", {
-                            count: number(waiting.length - updated),
-                          })
-                        : null,
-                      updated > 0
-                        ? t("{count} updated", { count: number(updated) })
-                        : null,
+                      waiting.length - updated === 0
+                        ? null
+                        : waiting.length - updated === 1
+                          ? tc("file", "1 new")
+                          : tc("file", "{count} new", {
+                              count: number(waiting.length - updated),
+                            }),
+                      updated === 0
+                        ? null
+                        : updated === 1
+                          ? tc("file", "1 updated")
+                          : tc("file", "{count} updated", {
+                              count: number(updated),
+                            }),
                     ]
                       .filter(Boolean)
                       .join(" · ")}

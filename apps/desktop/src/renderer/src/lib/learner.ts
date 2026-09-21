@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import type { LocaleFormatters } from "@resit/ui/hooks/use-locale";
+
 import type { LearnerProfile, TopicEvidence } from "../../../shared/learner";
 import { api, errorMessage } from "./api";
 
@@ -49,20 +51,33 @@ export function useLearner(): {
 }
 
 /** "9 reviews, 3 forgotten · 4 of 6 quiz answers right", or nothing. */
-export function evidenceLine(evidence: TopicEvidence | undefined): string {
+export function evidenceLine(
+  evidence: TopicEvidence | undefined,
+  t: LocaleFormatters["t"],
+): string {
   if (!evidence) return "";
   const parts = [];
-  if (evidence.reviews > 0)
+  if (evidence.reviews > 0) {
+    const values = { count: evidence.reviews, forgotten: evidence.forgotten };
     parts.push(
-      `${evidence.reviews} ${evidence.reviews === 1 ? "review" : "reviews"}, ${evidence.forgotten} forgotten`,
+      evidence.reviews === 1
+        ? t("{count} review, {forgotten} forgotten", values)
+        : t("{count} reviews, {forgotten} forgotten", values),
     );
-  if (evidence.answered > 0)
+  }
+  if (evidence.answered > 0) {
+    const values = { right: evidence.right, count: evidence.answered };
     parts.push(
-      `${evidence.right} of ${evidence.answered} quiz ${evidence.answered === 1 ? "answer" : "answers"} right`,
+      evidence.answered === 1
+        ? t("{right} of {count} quiz answer right", values)
+        : t("{right} of {count} quiz answers right", values),
     );
+  }
   if (parts.length === 0 && evidence.cards > 0)
     parts.push(
-      `${evidence.cards} ${evidence.cards === 1 ? "card" : "cards"}, not reviewed lately`,
+      evidence.cards === 1
+        ? t("{count} card, not reviewed lately", { count: 1 })
+        : t("{count} cards, not reviewed lately", { count: evidence.cards }),
     );
   return parts.join(" · ");
 }

@@ -24,6 +24,7 @@ import {
   ToggleGroupItem,
 } from "@resit/ui/components/toggle-group";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { MathText } from "@resit/ui/patterns/document/math";
@@ -56,9 +57,9 @@ type Screen =
   | { kind: "results"; attempt: Attempt };
 
 const OUTCOME_LABELS: Record<Outcome, string> = {
-  correct: "Right",
-  partial: "Partly",
-  incorrect: "Wrong",
+  correct: msg("Right"),
+  partial: msg("Partly"),
+  incorrect: msg("Wrong"),
 };
 
 /** One quiz: its past attempts, taking it, and the marked results. */
@@ -75,6 +76,7 @@ export function QuizView({
   onEdit: (quiz: QuizFile) => void;
   onDeleted: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [quiz, setQuiz] = useState<QuizFile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function QuizView({
       <EmptyState
         className="h-full"
         icon={<ClipboardListIcon />}
-        title="This quiz is no longer here"
+        title={t("This quiz is no longer here")}
         description={error}
       />
     );
@@ -122,7 +124,7 @@ export function QuizView({
         attempt: await api.startAttempt({ subjectId, quizId }),
       });
     } catch (reason) {
-      notices.fail("The quiz did not start", reason);
+      notices.fail(t("The quiz did not start"), reason);
     }
   };
 
@@ -164,7 +166,7 @@ export function QuizView({
           await api.deleteQuiz({ subjectId, quizId });
           onDeleted();
         } catch (reason) {
-          notices.fail("The quiz was not moved to the trash", reason);
+          notices.fail(t("The quiz was not moved to the trash"), reason);
         }
       }}
       onOpenResults={(attempt) => setScreen({ kind: "results", attempt })}
@@ -187,7 +189,7 @@ function QuizOverview({
   onDelete: () => Promise<void>;
   onOpenResults: (attempt: Attempt) => void;
 }) {
-  const { dateTime } = useLocale();
+  const { t, dateTime } = useLocale();
   const unfinished = quiz.attempts.find((attempt) => !attempt.submittedAt);
   const submitted = quiz.attempts
     .filter((attempt) => attempt.submittedAt)
@@ -219,27 +221,33 @@ function QuizOverview({
             {quiz.title}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {quiz.questions.length}{" "}
-            {quiz.questions.length === 1 ? "question" : "questions"}
-            {quiz.author === "assistant" ? " · made by the assistant" : ""}
+            {quiz.questions.length === 1
+              ? t("1 question")
+              : t("{count} questions", { count: quiz.questions.length })}
+            {quiz.author === "assistant"
+              ? ` · ${t("made by the assistant")}`
+              : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button size="lg" onClick={onStart}>
               {unfinished
-                ? `Continue (${answered} of ${unfinished.questions.length} answered)`
+                ? t("Continue ({answered} of {total} answered)", {
+                    answered,
+                    total: unfinished.questions.length,
+                  })
                 : submitted.length > 0
-                  ? "Take it again"
-                  : "Start"}
+                  ? t("Take it again")
+                  : t("Start")}
             </Button>
             <Button size="lg" variant="secondary" onClick={onEdit}>
-              <PencilIcon /> Edit
+              <PencilIcon /> {t("Edit")}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   size="icon-lg"
                   variant="subtle"
-                  aria-label="Quiz actions"
+                  aria-label={t("Quiz actions")}
                 >
                   <MoreHorizontalIcon />
                 </Button>
@@ -249,16 +257,16 @@ function QuizOverview({
                   variant="destructive"
                   onSelect={() => void onDelete()}
                 >
-                  <Trash2Icon /> Move to trash
+                  <Trash2Icon /> {t("Move to trash")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
         {submitted.length > 0 ? (
-          <section aria-label="Attempts" className="flex flex-col gap-1">
+          <section aria-label={t("Attempts")} className="flex flex-col gap-1">
             <h2 className="px-2 text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
-              Attempts
+              {t("Attempts")}
             </h2>
             <ul className="flex flex-col">
               {submitted.map((attempt) => {
@@ -278,7 +286,7 @@ function QuizOverview({
                       </span>
                       {unmarked > 0 ? (
                         <span className="text-xs font-medium text-warning">
-                          {unmarked} to mark
+                          {t("{count} to mark", { count: unmarked })}
                         </span>
                       ) : null}
                       <span className="w-16 text-right text-sm font-medium tabular-nums">
@@ -321,6 +329,7 @@ function AttemptScreen({
   onLeave: () => void;
   onSubmitted: (attempt: Attempt) => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [answers, setAnswers] = useState<Answers>(() => answersOf(attempt));
   const [currentId, setCurrentId] = useState(
@@ -347,9 +356,9 @@ function AttemptScreen({
         responses: next,
       });
     } catch (reason) {
-      notices.fail("Your answers were not saved", reason);
+      notices.fail(t("Your answers were not saved"), reason);
     }
-  }, [subjectId, quiz.id, attempt.id, notices]);
+  }, [t, subjectId, quiz.id, attempt.id, notices]);
 
   // Whatever is still unsaved goes when the attempt closes.
   useEffect(() => () => void flush(), [flush]);
@@ -389,7 +398,7 @@ function AttemptScreen({
         }),
       );
     } catch (reason) {
-      notices.fail("The quiz was not handed in", reason);
+      notices.fail(t("The quiz was not handed in"), reason);
       setSubmitting(false);
     }
   };
@@ -406,13 +415,15 @@ function AttemptScreen({
             onLeave();
           }}
         >
-          <ArrowLeftIcon /> Quiz
+          <ArrowLeftIcon /> {t("Quiz")}
         </Button>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">
           {quiz.title}
         </span>
         {submitting ? (
-          <span className="text-xs text-muted-foreground">Handing in…</span>
+          <span className="text-xs text-muted-foreground">
+            {t("Handing in…")}
+          </span>
         ) : null}
       </div>
       <ScrollArea className="min-h-0 flex-1">
@@ -461,7 +472,7 @@ function AttemptScreen({
                 className="self-start"
                 onClick={() => change(question.id, { hintShown: true })}
               >
-                <LightbulbIcon /> Show a hint
+                <LightbulbIcon /> {t("Show a hint")}
               </Button>
             )
           ) : null}
@@ -485,6 +496,7 @@ function ResultsScreen({
   onBack: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const score = attemptScore(attempt);
   const unmarked = attempt.questions.filter(
@@ -501,7 +513,7 @@ function ResultsScreen({
         outcome,
       });
     } catch (reason) {
-      notices.fail("The mark was not saved", reason);
+      notices.fail(t("The mark was not saved"), reason);
     }
   };
 
@@ -509,13 +521,13 @@ function ResultsScreen({
     <div className="flex h-full flex-col bg-background">
       <div className="flex h-toolbar shrink-0 items-center gap-2 border-b px-3">
         <Button variant="subtle" onClick={onBack}>
-          <ArrowLeftIcon /> Quiz
+          <ArrowLeftIcon /> {t("Quiz")}
         </Button>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">
           {quiz.title}
         </span>
         <Button variant="secondary" onClick={onRetry}>
-          <RotateCcwIcon /> Try again
+          <RotateCcwIcon /> {t("Try again")}
         </Button>
       </div>
       <ScrollArea className="min-h-0 flex-1">
@@ -532,8 +544,16 @@ function ResultsScreen({
               )}
             >
               {unmarked > 0
-                ? `${unmarked} ${unmarked === 1 ? "answer needs" : "answers need"} your mark. Compare with the solution below.`
-                : "Every answer is marked."}
+                ? unmarked === 1
+                  ? t(
+                      "{count} answer needs your mark. Compare with the solution below.",
+                      { count: 1 },
+                    )
+                  : t(
+                      "{count} answers need your mark. Compare with the solution below.",
+                      { count: unmarked },
+                    )
+                : t("Every answer is marked.")}
             </p>
           </header>
           <ol className="flex flex-col gap-4">
@@ -564,6 +584,7 @@ function ResultItem({
   response: Response | undefined;
   onMark: (outcome: Outcome) => void;
 }) {
+  const { t } = useLocale();
   const outcome = response?.mark?.outcome;
   const answer = response?.answer.trim() ?? "";
   const right = question.answer;
@@ -584,10 +605,10 @@ function ResultItem({
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
             {response?.mark?.by === "check"
-              ? "Marked by resit"
+              ? t("Marked by resit")
               : response?.mark
-                ? "Your mark"
-                : "Mark it"}
+                ? t("Your mark")
+                : t("Mark it")}
           </span>
           <ToggleGroup
             type="single"
@@ -596,7 +617,7 @@ function ResultItem({
             onValueChange={(value) => {
               if (value) onMark(value as Outcome);
             }}
-            aria-label={`Mark question ${number}`}
+            aria-label={t("Mark question {number}", { number })}
           >
             {(Object.keys(OUTCOME_LABELS) as Outcome[]).map((entry) => (
               <ToggleGroupItem
@@ -609,7 +630,7 @@ function ResultItem({
                   entry === "incorrect" && "data-[state=on]:text-destructive",
                 )}
               >
-                {OUTCOME_LABELS[entry]}
+                {t(OUTCOME_LABELS[entry])}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -624,13 +645,15 @@ function ResultItem({
           {answer ? (
             <MathText paragraphClassName="my-0">{answer}</MathText>
           ) : (
-            <span className="text-muted-foreground">No answer</span>
+            <span className="text-muted-foreground">{t("No answer")}</span>
           )}
         </div>
         {right ? (
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">
-              {question.kind === "worked" ? "Final answer" : "Right answer"}
+              {question.kind === "worked"
+                ? t("Final answer")
+                : t("Right answer")}
             </span>
             <MathText paragraphClassName="my-0">{right}</MathText>
           </div>

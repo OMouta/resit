@@ -133,7 +133,7 @@ function sessionStatus(session: StudySession): AgendaStatus {
 export function ScheduleView(props: ScheduleViewProps) {
   const { snapshot } = props;
   const notices = useNotices();
-  const { date: formatDate, weekday } = useLocale();
+  const { t, tx, date: formatDate, weekday } = useLocale();
   const { plan, error } = usePlan();
   const subjectIds = useMemo(
     () => snapshot.subjects.map((subject) => subject.id),
@@ -178,11 +178,11 @@ export function ScheduleView(props: ScheduleViewProps) {
       if (path)
         notices.notify({
           tone: "success",
-          title: "The study plan was exported",
+          title: t("The study plan was exported"),
           detail: path,
         });
     } catch (reason) {
-      notices.fail("The calendar was not exported", reason);
+      notices.fail(t("The calendar was not exported"), reason);
     }
   };
 
@@ -194,7 +194,9 @@ export function ScheduleView(props: ScheduleViewProps) {
       <ScrollArea className="h-full bg-background">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-8 pt-12 pb-24">
           <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-            <h1 className="text-3xl font-bold tracking-[-0.025em]">Schedule</h1>
+            <h1 className="text-3xl font-bold tracking-[-0.025em]">
+              {t("Schedule")}
+            </h1>
             <div className="flex items-center gap-2">
               <Button
                 variant="secondary"
@@ -207,14 +209,14 @@ export function ScheduleView(props: ScheduleViewProps) {
                   })
                 }
               >
-                <PlusIcon /> New session
+                <PlusIcon /> {t("New session")}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="subtle"
                     size="icon"
-                    aria-label="More planning actions"
+                    aria-label={t("More planning actions")}
                     disabled={!plan}
                   >
                     <MoreHorizontalIcon />
@@ -222,13 +224,13 @@ export function ScheduleView(props: ScheduleViewProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onSelect={() => setAssessmentRequest({})}>
-                    <GraduationCapIcon /> New assessment
+                    <GraduationCapIcon /> {t("New assessment")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setAvailabilityOpen(true)}>
-                    <ClockIcon /> Study times…
+                    <ClockIcon /> {t("Study times…")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => void exportCalendar()}>
-                    <DownloadIcon /> Export to a calendar file…
+                    <DownloadIcon /> {t("Export to a calendar file…")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -236,7 +238,7 @@ export function ScheduleView(props: ScheduleViewProps) {
           </header>
 
           {error && !plan ? (
-            <InlineMessage tone="error" title="The plan could not be read">
+            <InlineMessage tone="error" title={t("The plan could not be read")}>
               <p>{error}</p>
             </InlineMessage>
           ) : null}
@@ -248,27 +250,34 @@ export function ScheduleView(props: ScheduleViewProps) {
                 subjects={subjects}
                 onEdit={(session) => setSessionRequest({ session })}
               />
-              <section aria-label="Week" className="flex flex-col gap-3">
+              <section aria-label={t("Week")} className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="px-2 text-base font-semibold">
                     {thisWeek
-                      ? "This week"
-                      : `Week of ${formatDate(localInstant(days[0] ?? week, "12:00"), { year: undefined })}`}
+                      ? t("This week")
+                      : t("Week of {date}", {
+                          date: formatDate(
+                            localInstant(days[0] ?? week, "12:00"),
+                            {
+                              year: undefined,
+                            },
+                          ),
+                        })}
                   </h2>
                   <div className="flex items-center gap-1">
                     {thisWeek ? null : (
                       <Button variant="subtle" onClick={() => setWeek(today())}>
-                        Today
+                        {t("Today")}
                       </Button>
                     )}
                     <ToolbarButton
-                      label="Previous week"
+                      label={t("Previous week")}
                       onClick={() => setWeek((value) => addDays(value, -7))}
                     >
                       <ChevronLeftIcon />
                     </ToolbarButton>
                     <ToolbarButton
-                      label="Next week"
+                      label={t("Next week")}
                       onClick={() => setWeek((value) => addDays(value, 7))}
                     >
                       <ChevronRightIcon />
@@ -298,14 +307,20 @@ export function ScheduleView(props: ScheduleViewProps) {
                 />
                 {plan.availability.length === 0 ? (
                   <p className="px-2 text-sm text-muted-foreground">
-                    <button
-                      type="button"
-                      className="text-link hover:underline"
-                      onClick={() => setAvailabilityOpen(true)}
-                    >
-                      Set your study times
-                    </button>{" "}
-                    so the assistant plans sessions when you are free.
+                    {tx(
+                      "{link} so the assistant plans sessions when you are free.",
+                      {
+                        link: (
+                          <button
+                            type="button"
+                            className="text-link hover:underline"
+                            onClick={() => setAvailabilityOpen(true)}
+                          >
+                            {t("Set your study times")}
+                          </button>
+                        ),
+                      },
+                    )}
                   </p>
                 ) : null}
               </section>
@@ -372,7 +387,7 @@ function Decisions({
   onEdit: (session: StudySession) => void;
 }) {
   const notices = useNotices();
-  const { date: formatDate } = useLocale();
+  const { t, tc, date: formatDate } = useLocale();
   const suggested = plan.sessions
     .filter((session) => session.proposal || session.move)
     .sort((a, b) =>
@@ -394,8 +409,8 @@ function Decisions({
     } catch (reason) {
       notices.fail(
         accept
-          ? "The suggestion was not accepted"
-          : "The suggestion was not declined",
+          ? t("The suggestion was not accepted")
+          : t("The suggestion was not declined"),
         reason,
       );
     }
@@ -404,12 +419,12 @@ function Decisions({
     try {
       await api.setSessionStatus({ id, status });
     } catch (reason) {
-      notices.fail("The session was not changed", reason);
+      notices.fail(t("The session was not changed"), reason);
     }
   };
 
   return (
-    <section aria-label="Needs a decision" className="flex flex-col gap-4">
+    <section aria-label={t("Needs a decision")} className="flex flex-col gap-4">
       {suggested.length > 0 ? (
         <div className="flex flex-col gap-1">
           <SectionTitle
@@ -425,7 +440,7 @@ function Decisions({
                       )
                     }
                   >
-                    Decline all
+                    {t("Decline all")}
                   </Button>
                   <Button
                     variant="secondary"
@@ -436,7 +451,7 @@ function Decisions({
                       )
                     }
                   >
-                    <CheckIcon /> Accept all
+                    <CheckIcon /> {t("Accept all")}
                   </Button>
                 </div>
               ) : undefined
@@ -479,13 +494,13 @@ function Decisions({
                     variant="subtle"
                     onClick={() => void resolve([session.id], false)}
                   >
-                    <XIcon /> Decline
+                    <XIcon /> {t("Decline")}
                   </Button>
                   <Button
                     variant="secondary"
                     onClick={() => void resolve([session.id], true)}
                   >
-                    <CheckIcon /> Accept
+                    <CheckIcon /> {t("Accept")}
                   </Button>
                 </li>
               );
@@ -516,19 +531,19 @@ function Decisions({
                     </span>
                   </span>
                   <Button variant="subtle" onClick={() => onEdit(session)}>
-                    <CalendarClockIcon /> Move…
+                    <CalendarClockIcon /> {t("Move…")}
                   </Button>
                   <Button
                     variant="subtle"
                     onClick={() => void mark(session.id, "skipped")}
                   >
-                    <SkipForwardIcon /> Skip
+                    <SkipForwardIcon /> {t("Skip")}
                   </Button>
                   <Button
                     variant="secondary"
                     onClick={() => void mark(session.id, "done")}
                   >
-                    <CheckIcon /> Done
+                    <CheckIcon /> {tc("verb", "Done")}
                   </Button>
                 </li>
               );
@@ -568,7 +583,7 @@ function Week({
   onOpenAssessment: (assessment: PlanFile["assessments"][number]) => void;
   onOpenDeadline: (subjectId: string, activity: Activity) => void;
 }) {
-  const { time } = useLocale();
+  const { t, time } = useLocale();
   const byDay = useMemo(() => {
     const deadlines = new Map<string, Deadline[]>();
     for (const record of records ?? []) {
@@ -645,8 +660,12 @@ function Week({
           return (
             <CalendarActivityCard
               key={`${session.id}-${slot === session ? "at" : "to"}`}
-              title={pending ? `${session.title} (suggested)` : session.title}
-              subjectName={subject?.name ?? "No subject"}
+              title={
+                pending
+                  ? t("{title} (suggested)", { title: session.title })
+                  : session.title
+              }
+              subjectName={subject?.name ?? t("No subject")}
               subjectColor={subject?.color ?? "gray"}
               kind={session.kind}
               start={localInstant(slot.date, slot.start)}
@@ -671,7 +690,7 @@ function Week({
               )}
             >
               <span className="tabular-nums text-muted-foreground">
-                {dateLabel(date)} {time(date.at)}
+                {t(dateLabel(date))} {time(date.at)}
               </span>
               <span className="line-clamp-2 font-medium">{activity.name}</span>
             </button>
@@ -725,6 +744,7 @@ function Assessments({
   onAdd: () => void;
   onOpen: (assessment: PlanFile["assessments"][number]) => void;
 }) {
+  const { t } = useLocale();
   const now = new Date();
   const upcoming = plan.assessments
     .filter(
@@ -733,19 +753,19 @@ function Assessments({
     )
     .sort((a, b) => a.date.localeCompare(b.date));
   return (
-    <section aria-label="Assessments" className="flex flex-col gap-2">
+    <section aria-label={t("Assessments")} className="flex flex-col gap-2">
       <SectionTitle
         action={
           <Button variant="subtle" onClick={onAdd}>
-            <PlusIcon /> Add
+            <PlusIcon /> {t("Add")}
           </Button>
         }
       >
-        Assessments
+        {t("Assessments")}
       </SectionTitle>
       {upcoming.length === 0 ? (
         <p className="px-2 text-sm text-muted-foreground">
-          No exams or tests coming up.
+          {t("No exams or tests coming up.")}
         </p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -858,9 +878,12 @@ function MoodleSections({
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    if (dayKey(day) === dayKey(today)) return "Today";
-    if (dayKey(day) === dayKey(tomorrow)) return "Tomorrow";
-    return `${weekday(day)}, ${date(day, { year: undefined })}`;
+    if (dayKey(day) === dayKey(today)) return t("Today");
+    if (dayKey(day) === dayKey(tomorrow)) return t("Tomorrow");
+    return t("{weekday}, {date}", {
+      weekday: weekday(day),
+      date: date(day, { year: undefined }),
+    });
   };
 
   const openInMoodle = (activity: Activity) =>
@@ -875,10 +898,10 @@ function MoodleSections({
     .filter(Boolean);
 
   return (
-    <section aria-label="Moodle" className="flex flex-col gap-6">
+    <section aria-label={t("Moodle")} className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-8">
         <div className="flex flex-col gap-0.5 px-2">
-          <h2 className="text-base font-semibold">From Moodle</h2>
+          <h2 className="text-base font-semibold">{t("From Moodle")}</h2>
           <p
             className={cn(
               "text-sm text-muted-foreground",
@@ -889,17 +912,17 @@ function MoodleSections({
             aria-live="polite"
           >
             {checking
-              ? "Checking Moodle…"
+              ? t("Checking Moodle…")
               : oldest === null
                 ? records === null
                   ? ""
-                  : "Not checked yet"
+                  : t("Not checked yet")
                 : checkedLabel(oldest, { t, relative })}
           </p>
         </div>
         {connected ? (
           <ToolbarButton
-            label="Check Moodle again"
+            label={t("Check Moodle again")}
             disabled={checking}
             onClick={() => void check()}
           >
@@ -907,7 +930,7 @@ function MoodleSections({
           </ToolbarButton>
         ) : (
           <Button variant="secondary" onClick={onOpenSettings}>
-            Connect Moodle
+            {t("Connect Moodle")}
           </Button>
         )}
       </div>
@@ -916,7 +939,9 @@ function MoodleSections({
         <InlineMessage tone="warning">
           <p>
             {failedNames.length > 0
-              ? `${failedNames.join(", ")} could not be checked. `
+              ? `${t("{names} could not be checked.", {
+                  names: failedNames.join(", "),
+                })} `
               : ""}
             {failures[0]?.message}
           </p>
@@ -929,10 +954,10 @@ function MoodleSections({
           <Skeleton className="h-12 w-full" />
         </div>
       ) : (
-        <section aria-label="Upcoming" className="flex flex-col gap-6">
+        <section aria-label={t("Upcoming")} className="flex flex-col gap-6">
           {upcoming.length === 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
-              Nothing coming up in the courses you follow.
+              {t("Nothing coming up in the courses you follow.")}
             </p>
           ) : null}
           {upcoming.map(({ day, entries }) => (
@@ -959,8 +984,8 @@ function MoodleSections({
       )}
 
       {records && records.length > 0 ? (
-        <section aria-label="Activities" className="flex flex-col gap-1">
-          <SectionTitle>Activities</SectionTitle>
+        <section aria-label={t("Activities")} className="flex flex-col gap-1">
+          <SectionTitle>{t("Activities")}</SectionTitle>
           {followed.map((subject) => {
             const record = bySubject.get(subject.id);
             if (!record) return null;
@@ -999,7 +1024,7 @@ function MoodleSections({
                   <ul className="flex flex-col pl-6">
                     {record.activities.length === 0 ? (
                       <li className="flex h-control items-center px-2 text-sm text-muted-foreground">
-                        The course has no activities.
+                        {t("The course has no activities.")}
                       </li>
                     ) : null}
                     {record.activities.map((activity) => (
@@ -1062,6 +1087,7 @@ function UpcomingRow({
   onOpen: (() => void) | undefined;
   onOpenInMoodle: () => void;
 }) {
+  const { t } = useLocale();
   const { subject, activity, date } = entry;
   const passed = Date.parse(date.at) < Date.now();
   const deadline = isDeadline(date);
@@ -1077,7 +1103,7 @@ function UpcomingRow({
             {activity.name}
           </span>
           <span className="truncate text-xs text-muted-foreground">
-            {subject.name} · {activityType(activity.modname)}
+            {subject.name} · {t(activityType(activity.modname))}
           </span>
         </span>
         <span
@@ -1088,10 +1114,10 @@ function UpcomingRow({
               : "text-muted-foreground",
           )}
         >
-          {dateLabel(date)}
+          {t(dateLabel(date))}
         </span>
       </RowBody>
-      <ToolbarButton label="Open in Moodle" onClick={onOpenInMoodle}>
+      <ToolbarButton label={t("Open in Moodle")} onClick={onOpenInMoodle}>
         <ExternalLinkIcon />
       </ToolbarButton>
     </li>
@@ -1107,7 +1133,7 @@ function ActivityRow({
   onOpen: (() => void) | undefined;
   onOpenInMoodle: () => void;
 }) {
-  const { dateTime } = useLocale();
+  const { t, dateTime } = useLocale();
   const next = activity.dates.find(
     (entry) => Date.parse(entry.at) >= Date.now(),
   );
@@ -1120,16 +1146,16 @@ function ActivityRow({
           </span>
           <span className="truncate text-xs text-muted-foreground">
             {[
-              activityType(activity.modname),
+              t(activityType(activity.modname)),
               activity.sectionName,
-              next ? `${dateLabel(next)} ${dateTime(next.at)}` : null,
+              next ? `${t(dateLabel(next))} ${dateTime(next.at)}` : null,
             ]
               .filter(Boolean)
               .join(" · ")}
           </span>
         </span>
       </RowBody>
-      <ToolbarButton label="Open in Moodle" onClick={onOpenInMoodle}>
+      <ToolbarButton label={t("Open in Moodle")} onClick={onOpenInMoodle}>
         <ExternalLinkIcon />
       </ToolbarButton>
     </li>

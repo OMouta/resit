@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@resit/ui/components/select";
 import { Skeleton } from "@resit/ui/components/skeleton";
-import { useLocale } from "@resit/ui/hooks/use-locale";
+import { useLocale, type LocaleFormatters } from "@resit/ui/hooks/use-locale";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { MathText } from "@resit/ui/patterns/document/math";
@@ -86,6 +86,7 @@ export interface PracticeViewProps {
 
 /** Flashcards and quizzes for every subject, and the review session. */
 export function PracticeView(props: PracticeViewProps) {
+  const { t } = useLocale();
   const { snapshot } = props;
   const subjectIds = useMemo(
     () => snapshot.subjects.map((subject) => subject.id),
@@ -111,7 +112,7 @@ export function PracticeView(props: PracticeViewProps) {
       <EmptyState
         className="h-full"
         icon={<LayersIcon />}
-        title="Practice could not be read"
+        title={t("Practice could not be read")}
         description={error}
       />
     );
@@ -182,10 +183,6 @@ function SubjectDot({ subject }: { subject: SubjectInfo }) {
   );
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 function Overview({
   snapshot,
   practice,
@@ -200,7 +197,7 @@ function Overview({
   onBrowse: (subjectId: string) => void;
 }) {
   const notices = useNotices();
-  const { relative } = useLocale();
+  const { t, tc, relative } = useLocale();
   const bySubject = new Map(
     practice.subjects.map((record) => [record.subjectId, record]),
   );
@@ -239,7 +236,7 @@ function Overview({
     for (const { subjectId, card } of suggested)
       groups.set(subjectId, [...(groups.get(subjectId) ?? []), card.id]);
     for (const [subjectId, ids] of groups)
-      await change(subjectId, ids, "keep", "The cards were not kept");
+      await change(subjectId, ids, "keep", t("The cards were not kept"));
   };
 
   return (
@@ -247,10 +244,16 @@ function Overview({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-8 pt-12 pb-24">
         <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold tracking-[-0.025em]">Practice</h1>
+            <h1 className="text-3xl font-bold tracking-[-0.025em]">
+              {t("Practice")}
+            </h1>
             {reviewedToday > 0 ? (
               <p className="text-sm text-muted-foreground">
-                {plural(reviewedToday, "card", "cards")} reviewed today
+                {reviewedToday === 1
+                  ? t("{count} card reviewed today", { count: 1 })
+                  : t("{count} cards reviewed today", {
+                      count: reviewedToday,
+                    })}
               </p>
             ) : null}
           </div>
@@ -260,20 +263,20 @@ function Overview({
               disabled={subjects.length === 0}
               onClick={() => onEditCard({})}
             >
-              <PlusIcon /> New card
+              <PlusIcon /> {t("New card")}
             </Button>
             <Button
               variant="secondary"
               disabled={subjects.length === 0}
               onClick={() => onNewQuiz()}
             >
-              <PlusIcon /> New quiz
+              <PlusIcon /> {t("New quiz")}
             </Button>
           </div>
         </header>
 
         <section
-          aria-label="Review"
+          aria-label={t("Review")}
           className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border bg-background px-4 py-4"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground">
@@ -282,20 +285,32 @@ function Overview({
           <div className="flex min-w-44 flex-1 flex-col">
             <span className="text-sm font-medium">
               {due + fresh > 0
-                ? `${plural(due + fresh, "card", "cards")} to review`
-                : "Nothing to review right now"}
+                ? due + fresh === 1
+                  ? t("{count} card to review", { count: 1 })
+                  : t("{count} cards to review", { count: due + fresh })
+                : t("Nothing to review right now")}
             </span>
             <span className="text-xs text-muted-foreground">
               {due + fresh > 0
                 ? [
-                    due > 0 ? `${due} due` : null,
-                    fresh > 0 ? `${fresh} new` : null,
+                    due === 0
+                      ? null
+                      : due === 1
+                        ? tc("card", "1 due")
+                        : tc("card", "{count} due", { count: due }),
+                    fresh === 0
+                      ? null
+                      : fresh === 1
+                        ? tc("card", "1 new")
+                        : tc("card", "{count} new", { count: fresh }),
                   ]
                     .filter(Boolean)
                     .join(", ")
                 : nextDue
-                  ? `The next card comes back ${relative(nextDue)}`
-                  : "No cards yet"}
+                  ? t("The next card comes back {time}", {
+                      time: relative(nextDue),
+                    })
+                  : t("No cards yet")}
             </span>
           </div>
           <Select
@@ -304,39 +319,44 @@ function Overview({
               void api
                 .setNewCardsPerDay(Number(value))
                 .catch((error: unknown) =>
-                  notices.fail("The setting was not saved", error),
+                  notices.fail(t("The setting was not saved"), error),
                 )
                 .then(() => undefined)
             }
           >
-            <SelectTrigger aria-label="New cards a day" className="w-40">
+            <SelectTrigger aria-label={t("New cards a day")} className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {NEW_PER_DAY_CHOICES.map((value) => (
                 <SelectItem key={value} value={String(value)}>
-                  {value === 0 ? "No new cards" : `${value} new a day`}
+                  {value === 0
+                    ? t("No new cards")
+                    : t("{count} new a day", { count: value })}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button disabled={due + fresh === 0} onClick={() => onReview()}>
-            Review
+            {t("Review")}
           </Button>
         </section>
 
         {suggested.length > 0 ? (
-          <section aria-label="Suggested cards" className="flex flex-col gap-1">
+          <section
+            aria-label={t("Suggested cards")}
+            className="flex flex-col gap-1"
+          >
             <div className="flex items-center justify-between gap-2">
               <SectionTitle>
                 From the assistant · {suggested.length}
               </SectionTitle>
               <Button variant="subtle" onClick={() => void keepAll()}>
-                <CheckIcon /> Keep all
+                <CheckIcon /> {t("Keep all")}
               </Button>
             </div>
             <p className="px-2 pb-1 text-sm text-muted-foreground">
-              These cards are not reviewed until you keep them.
+              {t("These cards are not reviewed until you keep them.")}
             </p>
             <ul className="flex flex-col">
               {suggested.map(({ subjectId, card }) => (
@@ -353,32 +373,32 @@ function Overview({
                   </span>
                   <span className="flex shrink-0 items-center gap-0.5">
                     <ToolbarButton
-                      label="Keep"
+                      label={t("Keep")}
                       onClick={() =>
                         void change(
                           subjectId,
                           [card.id],
                           "keep",
-                          "The card was not kept",
+                          t("The card was not kept"),
                         )
                       }
                     >
                       <CheckIcon />
                     </ToolbarButton>
                     <ToolbarButton
-                      label="Edit"
+                      label={t("Edit")}
                       onClick={() => onEditCard({ card, subjectId })}
                     >
                       <PencilIcon />
                     </ToolbarButton>
                     <ToolbarButton
-                      label="Discard"
+                      label={t("Discard")}
                       onClick={() =>
                         void change(
                           subjectId,
                           [card.id],
                           "delete",
-                          "The card was not discarded",
+                          t("The card was not discarded"),
                         )
                       }
                     >
@@ -391,10 +411,10 @@ function Overview({
           </section>
         ) : null}
 
-        <section aria-label="Subjects" className="flex flex-col gap-6">
+        <section aria-label={t("Subjects")} className="flex flex-col gap-6">
           {subjects.length === 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
-              Add a subject to keep cards and quizzes in it.
+              {t("Add a subject to keep cards and quizzes in it.")}
             </p>
           ) : null}
           {subjects.map((subject) => (
@@ -435,6 +455,7 @@ function SubjectPracticeSection({
   onNewQuiz: () => void;
   onOpenQuiz: (quiz: QuizSummary) => void;
 }) {
+  const { t } = useLocale();
   const kept =
     record?.cards.filter((card) => card.status !== "suggested") ?? [];
   const quizzes = record?.quizzes ?? [];
@@ -462,10 +483,10 @@ function SubjectPracticeSection({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onSelect={onNewCard}>
-              <LayersIcon /> New card
+              <LayersIcon /> {t("New card")}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onNewQuiz}>
-              <ClipboardListIcon /> New quiz
+              <ClipboardListIcon /> {t("New quiz")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -482,15 +503,19 @@ function SubjectPracticeSection({
               className="size-4 shrink-0 text-muted-foreground"
             />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-sm">Flashcards</span>
+              <span className="text-sm">{t("Flashcards")}</span>
               <span className="truncate text-xs text-muted-foreground">
                 {kept.length > 0
-                  ? topicLine(kept)
-                  : "No cards yet. Add the first one."}
+                  ? topicLine(kept, t)
+                  : t("No cards yet. Add the first one.")}
               </span>
             </span>
             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-              {kept.length > 0 ? plural(kept.length, "card", "cards") : null}
+              {kept.length === 0
+                ? null
+                : kept.length === 1
+                  ? t("1 card")
+                  : t("{count} cards", { count: kept.length })}
             </span>
           </button>
         </li>
@@ -503,7 +528,7 @@ function SubjectPracticeSection({
 }
 
 /** "Limits 12 · Derivatives 30 · 6 without a topic". */
-function topicLine(cards: Flashcard[]): string {
+function topicLine(cards: Flashcard[], t: LocaleFormatters["t"]): string {
   const counts = new Map<string, number>();
   let loose = 0;
   for (const card of cards)
@@ -512,17 +537,22 @@ function topicLine(cards: Flashcard[]): string {
   const parts = [...counts]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([topic, count]) => `${topic} ${count}`);
-  if (loose > 0 && parts.length > 0) parts.push(`${loose} without a topic`);
-  return parts.length > 0 ? parts.join(" · ") : "No topics";
+  if (loose > 0 && parts.length > 0)
+    parts.push(t("{count} without a topic", { count: loose }));
+  return parts.length > 0 ? parts.join(" · ") : t("No topics");
 }
 
 function QuizRow({ quiz, onOpen }: { quiz: QuizSummary; onOpen: () => void }) {
-  const { relative } = useLocale();
+  const { t, relative } = useLocale();
   const status = quiz.unfinished
-    ? "In progress"
+    ? t("In progress")
     : quiz.last
-      ? `Last ${formatScore(quiz.last.correct)}/${quiz.last.total}, ${relative(quiz.last.at)}`
-      : "Not taken yet";
+      ? t("Last {score}/{total}, {time}", {
+          score: formatScore(quiz.last.correct),
+          total: quiz.last.total,
+          time: relative(quiz.last.at),
+        })
+      : t("Not taken yet");
   return (
     <li>
       <button
@@ -540,9 +570,11 @@ function QuizRow({ quiz, onOpen }: { quiz: QuizSummary; onOpen: () => void }) {
           </span>
           <span className="truncate text-xs text-muted-foreground">
             {[
-              plural(quiz.questionCount, "question", "questions"),
+              quiz.questionCount === 1
+                ? t("1 question")
+                : t("{count} questions", { count: quiz.questionCount }),
               quiz.topic,
-              quiz.author === "assistant" ? "made by the assistant" : null,
+              quiz.author === "assistant" ? t("made by the assistant") : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -606,12 +638,16 @@ function patternState(card: Flashcard): PatternState {
 function sourceLabel(
   card: Flashcard,
   resources: ReadonlyMap<string, ResourceInfo>,
+  t: LocaleFormatters["t"],
 ): string {
   if (!card.source) return card.topic ?? "";
   const resource = resources.get(card.source.resourceId);
-  if (!resource) return "Source no longer in the workspace";
+  if (!resource) return t("Source no longer in the workspace");
   return card.source.page
-    ? `${resource.title}, p. ${card.source.page}`
+    ? t("{title}, p. {page}", {
+        title: resource.title,
+        page: card.source.page,
+      })
     : resource.title;
 }
 
@@ -629,6 +665,7 @@ function ReviewSession({
   subjectId?: string;
   onDone: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [queue, setQueue] = useState<ReviewItem[] | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -654,10 +691,10 @@ function ReviewSession({
     try {
       setQueue(await api.getReviewQueue(subjectId ? { subjectId } : {}));
     } catch (error) {
-      notices.fail("The cards could not be loaded", error);
+      notices.fail(t("The cards could not be loaded"), error);
       setQueue([]);
     }
-  }, [subjectId, notices]);
+  }, [t, subjectId, notices]);
 
   useEffect(() => {
     void load();
@@ -719,12 +756,12 @@ function ReviewSession({
         if (rest.length === 0) await load();
         else setQueue(rest);
       } catch (error) {
-        notices.fail("The rating was not saved", error);
+        notices.fail(t("The rating was not saved"), error);
       } finally {
         setBusy(false);
       }
     },
-    [current, busy, queue, load, notices],
+    [t, current, busy, queue, load, notices],
   );
 
   const undo = async () => {
@@ -741,7 +778,7 @@ function ReviewSession({
       setReviewed((value) => Math.max(0, value - 1));
       setLast(null);
     } catch (error) {
-      notices.fail("The review was not undone", error);
+      notices.fail(t("The review was not undone"), error);
     }
   };
 
@@ -755,7 +792,7 @@ function ReviewSession({
       });
       setQueue((items) => items?.slice(1) ?? []);
     } catch (error) {
-      notices.fail("The card was not suspended", error);
+      notices.fail(t("The card was not suspended"), error);
     }
   };
 
@@ -764,18 +801,20 @@ function ReviewSession({
     <div className="flex h-full flex-col bg-background">
       <div className="flex h-toolbar shrink-0 items-center gap-2 border-b px-3">
         <Button variant="subtle" onClick={onDone}>
-          <ArrowLeftIcon /> Practice
+          <ArrowLeftIcon /> {t("Practice")}
         </Button>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {subject ? `Reviewing ${subject.name}` : "Reviewing every subject"}
+          {subject
+            ? t("Reviewing {subject}", { subject: subject.name })
+            : t("Reviewing every subject")}
         </span>
         {queue && queue.length > 0 ? (
           <span className="text-xs tabular-nums text-muted-foreground">
-            {queue.length} left
+            {t("{count} left", { count: queue.length })}
           </span>
         ) : null}
         <ToolbarButton
-          label="Undo the last rating"
+          label={t("Undo the last rating")}
           disabled={!last || busy}
           onClick={() => void undo()}
         >
@@ -789,15 +828,19 @@ function ReviewSession({
           ) : !current || !card ? (
             <EmptyState
               icon={<CheckIcon />}
-              title={reviewed > 0 ? "That's all for now" : "Nothing to review"}
+              title={
+                reviewed > 0 ? t("That's all for now") : t("Nothing to review")
+              }
               description={
                 reviewed > 0
-                  ? `You reviewed ${plural(reviewed, "card", "cards")}.`
-                  : "No cards are due."
+                  ? reviewed === 1
+                    ? t("You reviewed {count} card.", { count: 1 })
+                    : t("You reviewed {count} cards.", { count: reviewed })
+                  : t("No cards are due.")
               }
               actions={
                 <Button variant="secondary" onClick={onDone}>
-                  Back to practice
+                  {t("Back to practice")}
                 </Button>
               }
             />
@@ -809,7 +852,7 @@ function ReviewSession({
                 front={card.front}
                 back={card.back}
                 subjectName={subjects.get(current.subjectId)?.name ?? ""}
-                sourceTitle={sourceLabel(card, resources)}
+                sourceTitle={sourceLabel(card, resources, t)}
                 state={patternState(card)}
                 revealed={revealed}
                 onReveal={() => setRevealed(true)}
@@ -829,7 +872,7 @@ function ReviewSession({
                       onOpenSource(card.source.resourceId, card.source.page)
                     }
                   >
-                    Open the source
+                    {t("Open the source")}
                   </Button>
                 ) : null}
                 <Button
@@ -840,14 +883,14 @@ function ReviewSession({
                     onEditCard({ card, subjectId: current.subjectId })
                   }
                 >
-                  <PencilIcon /> Edit
+                  <PencilIcon /> {t("Edit")}
                 </Button>
                 <Button
                   variant="subtle"
                   size="sm"
                   onClick={() => void suspend()}
                 >
-                  <PauseIcon /> Suspend
+                  <PauseIcon /> {t("Suspend")}
                 </Button>
               </div>
             </>
@@ -860,14 +903,20 @@ function ReviewSession({
 
 function stateLabel(
   card: Flashcard,
-  relative: (value: Date | string) => string,
+  { tc, relative }: Pick<LocaleFormatters, "tc" | "relative">,
 ): { label: string; tone: "muted" | "info" | "warning" | "success" } {
-  if (card.status === "suggested") return { label: "Suggested", tone: "info" };
-  if (card.status === "suspended") return { label: "Suspended", tone: "muted" };
-  if (card.schedule.state === "new") return { label: "New", tone: "info" };
+  if (card.status === "suggested")
+    return { label: tc("card", "Suggested"), tone: "info" };
+  if (card.status === "suspended")
+    return { label: tc("card", "Suspended"), tone: "muted" };
+  if (card.schedule.state === "new")
+    return { label: tc("card", "New"), tone: "info" };
   if (Date.parse(card.schedule.due) <= Date.now())
-    return { label: "Due", tone: "warning" };
-  return { label: `Due ${relative(card.schedule.due)}`, tone: "muted" };
+    return { label: tc("card", "Due"), tone: "warning" };
+  return {
+    label: tc("card", "Due {time}", { time: relative(card.schedule.due) }),
+    tone: "muted",
+  };
 }
 
 /** Every card in one subject, to find, edit, suspend, or delete. */
@@ -882,7 +931,7 @@ function CardList({
   onBack: () => void;
 }) {
   const notices = useNotices();
-  const { relative } = useLocale();
+  const { t, tc, relative } = useLocale();
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("all");
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -923,7 +972,7 @@ function CardList({
     <div className="flex h-full flex-col bg-background">
       <div className="flex h-toolbar shrink-0 items-center gap-2 border-b px-3">
         <Button variant="subtle" onClick={onBack}>
-          <ArrowLeftIcon /> Practice
+          <ArrowLeftIcon /> {t("Practice")}
         </Button>
         <SubjectDot subject={subject} />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -933,7 +982,7 @@ function CardList({
           variant="secondary"
           onClick={() => onEditCard({ subjectId: subject.id })}
         >
-          <PlusIcon /> New card
+          <PlusIcon /> {t("New card")}
         </Button>
       </div>
       <ScrollArea className="min-h-0 flex-1">
@@ -945,26 +994,26 @@ function CardList({
                 className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle-foreground"
               />
               <Input
-                aria-label="Find cards"
+                aria-label={t("Find cards")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Find cards"
+                placeholder={t("Find cards")}
                 className="pl-8"
               />
             </div>
             {topics.length > 0 ? (
               <Select value={topic} onValueChange={setTopic}>
-                <SelectTrigger aria-label="Topic" className="w-48">
+                <SelectTrigger aria-label={t("Topic")} className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Every topic</SelectItem>
+                  <SelectItem value="all">{t("Every topic")}</SelectItem>
                   {topics.map((entry) => (
                     <SelectItem key={entry} value={entry}>
                       {entry}
                     </SelectItem>
                   ))}
-                  <SelectItem value="none">Without a topic</SelectItem>
+                  <SelectItem value="none">{t("Without a topic")}</SelectItem>
                 </SelectContent>
               </Select>
             ) : null}
@@ -972,13 +1021,13 @@ function CardList({
           {cards.length === 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
               {record.cards.length === 0
-                ? "No cards in this subject yet."
-                : "No cards match."}
+                ? t("No cards in this subject yet.")
+                : t("No cards match.")}
             </p>
           ) : (
             <ul className="flex flex-col">
               {cards.map((card) => {
-                const state = stateLabel(card, relative);
+                const state = stateLabel(card, { tc, relative });
                 return (
                   <li
                     key={card.id}
@@ -1011,18 +1060,18 @@ function CardList({
                             void change(
                               [card.id],
                               "delete",
-                              "The card was not deleted",
+                              t("The card was not deleted"),
                             );
                           }}
                         >
-                          Delete
+                          {t("Delete")}
                         </Button>
                         <Button
                           variant="subtle"
                           size="sm"
                           onClick={() => setConfirming(null)}
                         >
-                          Keep
+                          {t("Keep")}
                         </Button>
                       </span>
                     ) : (
@@ -1032,7 +1081,7 @@ function CardList({
                             variant="subtle"
                             size="icon"
                             className="mt-1 mr-1 shrink-0"
-                            aria-label="Card actions"
+                            aria-label={t("Card actions")}
                           >
                             <MoreHorizontalIcon />
                           </Button>
@@ -1043,7 +1092,7 @@ function CardList({
                               onEditCard({ card, subjectId: subject.id })
                             }
                           >
-                            <PencilIcon /> Edit…
+                            <PencilIcon /> {t("Edit…")}
                           </DropdownMenuItem>
                           {card.status === "suggested" ? (
                             <DropdownMenuItem
@@ -1051,11 +1100,11 @@ function CardList({
                                 void change(
                                   [card.id],
                                   "keep",
-                                  "The card was not kept",
+                                  t("The card was not kept"),
                                 )
                               }
                             >
-                              <CheckIcon /> Keep
+                              <CheckIcon /> {t("Keep")}
                             </DropdownMenuItem>
                           ) : card.status === "suspended" ? (
                             <DropdownMenuItem
@@ -1063,11 +1112,11 @@ function CardList({
                                 void change(
                                   [card.id],
                                   "resume",
-                                  "The card was not resumed",
+                                  t("The card was not resumed"),
                                 )
                               }
                             >
-                              <PlayIcon /> Resume
+                              <PlayIcon /> {t("Resume")}
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem
@@ -1075,11 +1124,11 @@ function CardList({
                                 void change(
                                   [card.id],
                                   "suspend",
-                                  "The card was not suspended",
+                                  t("The card was not suspended"),
                                 )
                               }
                             >
-                              <PauseIcon /> Suspend
+                              <PauseIcon /> {t("Suspend")}
                             </DropdownMenuItem>
                           )}
                           {card.schedule.reps > 0 ? (
@@ -1088,11 +1137,11 @@ function CardList({
                                 void change(
                                   [card.id],
                                   "reset",
-                                  "The card was not reset",
+                                  t("The card was not reset"),
                                 )
                               }
                             >
-                              <RotateCcwIcon /> Start its schedule again
+                              <RotateCcwIcon /> {t("Start its schedule again")}
                             </DropdownMenuItem>
                           ) : null}
                           <DropdownMenuSeparator />
@@ -1100,7 +1149,7 @@ function CardList({
                             variant="destructive"
                             onSelect={() => setConfirming(card.id)}
                           >
-                            <Trash2Icon /> Delete…
+                            <Trash2Icon /> {t("Delete…")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
