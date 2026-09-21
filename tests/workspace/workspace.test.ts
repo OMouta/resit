@@ -8,6 +8,8 @@ import {
   listAnnotations,
 } from "../../apps/desktop/src/main/workspace/annotations";
 import {
+  deleteFromTrash,
+  emptyTrash,
   listTrash,
   restoreFromTrash,
 } from "../../apps/desktop/src/main/workspace/trash";
@@ -18,6 +20,7 @@ import {
   createWorkspace,
   deleteFolder,
   deleteResource,
+  deleteSubject,
   importDownload,
   importFile,
   moveResource,
@@ -615,5 +618,43 @@ describe("trash", () => {
     await expect(restoreFromTrash(workspace, deleted!.id)).rejects.toThrow(
       /not a place inside this workspace/,
     );
+  });
+
+  it("deletes one item for good, and empties the rest", async () => {
+    for (const title of ["Limits", "Series", "Integrals"]) {
+      const note = await createNote(workspace, {
+        subjectId: mathematics().id,
+        title,
+      });
+      await deleteResource(workspace, note.id);
+    }
+    const [first] = await listTrash(workspace);
+    await deleteFromTrash(workspace, first!.id);
+    expect(await listTrash(workspace)).toHaveLength(2);
+    await expect(deleteFromTrash(workspace, first!.id)).rejects.toThrow(
+      /no longer in the trash/,
+    );
+    for (const id of ["..", ".", "../.."])
+      await expect(deleteFromTrash(workspace, id)).rejects.toThrow(
+        /no longer in the trash/,
+      );
+
+    await emptyTrash(workspace);
+    expect(await listTrash(workspace)).toEqual([]);
+    expect(await readdir(workspace.root)).toContain("workspace.json");
+  });
+
+  it("counts what a deleted subject holds", async () => {
+    const subject = await createSubject(workspace, {
+      name: "Physics",
+      color: "red",
+    });
+    await createNote(workspace, { subjectId: subject.id, title: "Forces" });
+    const source = join(directory, "Lab.pdf");
+    await writeFile(source, "%PDF-1.4\n");
+    await importFile(workspace, { subjectId: subject.id, sourcePath: source });
+    await deleteSubject(workspace, subject.id);
+    const [deleted] = await listTrash(workspace);
+    expect(deleted).toMatchObject({ kind: "subject", ownedCount: 2 });
   });
 });

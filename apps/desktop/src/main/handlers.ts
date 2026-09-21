@@ -130,7 +130,12 @@ import { codexModels, codexStatus } from "./providers/codex";
 import { loadSettings, updateSettings } from "./settings";
 import { workspaceLinks } from "./workspace/links";
 import { searchWorkspace } from "./workspace/search";
-import { listTrash, restoreFromTrash } from "./workspace/trash";
+import {
+  deleteFromTrash,
+  emptyTrash,
+  listTrash,
+  restoreFromTrash,
+} from "./workspace/trash";
 import {
   createFolder,
   createNote,
@@ -600,6 +605,14 @@ export function registerHandlers(
     await restoreFromTrash(workspace, entryId);
     return snapshot(workspace);
   });
+
+  handle(CHANNELS.deleteFromTrash, z.tuple([id]), (entryId) =>
+    deleteFromTrash(currentWorkspace(), entryId),
+  );
+
+  handle(CHANNELS.emptyTrash, z.tuple([]), () =>
+    emptyTrash(currentWorkspace()),
+  );
 
   handle(CHANNELS.listAnnotations, z.tuple([id]), (documentId) =>
     listAnnotations(currentWorkspace(), documentId),

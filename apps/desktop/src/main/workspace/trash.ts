@@ -38,6 +38,23 @@ function trashDir(workspace: OpenWorkspace): string {
   return join(workspace.root, ".resit", "trash");
 }
 
+/** How many notes and imported files a deleted subject holds. */
+async function resourceCount(path: string): Promise<number> {
+  let count = 0;
+  for (const entry of await readdir(path, { withFileTypes: true }).catch(
+    () => [],
+  )) {
+    if (entry.isDirectory())
+      count += await resourceCount(join(path, entry.name));
+    else if (
+      entry.name.endsWith(".md") ||
+      entry.name.endsWith(".resource.json")
+    )
+      count += 1;
+  }
+  return count;
+}
+
 /** The subject a deleted path belonged to, by its folder name. */
 function subjectFor(workspace: OpenWorkspace, path: string): string | null {
   const segments = path.split("/");
@@ -91,9 +108,47 @@ export async function listTrash(
       subjectName: subjectFor(workspace, first.from),
       deletedAt: record.deletedAt,
       originalPath: first.from,
+      ...(kind === "subject"
+        ? { ownedCount: await resourceCount(join(path, first.to)) }
+        : {}),
     });
   }
   return entries.sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+}
+
+/** A deletion's folder inside the trash, or an error if there is none. */
+async function trashEntryDir(
+  workspace: OpenWorkspace,
+  id: string,
+): Promise<string> {
+  const directory = trashDir(workspace);
+  const path = join(directory, id);
+  if (
+    !/^[\w.-]+$/.test(id) ||
+    path === directory ||
+    !isInside(directory, path) ||
+    !(await isDirectory(path))
+  )
+    throw new WorkspaceError("That deleted item is no longer in the trash.");
+  return path;
+}
+
+/** Removes one deletion from disk for good. History copies stay. */
+export async function deleteFromTrash(
+  workspace: OpenWorkspace,
+  id: string,
+): Promise<void> {
+  await rm(await trashEntryDir(workspace, id), {
+    recursive: true,
+    force: true,
+  });
+}
+
+/** Removes everything in the trash from disk. */
+export async function emptyTrash(workspace: OpenWorkspace): Promise<void> {
+  const directory = trashDir(workspace);
+  for (const name of await readdir(directory).catch(() => []))
+    await rm(join(directory, name), { recursive: true, force: true });
 }
 
 /**
@@ -104,10 +159,7 @@ export async function restoreFromTrash(
   workspace: OpenWorkspace,
   id: string,
 ): Promise<void> {
-  const directory = trashDir(workspace);
-  const path = join(directory, id);
-  if (!isInside(directory, path) || !(await isDirectory(path)))
-    throw new WorkspaceError("That deleted item is no longer in the trash.");
+  const path = await trashEntryDir(workspace, id);
   const parsed = trashRecordSchema.safeParse(
     await readJson(join(path, "trash.json")).catch(() => null),
   );

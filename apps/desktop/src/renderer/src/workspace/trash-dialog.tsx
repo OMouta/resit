@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@resit/ui/components/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,7 +31,7 @@ export interface TrashDialogProps {
   onRestored: (snapshot: WorkspaceSnapshot) => void;
 }
 
-/** What is in `.resit/trash`, and a way to put it back. */
+/** What is in `.resit/trash`, and ways to put it back or remove it. */
 export function TrashDialog({
   open,
   onOpenChange,
@@ -29,6 +39,7 @@ export function TrashDialog({
 }: TrashDialogProps) {
   const notices = useNotices();
   const [entries, setEntries] = useState<TrashEntry[] | null>(null);
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +74,27 @@ export function TrashDialog({
     }
   };
 
+  const remove = async (id: string) => {
+    try {
+      await api.deleteFromTrash(id);
+      setEntries((list) => (list ?? []).filter((item) => item.id !== id));
+    } catch (error) {
+      notices.fail("It was not deleted", error);
+    }
+  };
+
+  const empty = async () => {
+    try {
+      await api.emptyTrash();
+      setEntries([]);
+    } catch (error) {
+      notices.fail("The trash was not emptied", error);
+      setEntries(await api.listTrash().catch(() => entries));
+    }
+  };
+
+  const count = entries?.length ?? 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -88,11 +120,38 @@ export function TrashDialog({
                 subjectName: entry.subjectName,
                 deletedAt: entry.deletedAt,
                 originalPath: entry.originalPath,
+                ...(entry.ownedCount === undefined
+                  ? {}
+                  : { ownedCount: entry.ownedCount }),
               }))}
               onRestore={(id) => void restore(id)}
+              onDeletePermanently={(id) => void remove(id)}
+              onEmpty={() => setConfirmEmpty(true)}
             />
           )}
         </ScrollArea>
+        <AlertDialog open={confirmEmpty} onOpenChange={setConfirmEmpty}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Empty the trash?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {count === 1
+                  ? "The item in the trash is removed from disk."
+                  : `The ${count} items in the trash are removed from disk.`}{" "}
+                This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => void empty()}
+              >
+                Empty trash
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

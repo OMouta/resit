@@ -143,6 +143,8 @@ export interface TrashEntry {
   deletedAt: string;
   /** Where the deleted item came from, relative to the workspace. */
   originalPath: string;
+  /** For a subject, the notes and files it holds. */
+  ownedCount?: number;
 }
 
 /** Note text that was not saved, kept so it survives a restart. */

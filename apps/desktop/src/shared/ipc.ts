@@ -266,6 +266,9 @@ export interface DesktopApi {
   listTrash(): Promise<TrashEntry[]>;
   /** Moves a deleted item back where it came from. */
   restoreFromTrash(id: string): Promise<WorkspaceSnapshot>;
+  /** Removes a deleted item from disk for good. */
+  deleteFromTrash(id: string): Promise<void>;
+  emptyTrash(): Promise<void>;
   importFiles(subjectId: string, folder?: string): Promise<ResourceInfo[]>;
 
   listAnnotations(documentId: string): Promise<Annotation[]>;
@@ -474,6 +477,8 @@ export const CHANNELS = {
   deleteResource: "resit:resource-delete",
   listTrash: "resit:trash-list",
   restoreFromTrash: "resit:trash-restore",
+  deleteFromTrash: "resit:trash-delete",
+  emptyTrash: "resit:trash-empty",
   importFiles: "resit:resource-import",
   listAnnotations: "resit:annotation-list",
   createAnnotation: "resit:annotation-create",
