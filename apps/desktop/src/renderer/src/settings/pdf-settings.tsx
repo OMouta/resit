@@ -11,6 +11,7 @@ import { cn } from "@resit/ui/lib/utils";
 
 import type {
   AppSettings,
+  OcrLanguage,
   PdfPanel,
   PdfZoomSetting,
   SettingsPatch,
@@ -27,6 +28,12 @@ const ZOOMS: { value: PdfZoomSetting; label: string }[] = [
   { value: "100", label: "100%" },
   { value: "125", label: "125%" },
   { value: "150", label: "150%" },
+];
+
+const OCR_LANGUAGES: { value: string; label: string }[] = [
+  { value: "eng", label: "English" },
+  { value: "por", label: "Portuguese" },
+  { value: "eng+por", label: "English and Portuguese" },
 ];
 
 const PANELS: { value: PdfPanel; label: string }[] = [
@@ -100,6 +107,36 @@ export function PdfSettings({
               onChange({ pdf: { dimInDark: checked } })
             }
           />
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Text recognition"
+        description="Reads the text on scanned pages so search and the assistant can find it. It runs on this computer and downloads each language once."
+      >
+        <SettingRow label="Languages">
+          <Select
+            value={settings.pdf.ocrLanguages.join("+")}
+            onValueChange={(value) =>
+              onChange({
+                pdf: { ocrLanguages: value.split("+") as OcrLanguage[] },
+              })
+            }
+          >
+            <SelectTrigger
+              aria-label="Text recognition languages"
+              className="w-56"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OCR_LANGUAGES.map((language) => (
+                <SelectItem key={language.value} value={language.value}>
+                  {language.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </SettingRow>
       </SettingsSection>
 

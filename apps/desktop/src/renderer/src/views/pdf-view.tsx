@@ -49,6 +49,7 @@ import { PromptDialog, type PromptRequest } from "../components/prompt-dialog";
 import { api, errorMessage } from "../lib/api";
 import { citationMarkdown } from "../lib/citations";
 import { useNotices } from "../lib/notices";
+import { TextRecognitionBanner } from "./text-recognition";
 import { useSettings } from "../lib/settings-context";
 import { useWidth } from "../lib/use-width";
 import {
@@ -667,6 +668,9 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             <XIcon />
           </Button>
         </form>
+      ) : null}
+      {status === "ready" ? (
+        <TextRecognitionBanner resource={resource} />
       ) : null}
       {annotationError ? (
         <InlineMessage tone="warning" className="mx-3 mt-3">
