@@ -20,6 +20,7 @@ import {
   releaseLockSync,
   type WorkspaceLock,
 } from "./workspace/lock";
+import { closeSearchIndex, updateSearchIndex } from "./workspace/search";
 import {
   createWorkspace,
   openWorkspace,
@@ -96,11 +97,9 @@ function startWatching(workspace: OpenWorkspace): void {
         if (current !== workspace) return;
         void scanWorkspace(workspace).then(
           () => {
-            if (current === workspace)
-              emit({
-                type: "workspace-changed",
-                snapshot: snapshot(workspace),
-              });
+            if (current !== workspace) return;
+            emit({ type: "workspace-changed", snapshot: snapshot(workspace) });
+            void indexInBackground(workspace);
           },
           (error: unknown) => console.error("Workspace rescan failed", error),
         );
@@ -120,9 +119,20 @@ function stopWatching(): void {
   rescanTimer = null;
 }
 
+/** Reads new and changed files into the search index while nothing waits. */
+async function indexInBackground(workspace: OpenWorkspace): Promise<void> {
+  try {
+    await updateSearchIndex(workspace);
+  } catch (error) {
+    console.error("Updating the search index failed", error);
+  }
+}
+
 async function activateWorkspace(workspace: OpenWorkspace): Promise<void> {
-  if (current && current.root !== workspace.root)
+  if (current && current.root !== workspace.root) {
+    closeSearchIndex(current);
     await releaseLock(current.root).catch(() => undefined);
+  }
   stopWatching();
   abortAllTurns();
   abandonRenders();
@@ -140,6 +150,7 @@ async function activateWorkspace(workspace: OpenWorkspace): Promise<void> {
   }
   startWatching(workspace);
   void refreshReminders();
+  void indexInBackground(workspace);
 }
 
 function lockedWorkspace(path: string, lock: WorkspaceLock): LockedWorkspace {
@@ -188,7 +199,10 @@ export async function closeCurrentWorkspace(): Promise<void> {
   abortAllTurns();
   abandonRenders();
   setLiveContext(null);
-  if (current) await releaseLock(current.root).catch(() => undefined);
+  if (current) {
+    closeSearchIndex(current);
+    await releaseLock(current.root).catch(() => undefined);
+  }
   current = null;
   void refreshReminders();
   await forgetLastWorkspace();

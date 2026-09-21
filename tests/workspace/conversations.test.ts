@@ -13,7 +13,10 @@ import {
   readConversation,
 } from "../../apps/desktop/src/main/conversations/store";
 import { pdfPages } from "../../apps/desktop/src/main/workspace/pdf-text";
-import { searchWorkspace } from "../../apps/desktop/src/main/workspace/search";
+import {
+  closeSearchIndex,
+  searchWorkspace,
+} from "../../apps/desktop/src/main/workspace/search";
 import {
   createNote,
   createSubject,
@@ -39,6 +42,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeSearchIndex(workspace);
   await rm(directory, { recursive: true, force: true });
 });
 
