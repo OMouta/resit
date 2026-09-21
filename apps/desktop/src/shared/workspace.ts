@@ -72,6 +72,30 @@ export type SidecarFile = z.infer<typeof sidecarFileSchema>;
 
 export type ResourceKind = "note" | BinaryKind;
 
+/**
+ * `projects/<name>.json`: subjects and files from across the workspace,
+ * grouped. A project refers to them; it does not copy them.
+ */
+export const projectFileSchema = z.looseObject({
+  format: z.literal("resit-project"),
+  formatVersion: z.number().int().positive(),
+  id: z.string().min(1),
+  title: z.string().min(1),
+  subjectIds: z.array(z.string()).catch([]),
+  resourceIds: z.array(z.string()).catch([]),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+});
+export type ProjectFile = z.infer<typeof projectFileSchema>;
+
+export interface ProjectInfo {
+  id: string;
+  title: string;
+  subjectIds: string[];
+  /** Files added on their own, beyond the subjects. */
+  resourceIds: string[];
+}
+
 export interface SubjectInfo {
   id: string;
   name: string;
@@ -119,6 +143,7 @@ export interface WorkspaceIssue {
 export interface WorkspaceSnapshot {
   workspace: WorkspaceInfo;
   subjects: SubjectInfo[];
+  projects: ProjectInfo[];
   folders: FolderInfo[];
   resources: ResourceInfo[];
   issues: WorkspaceIssue[];
@@ -131,7 +156,7 @@ export interface RecentWorkspace {
 }
 
 export type TrashKind =
-  ResourceKind | "subject" | "folder" | "conversation" | "quiz";
+  ResourceKind | "subject" | "folder" | "conversation" | "quiz" | "project";
 
 /** One deletion sitting in `.resit/trash`. */
 export interface TrashEntry {

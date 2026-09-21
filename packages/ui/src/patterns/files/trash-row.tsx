@@ -1,6 +1,7 @@
 import {
   FileTextIcon,
   FolderIcon,
+  FolderKanbanIcon,
   FoldersIcon,
   ImageIcon,
   ClipboardListIcon,
@@ -37,7 +38,8 @@ export interface TrashItem {
     | "subject"
     | "folder"
     | "conversation"
-    | "quiz";
+    | "quiz"
+    | "project";
   subjectName: string | null;
   deletedAt: string | Date;
   originalPath: string;
@@ -54,6 +56,7 @@ const icons = {
   folder: FolderIcon,
   conversation: MessageSquareIcon,
   quiz: ClipboardListIcon,
+  project: FolderKanbanIcon,
 };
 
 export interface TrashRowProps {

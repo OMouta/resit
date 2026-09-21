@@ -14,11 +14,13 @@ import { basename, dirname, join, relative } from "node:path";
 
 import type { MoodleFileRef, MoodleLink } from "../../shared/moodle";
 import {
+  projectFileSchema,
   sidecarFileSchema,
   subjectFileSchema,
   workspaceFileSchema,
   type BinaryKind,
   type FolderInfo,
+  type ProjectInfo,
   type ResourceInfo,
   type SaveNoteResult,
   type SidecarFile,
@@ -53,6 +55,11 @@ const ACTIVITIES_FILE = "activities.json";
 interface SubjectEntry {
   info: SubjectInfo;
   dir: string;
+}
+
+export interface ProjectEntry {
+  info: ProjectInfo;
+  path: string;
 }
 
 interface ResourceEntry {
@@ -106,6 +113,7 @@ export interface OpenWorkspace {
   root: string;
   file: WorkspaceFile;
   subjects: Map<string, SubjectEntry>;
+  projects: Map<string, ProjectEntry>;
   folders: Map<string, FolderEntry>;
   resources: Map<string, ResourceEntry>;
   issues: WorkspaceIssue[];
@@ -178,6 +186,7 @@ export async function openWorkspace(folder: string): Promise<OpenWorkspace> {
     root: folder,
     file: await readWorkspaceFile(folder),
     subjects: new Map(),
+    projects: new Map(),
     folders: new Map(),
     resources: new Map(),
     issues: [],
@@ -275,9 +284,58 @@ export async function scanWorkspace(workspace: OpenWorkspace): Promise<void> {
   }
 
   workspace.subjects = subjects;
+  workspace.projects = await scanProjects(workspace.root, issues);
   workspace.resources = resources;
   workspace.folders = folders;
   workspace.issues = issues;
+}
+
+/** Where projects live, whether or not there are any. */
+export function projectsDir(workspace: OpenWorkspace): string {
+  return join(workspace.root, "projects");
+}
+
+async function scanProjects(
+  root: string,
+  issues: WorkspaceIssue[],
+): Promise<Map<string, ProjectEntry>> {
+  const projects = new Map<string, ProjectEntry>();
+  const directory = join(root, "projects");
+  if (!(await isDirectory(directory))) return projects;
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    const path = join(directory, entry.name);
+    const parsed = projectFileSchema.safeParse(
+      await readJson(path).catch(() => null),
+    );
+    if (!parsed.success) {
+      issues.push({
+        kind: "invalid-file",
+        path: `projects/${entry.name}`,
+        message: "The project could not be read.",
+      });
+      continue;
+    }
+    const project = parsed.data;
+    if (projects.has(project.id)) {
+      issues.push({
+        kind: "duplicate-id",
+        path: `projects/${entry.name}`,
+        message: `Another project already uses the ID ${project.id}.`,
+      });
+      continue;
+    }
+    projects.set(project.id, {
+      path,
+      info: {
+        id: project.id,
+        title: project.title,
+        subjectIds: project.subjectIds,
+        resourceIds: project.resourceIds,
+      },
+    });
+  }
+  return projects;
 }
 
 interface SubjectScan {
@@ -478,6 +536,9 @@ export function snapshot(workspace: OpenWorkspace): WorkspaceSnapshot {
       .sort(
         (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
       ),
+    projects: [...workspace.projects.values()]
+      .map((entry) => entry.info)
+      .sort((a, b) => a.title.localeCompare(b.title)),
     folders: [...workspace.folders.values()]
       .map((entry) => entry.info)
       .sort((a, b) => a.path.localeCompare(b.path)),

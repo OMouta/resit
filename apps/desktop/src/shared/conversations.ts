@@ -5,6 +5,8 @@ import { providerIdSchema, type ProviderId } from "./settings";
 export const scopeSchema = z.object({
   subjectIds: z.array(z.string().min(1).max(200)).max(100),
   resourceIds: z.array(z.string().min(1).max(200)).max(200),
+  /** A project whose subjects and files join the scope as they are at each turn. */
+  projectId: z.string().min(1).max(200).optional(),
 });
 export type ConversationScope = z.infer<typeof scopeSchema>;
 

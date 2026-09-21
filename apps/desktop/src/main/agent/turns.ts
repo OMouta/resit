@@ -27,6 +27,7 @@ import { learnerContext } from "../learner/store";
 import { claudeStatus } from "../providers/claude";
 import { codexStatus } from "../providers/codex";
 import { loadSettings } from "../settings";
+import { resolveScope } from "../workspace/projects";
 import { snapshot, type OpenWorkspace } from "../workspace/workspace";
 import { runCodexTurn } from "./codex-turn";
 import { INSTRUCTIONS } from "./instructions";
@@ -85,12 +86,13 @@ function composeContext(
   workspace: OpenWorkspace,
   scope: ConversationScope,
   context: TurnContext,
+  project: string | undefined,
 ): string {
   const subjects = scope.subjectIds
     .map((id) => workspace.subjects.get(id)?.info.name)
     .filter(Boolean);
   const lines = [
-    `Conversation scope: ${subjects.length > 0 ? subjects.join(", ") : "no subjects"}${
+    `Conversation scope${project ? ` (the project "${project}")` : ""}: ${subjects.length > 0 ? subjects.join(", ") : "no subjects"}${
       scope.resourceIds.length > 0
         ? `, plus ${scope.resourceIds.length} added ${scope.resourceIds.length === 1 ? "file" : "files"}`
         : ""
@@ -238,11 +240,16 @@ export async function startTurn(
     message,
     meta,
   });
+  // The project's subjects and files as they are now.
+  const scope = resolveScope(workspace, meta.scope);
+  const project = meta.scope.projectId
+    ? workspace.projects.get(meta.scope.projectId)?.info.title
+    : undefined;
   // A profile that cannot be read leaves the message without it.
-  const profile = await learnerContext(workspace, meta.scope).catch(() => null);
-  const prompt = `${composeContext(workspace, meta.scope, input.context)}${profile ? `\n${profile}` : ""}\n\n${input.text}`;
+  const profile = await learnerContext(workspace, scope).catch(() => null);
+  const prompt = `${composeContext(workspace, scope, input.context, project)}${profile ? `\n${profile}` : ""}\n\n${input.text}`;
   const grant = turnGrant(workspace, emit, {
-    scope: meta.scope,
+    scope,
     context: input.context,
     images: providerId === "claude",
   });

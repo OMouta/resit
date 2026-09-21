@@ -32,6 +32,7 @@ const KINDS: TrashKind[] = [
   "folder",
   "conversation",
   "quiz",
+  "project",
 ];
 
 function trashDir(workspace: OpenWorkspace): string {
