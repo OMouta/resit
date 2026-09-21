@@ -15,6 +15,7 @@ import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type {
   ProjectInfo,
@@ -50,6 +51,7 @@ export function ProjectDialog({
   resources: ResourceInfo[];
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const [title, setTitle] = useState("");
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [resourceIds, setResourceIds] = useState<string[]>([]);
@@ -116,22 +118,25 @@ export function ProjectDialog({
             <DialogHeader>
               <DialogTitle>{request.title}</DialogTitle>
               <DialogDescription>
-                A project gathers subjects and files for work that spans them.
-                Nothing is copied.
+                {t(
+                  "A project gathers subjects and files for work that spans them. Nothing is copied.",
+                )}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="project-title">Name</Label>
+              <Label htmlFor="project-title">{t("Name")}</Label>
               <Input
                 id="project-title"
                 autoFocus
                 value={title}
-                placeholder="Numerical simulation"
+                placeholder={t("Numerical simulation")}
                 onChange={(event) => setTitle(event.target.value)}
               />
             </div>
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-sm font-medium">Subjects</legend>
+              <legend className="mb-2 text-sm font-medium">
+                {t("Subjects")}
+              </legend>
               {subjects.map((subject) => (
                 <div key={subject.id} className="flex items-center gap-2.5">
                   <Checkbox
@@ -161,7 +166,7 @@ export function ProjectDialog({
             </fieldset>
             <div className="flex min-w-0 flex-col gap-2">
               <span className="text-sm font-medium">
-                Files from other subjects
+                {t("Files from other subjects")}
               </span>
               <div className="relative">
                 <SearchIcon
@@ -169,9 +174,9 @@ export function ProjectDialog({
                   className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle-foreground"
                 />
                 <Input
-                  aria-label="Find a file"
+                  aria-label={t("Find a file")}
                   value={filter}
-                  placeholder="Find a file"
+                  placeholder={t("Find a file")}
                   className="pl-8"
                   onChange={(event) => setFilter(event.target.value)}
                 />
@@ -180,8 +185,8 @@ export function ProjectDialog({
                 {files.length === 0 ? (
                   <p className="px-2 py-3 text-sm text-muted-foreground">
                     {filter.trim()
-                      ? "No file matches."
-                      : "Every file is in a chosen subject."}
+                      ? t("No file matches.")
+                      : t("Every file is in a chosen subject.")}
                   </p>
                 ) : null}
                 {files.map((resource) => (
@@ -209,7 +214,7 @@ export function ProjectDialog({
             </div>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={busy || !title.trim()}>
                 {request.submitLabel}

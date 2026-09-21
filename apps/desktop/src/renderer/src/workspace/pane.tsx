@@ -11,6 +11,7 @@ import {
   PaneEmpty,
   PaneHeader,
 } from "@resit/ui/patterns/navigation/pane-header";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection } from "../../../shared/moodle";
 import type {
@@ -127,6 +128,7 @@ export function WorkspacePane({
   onEditQuiz,
   projectActions,
 }: PaneProps) {
+  const { t } = useLocale();
   const openResource = (resourceId: string) => {
     const target = resources.get(resourceId);
     if (target) dispatch({ type: "open", resourceId, title: target.title });
@@ -134,13 +136,13 @@ export function WorkspacePane({
 
   const items: DocumentTabItem[] = pane.tabs.map((tab) => {
     if (tab.resourceId === GRAPH_TAB_ID)
-      return { id: tab.id, title: "Graph", kind: "graph" };
+      return { id: tab.id, title: t("Graph"), kind: "graph" };
     if (tab.resourceId === SCHEDULE_TAB_ID)
-      return { id: tab.id, title: "Schedule", kind: "schedule" };
+      return { id: tab.id, title: t("Schedule"), kind: "schedule" };
     if (tab.resourceId === PRACTICE_TAB_ID)
-      return { id: tab.id, title: "Practice", kind: "practice" };
+      return { id: tab.id, title: t("Practice"), kind: "practice" };
     if (tab.resourceId === PROFILE_TAB_ID)
-      return { id: tab.id, title: "Learner profile", kind: "profile" };
+      return { id: tab.id, title: t("Learner profile"), kind: "profile" };
     const projectId = parseProjectTabId(tab.resourceId);
     if (projectId)
       return {
@@ -221,7 +223,7 @@ export function WorkspacePane({
             dispatch({
               type: "open",
               resourceId: PRACTICE_TAB_ID,
-              title: "Practice",
+              title: t("Practice"),
             });
             requestReview({ subjectId });
           }}
@@ -300,15 +302,17 @@ export function WorkspacePane({
       <EmptyState
         className="h-full"
         icon={<FileQuestionIcon />}
-        title={`${tab.title} is no longer in the workspace`}
-        description="It was moved to the trash or deleted outside resit."
+        title={t("{title} is no longer in the workspace", {
+          title: tab.title,
+        })}
+        description={t("It was moved to the trash or deleted outside resit.")}
       />
     );
   };
 
   return (
     <section
-      aria-label="Pane"
+      aria-label={t("Pane")}
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
       onPointerDownCapture={() => dispatch({ type: "focus", paneId: pane.id })}
       onFocusCapture={() => dispatch({ type: "focus", paneId: pane.id })}
@@ -348,7 +352,11 @@ export function WorkspacePane({
       </PaneHeader>
       <div className="relative min-h-0 flex-1 bg-background">
         {pane.tabs.length === 0 ? (
-          <PaneEmpty description="Pick a note or document from the sidebar, or press Ctrl+K to find one." />
+          <PaneEmpty
+            description={t(
+              "Pick a note or document from the sidebar, or press Ctrl+K to find one.",
+            )}
+          />
         ) : null}
         {pane.tabs.map((tab) => {
           const resource = resources.get(tab.resourceId);

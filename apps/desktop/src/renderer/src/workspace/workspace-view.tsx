@@ -15,6 +15,7 @@ import { cn } from "@resit/ui/lib/utils";
 import { SplitLayout } from "@resit/ui/patterns/navigation/split-handle";
 import { WorkspaceSwitcher } from "@resit/ui/patterns/navigation/workspace-switcher";
 import { AppShell } from "@resit/ui/patterns/screens/app-shell";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection, MoodleCourse } from "../../../shared/moodle";
 import type { AppSettings } from "../../../shared/settings";
@@ -109,6 +110,7 @@ export function WorkspaceView({
   onOpenSettings,
   renderAiPanel,
 }: WorkspaceViewProps) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [layout, dispatch] = useReducer(
     layoutReducer,
@@ -185,10 +187,10 @@ export function WorkspaceView({
           dispatch({
             type: "open",
             resourceId: SCHEDULE_TAB_ID,
-            title: "Schedule",
+            title: t("Schedule"),
           });
       }),
-    [setSnapshot],
+    [t, setSnapshot],
   );
 
   // Draws the PDF pages the assistant asks to look at.
@@ -222,15 +224,15 @@ export function WorkspaceView({
       if (!resource) {
         notices.notify({
           tone: "info",
-          title: "That link points to a file that is no longer here",
-          detail: "It was renamed outside resit, or moved to the trash.",
+          title: t("That link points to a file that is no longer here"),
+          detail: t("It was renamed outside resit, or moved to the trash."),
         });
         return;
       }
       dispatch({ type: "open", resourceId, title: resource.title });
       showTarget(resourceId, target);
     },
-    [resources, notices],
+    [t, resources, notices],
   );
 
   const refresh = useCallback(
@@ -254,11 +256,11 @@ export function WorkspaceView({
       const subject = subjects.get(subjectId);
       const where = [subject?.name, folder].filter(Boolean).join(" / ");
       setPrompt({
-        title: "New note",
-        ...(where ? { description: `In ${where}` } : {}),
-        label: "Title",
-        placeholder: "Limits and continuity",
-        submitLabel: "Create note",
+        title: t("New note"),
+        ...(where ? { description: t("In {place}", { place: where }) } : {}),
+        label: t("Title"),
+        placeholder: t("Limits and continuity"),
+        submitLabel: t("Create note"),
         onSubmit: async (title) => {
           try {
             const resource = await api.createNote({
@@ -273,12 +275,12 @@ export function WorkspaceView({
             revealIn(subjectId, folder);
             dispatch({ type: "open", resourceId: resource.id, title });
           } catch (error) {
-            notices.fail("The note was not created", error);
+            notices.fail(t("The note was not created"), error);
           }
         },
       });
     },
-    [subjects, setSnapshot, notices, revealIn],
+    [t, subjects, setSnapshot, notices, revealIn],
   );
 
   const newFolder = useCallback(
@@ -286,11 +288,11 @@ export function WorkspaceView({
       const subject = subjects.get(subjectId);
       const where = [subject?.name, parent].filter(Boolean).join(" / ");
       setPrompt({
-        title: "New folder",
-        ...(where ? { description: `In ${where}` } : {}),
-        label: "Name",
-        placeholder: "Worksheets",
-        submitLabel: "Create folder",
+        title: t("New folder"),
+        ...(where ? { description: t("In {place}", { place: where }) } : {}),
+        label: t("Name"),
+        placeholder: t("Worksheets"),
+        submitLabel: t("Create folder"),
         onSubmit: async (name) => {
           try {
             const folder = await api.createFolder({
@@ -304,12 +306,12 @@ export function WorkspaceView({
             }));
             revealIn(subjectId, parent);
           } catch (error) {
-            notices.fail("The folder was not created", error);
+            notices.fail(t("The folder was not created"), error);
           }
         },
       });
     },
-    [subjects, setSnapshot, notices, revealIn],
+    [t, subjects, setSnapshot, notices, revealIn],
   );
 
   /** Renames a folder or moves it into another, keeping it open in the tree. */
@@ -337,18 +339,18 @@ export function WorkspaceView({
   const renameFolder = useCallback(
     (subjectId: string, path: string) => {
       setPrompt({
-        title: "Rename folder",
-        label: "Name",
+        title: t("Rename folder"),
+        label: t("Name"),
         initialValue: path.slice(path.lastIndexOf("/") + 1),
-        submitLabel: "Rename",
+        submitLabel: t("Rename"),
         onSubmit: (name) =>
           relocateFolder(
             { subjectId, path, name },
-            "The folder was not renamed",
+            t("The folder was not renamed"),
           ),
       });
     },
-    [relocateFolder],
+    [t, relocateFolder],
   );
 
   const importFiles = useCallback(
@@ -365,10 +367,10 @@ export function WorkspaceView({
         if (first)
           dispatch({ type: "open", resourceId: first.id, title: first.title });
       } catch (error) {
-        notices.fail("Import stopped", error);
+        notices.fail(t("Import stopped"), error);
       }
     },
-    [setSnapshot, notices, revealIn],
+    [t, setSnapshot, notices, revealIn],
   );
 
   const connected = moodle.status === "connected";
@@ -378,8 +380,8 @@ export function WorkspaceView({
     if (connected && !courses)
       api.listMoodleCourses().then(setCourses, () => undefined);
     setSubjectRequest({
-      title: "New subject",
-      submitLabel: "Add subject",
+      title: t("New subject"),
+      submitLabel: t("Add subject"),
       linkable: connected,
       onSubmit: async ({ name, color, moodleCourseId }) => {
         try {
@@ -394,11 +396,11 @@ export function WorkspaceView({
           }));
           dispatch({ type: "set-expanded", id: subject.id, expanded: true });
         } catch (error) {
-          notices.fail("The subject was not created", error);
+          notices.fail(t("The subject was not created"), error);
         }
       },
     });
-  }, [setSnapshot, notices, connected, courses]);
+  }, [t, setSnapshot, notices, connected, courses]);
 
   const renameResource = useCallback(
     async (resourceId: string, title: string) => {
@@ -412,17 +414,17 @@ export function WorkspaceView({
         }));
         dispatch({ type: "rename-resource", resourceId, title });
       } catch (error) {
-        notices.fail("The file was not renamed", error);
+        notices.fail(t("The file was not renamed"), error);
       }
     },
-    [setSnapshot, notices],
+    [t, setSnapshot, notices],
   );
 
   /** Saves a project's name and contents, new or changed. */
   const editProject = (project?: ProjectInfo) =>
     setProjectRequest({
-      title: project ? "Edit project" : "New project",
-      submitLabel: project ? "Save" : "Create project",
+      title: project ? t("Edit project") : t("New project"),
+      submitLabel: project ? t("Save") : t("Create project"),
       ...(project ? { project } : {}),
       onSubmit: async (values) => {
         try {
@@ -449,8 +451,8 @@ export function WorkspaceView({
         } catch (error) {
           notices.fail(
             project
-              ? "The project was not changed"
-              : "The project was not created",
+              ? t("The project was not changed")
+              : t("The project was not created"),
             error,
           );
         }
@@ -467,10 +469,11 @@ export function WorkspaceView({
       const project = projects.get(projectId);
       if (!project) return;
       setConfirm({
-        title: `Delete “${project.title}”?`,
-        description:
+        title: t("Delete “{title}”?", { title: project.title }),
+        description: t(
           "The project goes to the trash. Its subjects and files stay where they are.",
-        confirmLabel: "Delete project",
+        ),
+        confirmLabel: t("Delete project"),
         onConfirm: async () => {
           try {
             refresh(await api.deleteProject(projectId));
@@ -479,7 +482,7 @@ export function WorkspaceView({
               resourceId: projectTabId(projectId),
             });
           } catch (error) {
-            notices.fail("The project was not deleted", error);
+            notices.fail(t("The project was not deleted"), error);
           }
         },
       });
@@ -520,21 +523,40 @@ export function WorkspaceView({
           if (!result) return;
           notices.notify({
             tone: "success",
-            title: `Exported ${result.notes} ${result.notes === 1 ? "note" : "notes"} as Markdown`,
+            title:
+              result.notes === 1
+                ? t("Exported {count} note as Markdown", { count: 1 })
+                : t("Exported {count} notes as Markdown", {
+                    count: result.notes,
+                  }),
             detail: [
               result.folder,
-              result.files > 0
-                ? `${result.files} linked ${result.files === 1 ? "file is" : "files are"} in its files folder.`
-                : "",
-              result.unresolved > 0
-                ? `${result.unresolved} ${result.unresolved === 1 ? "link points" : "links point"} to notes that were not exported, so ${result.unresolved === 1 ? "it keeps its" : "they keep their"} resit:// address.`
-                : "",
+              result.files === 0
+                ? ""
+                : result.files === 1
+                  ? t("{count} linked file is in its files folder.", {
+                      count: 1,
+                    })
+                  : t("{count} linked files are in its files folder.", {
+                      count: result.files,
+                    }),
+              result.unresolved === 0
+                ? ""
+                : result.unresolved === 1
+                  ? t(
+                      "{count} link points to notes that were not exported, so it keeps its resit:// address.",
+                      { count: 1 },
+                    )
+                  : t(
+                      "{count} links point to notes that were not exported, so they keep their resit:// address.",
+                      { count: result.unresolved },
+                    ),
             ]
               .filter(Boolean)
               .join(" "),
           });
         } catch (error) {
-          notices.fail("The notes were not exported", error);
+          notices.fail(t("The notes were not exported"), error);
         }
       })(),
     addSubject,
@@ -542,15 +564,15 @@ export function WorkspaceView({
       const subject = subjects.get(subjectId);
       if (!subject) return;
       setSubjectRequest({
-        title: "Edit subject",
-        submitLabel: "Save",
+        title: t("Edit subject"),
+        submitLabel: t("Save"),
         name: subject.name,
         color: subject.color,
         onSubmit: async ({ name, color }) => {
           try {
             refresh(await api.updateSubject({ id: subjectId, name, color }));
           } catch (error) {
-            notices.fail("The subject was not changed", error);
+            notices.fail(t("The subject was not changed"), error);
           }
         },
       });
@@ -562,17 +584,26 @@ export function WorkspaceView({
         (resource) => resource.subjectId === subjectId,
       );
       setConfirm({
-        title: `Move ${subject.name} to the trash?`,
+        title: t("Move {name} to the trash?", { name: subject.name }),
         description:
           owned.length === 0
-            ? "The subject has no notes or files."
-            : `Its ${owned.length} ${owned.length === 1 ? "note or file moves" : "notes and files move"} with it: ${owned
-                .slice(0, 5)
-                .map((resource) => resource.title)
-                .join(
-                  ", ",
-                )}${owned.length > 5 ? ", …" : ""}. They stay in the workspace's .resit/trash folder.`,
-        confirmLabel: "Move to trash",
+            ? t("The subject has no notes or files.")
+            : owned.length === 1
+              ? t(
+                  "Its {count} note or file moves with it: {list}. They stay in the workspace's .resit/trash folder.",
+                  { count: 1, list: owned[0]?.title ?? "" },
+                )
+              : t(
+                  "Its {count} notes and files move with it: {list}. They stay in the workspace's .resit/trash folder.",
+                  {
+                    count: owned.length,
+                    list: `${owned
+                      .slice(0, 5)
+                      .map((resource) => resource.title)
+                      .join(", ")}${owned.length > 5 ? ", …" : ""}`,
+                  },
+                ),
+        confirmLabel: t("Move to trash"),
         onConfirm: async () => {
           try {
             await Promise.all(
@@ -582,7 +613,7 @@ export function WorkspaceView({
             for (const resource of owned)
               dispatch({ type: "close-resource", resourceId: resource.id });
           } catch (error) {
-            notices.fail("The subject was not moved to the trash", error);
+            notices.fail(t("The subject was not moved to the trash"), error);
           }
         },
       });
@@ -606,7 +637,7 @@ export function WorkspaceView({
             }),
           );
         } catch (error) {
-          notices.fail("The subjects were not reordered", error);
+          notices.fail(t("The subjects were not reordered"), error);
         }
       })();
     },
@@ -616,7 +647,7 @@ export function WorkspaceView({
     moveFolder: (subjectId: string, path: string, parent?: string) =>
       void relocateFolder(
         { subjectId, path, parent: parent ?? "" },
-        "The folder was not moved",
+        t("The folder was not moved"),
       ),
     moveResource: (resourceId: string, subjectId: string, folder?: string) =>
       void (async () => {
@@ -635,7 +666,7 @@ export function WorkspaceView({
           }));
           revealIn(subjectId, folder);
         } catch (error) {
-          notices.fail("The file was not moved", error);
+          notices.fail(t("The file was not moved"), error);
         }
       })(),
     importFiles: (subjectId: string, folder?: string) =>
@@ -653,13 +684,29 @@ export function WorkspaceView({
             resource.folder?.startsWith(`${path}/`) === true),
       );
       setConfirm({
-        title: `Move “${path}” to the trash?`,
+        title: t("Move “{path}” to the trash?", { path }),
         description: folder.moodle
-          ? `This folder holds ${owned.length} ${owned.length === 1 ? "file" : "files"} downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.`
+          ? owned.length === 1
+            ? t(
+                "This folder holds {count} file downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.",
+                { count: 1 },
+              )
+            : t(
+                "This folder holds {count} files downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.",
+                { count: owned.length },
+              )
           : owned.length === 0
-            ? "The folder is empty."
-            : `Its ${owned.length} ${owned.length === 1 ? "note or file moves" : "notes and files move"} with it. They stay in the workspace's .resit/trash folder.`,
-        confirmLabel: "Move to trash",
+            ? t("The folder is empty.")
+            : owned.length === 1
+              ? t(
+                  "Its {count} note or file moves with it. They stay in the workspace's .resit/trash folder.",
+                  { count: 1 },
+                )
+              : t(
+                  "Its {count} notes and files move with it. They stay in the workspace's .resit/trash folder.",
+                  { count: owned.length },
+                ),
+        confirmLabel: t("Move to trash"),
         onConfirm: async () => {
           try {
             await Promise.all(
@@ -669,7 +716,7 @@ export function WorkspaceView({
             for (const resource of owned)
               dispatch({ type: "close-resource", resourceId: resource.id });
           } catch (error) {
-            notices.fail("The folder was not moved to the trash", error);
+            notices.fail(t("The folder was not moved to the trash"), error);
           }
         },
       });
@@ -678,10 +725,10 @@ export function WorkspaceView({
       const resource = resources.get(resourceId);
       if (!resource) return;
       setPrompt({
-        title: "Rename",
-        label: "Title",
+        title: t("Rename"),
+        label: t("Title"),
         initialValue: resource.title,
-        submitLabel: "Rename",
+        submitLabel: t("Rename"),
         onSubmit: (title) => renameResource(resourceId, title),
       });
     },
@@ -689,41 +736,42 @@ export function WorkspaceView({
       const resource = resources.get(resourceId);
       if (!resource) return;
       setConfirm({
-        title: `Move “${resource.title}” to the trash?`,
-        description:
+        title: t("Move “{title}” to the trash?", { title: resource.title }),
+        description: t(
           "It moves to the workspace's .resit/trash folder. Links to it will show as missing.",
-        confirmLabel: "Move to trash",
+        ),
+        confirmLabel: t("Move to trash"),
         onConfirm: async () => {
           try {
             await viewFor(resourceId)?.flush?.();
             refresh(await api.deleteResource(resourceId));
             dispatch({ type: "close-resource", resourceId });
           } catch (error) {
-            notices.fail("The file was not moved to the trash", error);
+            notices.fail(t("The file was not moved to the trash"), error);
           }
         },
       });
     },
     showFileHistory: (resourceId: string) => setHistoryId(resourceId),
     openGraph: () =>
-      dispatch({ type: "open", resourceId: GRAPH_TAB_ID, title: "Graph" }),
+      dispatch({ type: "open", resourceId: GRAPH_TAB_ID, title: t("Graph") }),
     openSchedule: () =>
       dispatch({
         type: "open",
         resourceId: SCHEDULE_TAB_ID,
-        title: "Schedule",
+        title: t("Schedule"),
       }),
     openPractice: () =>
       dispatch({
         type: "open",
         resourceId: PRACTICE_TAB_ID,
-        title: "Practice",
+        title: t("Practice"),
       }),
     openProfile: () =>
       dispatch({
         type: "open",
         resourceId: PROFILE_TAB_ID,
-        title: "Learner profile",
+        title: t("Learner profile"),
       }),
     openTrash: () => setTrashOpen(true),
     openSettings: () => onOpenSettings(),
@@ -741,15 +789,18 @@ export function WorkspaceView({
     (markdown: string) => {
       const note = insertIntoNote(layoutRef.current, resources, markdown);
       if (note)
-        notices.notify({ tone: "success", title: `Quoted in ${note.title}` });
+        notices.notify({
+          tone: "success",
+          title: t("Quoted in {title}", { title: note.title }),
+        });
       else
         notices.notify({
           tone: "info",
-          title: "Open a note to quote this highlight",
-          detail: "Split the pane with Ctrl+\\ to keep both open.",
+          title: t("Open a note to quote this highlight"),
+          detail: t("Split the pane with Ctrl+\\ to keep both open."),
         });
     },
-    [resources, notices],
+    [t, resources, notices],
   );
 
   // A highlight made into a flashcard opens the card dialog over the PDF.
@@ -910,7 +961,10 @@ export function WorkspaceView({
             ? [
                 {
                   id: "new-note",
-                  label: `New note in ${subjects.get(currentSubjectId)?.name ?? "subject"}`,
+                  label: t("New note in {subject}", {
+                    subject:
+                      subjects.get(currentSubjectId)?.name ?? t("subject"),
+                  }),
                   shortcut: "Ctrl+N",
                   icon: "new-note" as const,
                   run: () => newNote(currentSubjectId),
@@ -919,32 +973,32 @@ export function WorkspaceView({
             : []),
           {
             id: "new-subject",
-            label: "New subject",
+            label: t("New subject"),
             icon: "new-subject",
             run: addSubject,
           },
           {
             id: "graph",
-            label: "Open the graph",
+            label: t("Open the graph"),
             shortcut: "Ctrl+Shift+G",
             icon: "graph",
             run: actions.openGraph,
           },
           {
             id: "schedule",
-            label: "Open the schedule",
+            label: t("Open the schedule"),
             icon: "schedule",
             run: actions.openSchedule,
           },
           {
             id: "practice",
-            label: "Open practice",
+            label: t("Open practice"),
             icon: "practice",
             run: actions.openPractice,
           },
           {
             id: "profile",
-            label: "Open the learner profile",
+            label: t("Open the learner profile"),
             icon: "profile",
             run: actions.openProfile,
           },
@@ -952,7 +1006,7 @@ export function WorkspaceView({
             ? [
                 {
                   id: "new-card",
-                  label: "New flashcard",
+                  label: t("New flashcard"),
                   icon: "practice" as const,
                   run: () =>
                     setCardRequest(
@@ -961,7 +1015,7 @@ export function WorkspaceView({
                 },
                 {
                   id: "new-quiz",
-                  label: "New quiz",
+                  label: t("New quiz"),
                   icon: "quiz" as const,
                   run: () =>
                     setQuizRequest(
@@ -972,13 +1026,13 @@ export function WorkspaceView({
             : []),
           {
             id: "export",
-            label: "Export workspace",
+            label: t("Export workspace"),
             icon: "export",
             run: () => setExportOpen(true),
           },
           {
             id: "settings",
-            label: "Settings",
+            label: t("Settings"),
             icon: "settings",
             run: () => onOpenSettings(),
           },
@@ -1071,9 +1125,10 @@ function Breadcrumb({
   subject: SubjectInfo | undefined;
   title: string;
 }) {
+  const { t } = useLocale();
   return (
     <nav
-      aria-label="Current document"
+      aria-label={t("Current document")}
       className="flex min-w-0 items-center gap-1.5"
     >
       <span aria-hidden className="text-subtle-foreground">

@@ -37,7 +37,7 @@ export function ArchiveDialog({
   onOpened: (state: AppState) => void;
 }) {
   const notices = useNotices();
-  const { date, number } = useLocale();
+  const { t, date, number } = useLocale();
   const [running, setRunning] = useState(false);
   const progress = usePackageProgress(running);
 
@@ -51,13 +51,18 @@ export function ArchiveDialog({
         onOpened(state);
       }
     } catch (error) {
-      notices.fail("The archive was not opened", error);
+      notices.fail(t("The archive was not opened"), error);
     } finally {
       setRunning(false);
     }
   };
 
   const summary = archive?.summary;
+  const facts = summary && {
+    count: number(summary.files),
+    size: formatBytes(summary.bytes, number),
+    date: date(summary.exportedAt),
+  };
   return (
     <Dialog
       open={archive !== null}
@@ -68,31 +73,38 @@ export function ArchiveDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            Open “{summary?.workspaceName ?? "workspace"}”
+            {t("Open “{workspace}”", {
+              workspace: summary?.workspaceName ?? t("workspace"),
+            })}
           </DialogTitle>
           <DialogDescription>
-            {summary
-              ? `${number(summary.files)} ${summary.files === 1 ? "file" : "files"}, ${formatBytes(summary.bytes, number)}, exported ${date(summary.exportedAt)}. `
+            {summary && facts
+              ? `${
+                  summary.files === 1
+                    ? t("{count} file, {size}, exported {date}.", facts)
+                    : t("{count} files, {size}, exported {date}.", facts)
+                } `
               : null}
-            resit copies it into a new folder inside the one you choose, then
-            opens it.
+            {t(
+              "resit copies it into a new folder inside the one you choose, then opens it.",
+            )}
           </DialogDescription>
         </DialogHeader>
         {progress ? (
-          <PackageProgress progress={progress} label="Copying files" />
+          <PackageProgress progress={progress} label={t("Copying files")} />
         ) : null}
         <DialogFooter>
           {progress ? (
             <Button variant="outline" onClick={() => void api.stopPackage()}>
-              Stop
+              {t("Stop")}
             </Button>
           ) : (
             <>
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button disabled={running} onClick={() => void open()}>
-                Choose folder…
+                {t("Choose folder…")}
               </Button>
             </>
           )}

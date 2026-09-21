@@ -15,7 +15,8 @@ import { Input } from "@resit/ui/components/input";
 import { Progress } from "@resit/ui/components/progress";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
-import { useLocale } from "@resit/ui/hooks/use-locale";
+import { useLocale, type LocaleFormatters } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 import { formatBytes } from "@resit/ui/lib/format-bytes";
 import { cn } from "@resit/ui/lib/utils";
 
@@ -38,19 +39,31 @@ type View =
 /** New files need no label: they are the ones ticked and waiting. */
 const STATE_LABEL: Record<MoodleItem["state"], string> = {
   new: "",
-  updated: "Updated",
-  current: "In workspace",
+  updated: msg("Updated"),
+  current: msg("In workspace"),
 };
 
-function describeSkipped(contents: MoodleCourseContents): string | null {
+function describeSkipped(
+  contents: MoodleCourseContents,
+  t: LocaleFormatters["t"],
+): string | null {
   const parts = contents.skipped.map((entry) => {
+    const values = { count: entry.count, detail: entry.detail };
     if (entry.reason === "unsupported")
-      return `${entry.count} ${entry.count === 1 ? "activity" : "activities"} resit does not download (${entry.detail})`;
+      return entry.count === 1
+        ? t("{count} activity resit does not download ({detail})", values)
+        : t("{count} activities resit does not download ({detail})", values);
     if (entry.reason === "external")
-      return `${entry.count} ${entry.count === 1 ? "file" : "files"} stored on another site`;
-    return `${entry.count} ${entry.count === 1 ? "file" : "files"} too large to download`;
+      return entry.count === 1
+        ? t("{count} file stored on another site", values)
+        : t("{count} files stored on another site", values);
+    return entry.count === 1
+      ? t("{count} file too large to download", values)
+      : t("{count} files too large to download", values);
   });
-  return parts.length > 0 ? `Left out: ${parts.join(", ")}.` : null;
+  return parts.length > 0
+    ? t("Left out: {list}.", { list: parts.join(", ") })
+    : null;
 }
 
 /** Follows a Moodle course from a subject, and downloads its files. */
@@ -67,7 +80,7 @@ export function MoodleDialog({
   onOpenSettings: () => void;
 }) {
   const notices = useNotices();
-  const { number } = useLocale();
+  const { t, number } = useLocale();
   const [view, setView] = useState<View>({ kind: "loading" });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [query, setQuery] = useState("");
@@ -128,7 +141,7 @@ export function MoodleDialog({
     try {
       await api.setMoodleCourse({ subjectId, courseId: course });
     } catch (error) {
-      notices.fail("The course was not linked", error);
+      notices.fail(t("The course was not linked"), error);
       setView({ kind: "error", message: errorMessage(error) });
     }
   };
@@ -146,8 +159,16 @@ export function MoodleDialog({
         tone: result.failures.length > 0 ? "error" : "success",
         title:
           saved === 0
-            ? "Nothing was downloaded"
-            : `${number(saved)} ${saved === 1 ? "file" : "files"} in ${subject?.name ?? "the subject"}`,
+            ? t("Nothing was downloaded")
+            : saved === 1
+              ? t("{count} file in {subject}", {
+                  count: number(saved),
+                  subject: subject?.name ?? t("the subject"),
+                })
+              : t("{count} files in {subject}", {
+                  count: number(saved),
+                  subject: subject?.name ?? t("the subject"),
+                }),
         ...(result.failures.length > 0
           ? {
               detail: `${result.failures[0]?.filename}: ${result.failures[0]?.message}`,
@@ -156,7 +177,7 @@ export function MoodleDialog({
       });
       await load();
     } catch (error) {
-      notices.fail("The download stopped", error);
+      notices.fail(t("The download stopped"), error);
     } finally {
       setProgress(null);
     }
@@ -170,12 +191,12 @@ export function MoodleDialog({
       if (group) group.items.push(item);
       else
         sections.set(item.section, {
-          name: item.sectionName || "Course files",
+          name: item.sectionName || t("Course files"),
           items: [item],
         });
     }
     return [...sections.entries()];
-  }, [view]);
+  }, [view, t]);
 
   const waiting =
     view.kind === "contents"
@@ -198,14 +219,14 @@ export function MoodleDialog({
             title={subject?.moodle?.fullname}
           >
             {subject?.moodle?.fullname ??
-              "Choose the Moodle course this subject follows."}
+              t("Choose the Moodle course this subject follows.")}
           </DialogDescription>
         </DialogHeader>
 
         {!connected ? (
           <div className="flex flex-col items-start gap-3 py-4">
             <p className="text-sm text-muted-foreground">
-              Connect your Moodle account to follow a course.
+              {t("Connect your Moodle account to follow a course.")}
             </p>
             <Button
               size="sm"
@@ -214,7 +235,7 @@ export function MoodleDialog({
                 onOpenSettings();
               }}
             >
-              Open settings
+              {t("Open settings")}
             </Button>
           </div>
         ) : view.kind === "loading" ? (
@@ -227,7 +248,7 @@ export function MoodleDialog({
           <div className="flex flex-col items-start gap-3 py-4">
             <p className="text-sm text-destructive">{view.message}</p>
             <Button size="sm" variant="secondary" onClick={() => void load()}>
-              Try again
+              {t("Try again")}
             </Button>
           </div>
         ) : view.kind === "courses" ? (
@@ -242,12 +263,16 @@ export function MoodleDialog({
             <div className="flex h-control items-center gap-3 border-b pb-3">
               <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                 {waiting.length === 0
-                  ? "Everything in this course is already here."
+                  ? t("Everything in this course is already here.")
                   : [
                       waiting.length - updated > 0
-                        ? `${number(waiting.length - updated)} new`
+                        ? t("{count} new", {
+                            count: number(waiting.length - updated),
+                          })
                         : null,
-                      updated > 0 ? `${number(updated)} updated` : null,
+                      updated > 0
+                        ? t("{count} updated", { count: number(updated) })
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -264,7 +289,7 @@ export function MoodleDialog({
                     )
                   }
                 >
-                  {selected.size > 0 ? "Select none" : "Select all"}
+                  {selected.size > 0 ? t("Select none") : t("Select all")}
                 </Button>
               ) : null}
             </div>
@@ -298,7 +323,9 @@ export function MoodleDialog({
                                 : "indeterminate"
                           }
                           disabled={locked}
-                          aria-label={`Everything in ${group.name}`}
+                          aria-label={t("Everything in {section}", {
+                            section: group.name,
+                          })}
                           onCheckedChange={(checked) =>
                             setSelected((current) => {
                               const next = new Set(current);
@@ -358,7 +385,7 @@ export function MoodleDialog({
                                       : "text-subtle-foreground",
                                   )}
                                 >
-                                  {STATE_LABEL[item.state]}
+                                  {t(STATE_LABEL[item.state])}
                                 </span>
                                 <span className="w-16 shrink-0 text-right text-xs tabular-nums text-subtle-foreground">
                                   {formatBytes(item.filesize, number)}
@@ -373,15 +400,15 @@ export function MoodleDialog({
                 })}
                 {view.contents.items.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">
-                    This course has no files resit can download.
+                    {t("This course has no files resit can download.")}
                   </p>
                 ) : null}
               </div>
             </ScrollArea>
 
-            {describeSkipped(view.contents) ? (
+            {describeSkipped(view.contents, t) ? (
               <p className="text-xs text-subtle-foreground">
-                {describeSkipped(view.contents)}
+                {describeSkipped(view.contents, t)}
               </p>
             ) : null}
 
@@ -389,15 +416,18 @@ export function MoodleDialog({
               <div className="flex flex-col gap-1.5">
                 <Progress
                   value={(progress.done / Math.max(progress.total, 1)) * 100}
-                  aria-label="Downloading from Moodle"
+                  aria-label={t("Downloading from Moodle")}
                 />
                 <p
                   className="truncate text-xs text-muted-foreground"
                   aria-live="polite"
                 >
                   {progress.filename
-                    ? `${progress.filename} · ${number(progress.done)} of ${number(progress.total)}`
-                    : "Starting…"}
+                    ? `${progress.filename} · ${t("{done} of {total}", {
+                        done: number(progress.done),
+                        total: number(progress.total),
+                      })}`
+                    : t("Starting…")}
                 </p>
               </div>
             ) : null}
@@ -408,15 +438,15 @@ export function MoodleDialog({
                 disabled={progress !== null}
                 onClick={() => void follow(0)}
               >
-                Stop following
+                {t("Stop following")}
               </Button>
               <Button
                 disabled={selected.size === 0 || progress !== null}
                 onClick={() => void download()}
               >
                 {progress !== null
-                  ? "Downloading…"
-                  : `Download ${number(selected.size)}`}
+                  ? t("Downloading…")
+                  : t("Download {count}", { count: number(selected.size) })}
               </Button>
             </DialogFooter>
           </div>
@@ -437,6 +467,7 @@ function CourseList({
   onQueryChange: (value: string) => void;
   onFollow: (courseId: number) => void;
 }) {
+  const { t } = useLocale();
   const term = query.trim().toLowerCase();
   const shown = term
     ? courses.filter((course) =>
@@ -451,7 +482,7 @@ function CourseList({
         <Input
           value={query}
           autoFocus
-          placeholder="Search your courses"
+          placeholder={t("Search your courses")}
           className="pl-8"
           onChange={(event) => onQueryChange(event.target.value)}
         />
@@ -476,15 +507,15 @@ function CourseList({
                 variant="secondary"
                 onClick={() => onFollow(course.id)}
               >
-                Follow
+                {t("Follow")}
               </Button>
             </li>
           ))}
           {shown.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               {courses.length === 0
-                ? "Moodle lists no courses for your account."
-                : "No course matches that."}
+                ? t("Moodle lists no courses for your account.")
+                : t("No course matches that.")}
             </p>
           ) : null}
         </ul>

@@ -14,6 +14,7 @@ import { Label } from "@resit/ui/components/label";
 import { Progress } from "@resit/ui/components/progress";
 import { useLocale } from "@resit/ui/hooks/use-locale";
 import { formatBytes } from "@resit/ui/lib/format-bytes";
+import { msg } from "@resit/ui/lib/i18n";
 
 import type { PackageOptions } from "../../../shared/workspace";
 import { api } from "../lib/api";
@@ -21,10 +22,10 @@ import { useNotices } from "../lib/notices";
 import { flushAllViews } from "../views/view-registry";
 
 const CHOICES: { key: keyof PackageOptions; label: string }[] = [
-  { key: "conversations", label: "Conversations" },
-  { key: "learner", label: "Learner profile" },
-  { key: "history", label: "Version history" },
-  { key: "trash", label: "Trash" },
+  { key: "conversations", label: msg("Conversations") },
+  { key: "learner", label: msg("Learner profile") },
+  { key: "history", label: msg("Version history") },
+  { key: "trash", label: msg("Trash") },
 ];
 
 /** Bytes written so far, while a package is being written or opened. */
@@ -55,7 +56,7 @@ export function PackageProgress({
   progress: { done: number; total: number } | null;
   label: string;
 }) {
-  const { number } = useLocale();
+  const { t, number } = useLocale();
   const total = progress?.total ?? 0;
   return (
     <div role="status" className="flex flex-col gap-2">
@@ -63,8 +64,10 @@ export function PackageProgress({
         <span>{label}</span>
         {total > 0 ? (
           <span className="tabular-nums text-muted-foreground">
-            {formatBytes(progress?.done ?? 0, number)} of{" "}
-            {formatBytes(total, number)}
+            {t("{done} of {total}", {
+              done: formatBytes(progress?.done ?? 0, number),
+              total: formatBytes(total, number),
+            })}
           </span>
         ) : null}
       </div>
@@ -85,6 +88,7 @@ export function ExportDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [options, setOptions] = useState<PackageOptions>({
     conversations: true,
@@ -104,12 +108,12 @@ export function ExportDialog({
         onOpenChange(false);
         notices.notify({
           tone: "success",
-          title: "The workspace was exported",
+          title: t("The workspace was exported"),
           detail: path,
         });
       }
     } catch (error) {
-      notices.fail("The workspace was not exported", error);
+      notices.fail(t("The workspace was not exported"), error);
     } finally {
       setRunning(false);
     }
@@ -124,17 +128,18 @@ export function ExportDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export workspace</DialogTitle>
+          <DialogTitle>{t("Export workspace")}</DialogTitle>
           <DialogDescription>
-            Saves the workspace as one .resit file. Open it in resit on another
-            computer to carry on there.
+            {t(
+              "Saves the workspace as one .resit file. Open it in resit on another computer to carry on there.",
+            )}
           </DialogDescription>
         </DialogHeader>
         {progress ? (
-          <PackageProgress progress={progress} label="Exporting" />
+          <PackageProgress progress={progress} label={t("Exporting")} />
         ) : (
           <fieldset className="flex flex-col gap-3" disabled={running}>
-            <legend className="mb-3 text-sm font-medium">Include</legend>
+            <legend className="mb-3 text-sm font-medium">{t("Include")}</legend>
             {CHOICES.map(({ key, label }) => (
               <div key={key} className="flex items-center gap-2.5">
                 <Checkbox
@@ -148,7 +153,7 @@ export function ExportDialog({
                   }
                 />
                 <Label htmlFor={`export-${key}`} className="font-normal">
-                  {label}
+                  {t(label)}
                 </Label>
               </div>
             ))}
@@ -157,15 +162,15 @@ export function ExportDialog({
         <DialogFooter>
           {progress ? (
             <Button variant="outline" onClick={() => void api.stopPackage()}>
-              Stop
+              {t("Stop")}
             </Button>
           ) : (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button disabled={running} onClick={() => void run()}>
-                Export…
+                {t("Export…")}
               </Button>
             </>
           )}

@@ -11,6 +11,7 @@ import {
 } from "@resit/ui/components/dialog";
 import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 export interface PromptRequest {
   title: string;
@@ -32,6 +33,7 @@ export function PromptDialog({
   onClose: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useLocale();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -78,7 +80,7 @@ export function PromptDialog({
             {children}
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={busy || !value.trim()}>
                 {request.submitLabel}

@@ -20,6 +20,7 @@ import {
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
 import { TrashList } from "@resit/ui/patterns/files/trash-row";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { TrashEntry, WorkspaceSnapshot } from "../../../shared/workspace";
 import { api } from "../lib/api";
@@ -37,6 +38,7 @@ export function TrashDialog({
   onOpenChange,
   onRestored,
 }: TrashDialogProps) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [entries, setEntries] = useState<TrashEntry[] | null>(null);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
@@ -52,13 +54,13 @@ export function TrashDialog({
       (error: unknown) => {
         if (cancelled) return;
         setEntries([]);
-        notices.fail("The trash could not be read", error);
+        notices.fail(t("The trash could not be read"), error);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [open, notices]);
+  }, [t, open, notices]);
 
   const restore = async (id: string) => {
     const entry = entries?.find((item) => item.id === id);
@@ -67,10 +69,12 @@ export function TrashDialog({
       setEntries((list) => (list ?? []).filter((item) => item.id !== id));
       notices.notify({
         tone: "success",
-        title: `${entry?.title ?? "The item"} is back in your workspace`,
+        title: t("{title} is back in your workspace", {
+          title: entry?.title ?? t("The item"),
+        }),
       });
     } catch (error) {
-      notices.fail("It was not restored", error);
+      notices.fail(t("It was not restored"), error);
     }
   };
 
@@ -79,7 +83,7 @@ export function TrashDialog({
       await api.deleteFromTrash(id);
       setEntries((list) => (list ?? []).filter((item) => item.id !== id));
     } catch (error) {
-      notices.fail("It was not deleted", error);
+      notices.fail(t("It was not deleted"), error);
     }
   };
 
@@ -88,7 +92,7 @@ export function TrashDialog({
       await api.emptyTrash();
       setEntries([]);
     } catch (error) {
-      notices.fail("The trash was not emptied", error);
+      notices.fail(t("The trash was not emptied"), error);
       setEntries(await api.listTrash().catch(() => entries));
     }
   };
@@ -99,10 +103,11 @@ export function TrashDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Trash</DialogTitle>
+          <DialogTitle>{t("Trash")}</DialogTitle>
           <DialogDescription>
-            Deleted notes, documents, subjects, and conversations stay in the
-            workspace folder until you remove them yourself.
+            {t(
+              "Deleted notes, documents, subjects, and conversations stay in the workspace folder until you remove them yourself.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="-mx-2 max-h-[60vh] px-2">
@@ -133,21 +138,23 @@ export function TrashDialog({
         <AlertDialog open={confirmEmpty} onOpenChange={setConfirmEmpty}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Empty the trash?</AlertDialogTitle>
+              <AlertDialogTitle>{t("Empty the trash?")}</AlertDialogTitle>
               <AlertDialogDescription>
                 {count === 1
-                  ? "The item in the trash is removed from disk."
-                  : `The ${count} items in the trash are removed from disk.`}{" "}
-                This cannot be undone.
+                  ? t("The item in the trash is removed from disk.")
+                  : t("The {count} items in the trash are removed from disk.", {
+                      count,
+                    })}{" "}
+                {t("This cannot be undone.")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 onClick={() => void empty()}
               >
-                Empty trash
+                {t("Empty trash")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -26,6 +26,7 @@ import {
 } from "@resit/ui/components/command";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { SearchResult } from "../../../shared/ipc";
 import type {
@@ -97,6 +98,7 @@ export function QuickOpen({
   commands: QuickOpenCommand[];
   onOpenResource: (resourceId: string, page?: number) => void;
 }) {
+  const { t } = useLocale();
   const subjects = new Map(
     snapshot.subjects.map((subject) => [subject.id, subject]),
   );
@@ -163,21 +165,23 @@ export function QuickOpen({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Go to"
-      description="Find a note or document, search inside them, or run a command"
+      title={t("Go to")}
+      description={t(
+        "Find a note or document, search inside them, or run a command",
+      )}
       shouldFilter={false}
     >
       <CommandInput
-        placeholder="Find a note, PDF, or command…"
+        placeholder={t("Find a note, PDF, or command…")}
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
         <CommandEmpty>
-          {searching ? "Searching…" : "Nothing matches."}
+          {searching ? t("Searching…") : t("Nothing matches.")}
         </CommandEmpty>
         {titleHits.length > 0 ? (
-          <CommandGroup heading="Notes and documents">
+          <CommandGroup heading={t("Notes and documents")}>
             {titleHits.map((resource) => {
               const subject = subjects.get(resource.subjectId);
               const Icon = icons[resource.kind];
@@ -211,7 +215,7 @@ export function QuickOpen({
           </CommandGroup>
         ) : null}
         {results.length > 0 ? (
-          <CommandGroup heading="Inside notes and PDFs">
+          <CommandGroup heading={t("Inside notes and PDFs")}>
             {results.map((hit) => {
               const subject = subjects.get(hit.subjectId);
               return (
@@ -227,7 +231,7 @@ export function QuickOpen({
                       <span className="truncate font-medium">{hit.title}</span>
                       {hit.page ? (
                         <span className="shrink-0 text-xs text-muted-foreground">
-                          p. {hit.page}
+                          {t("p. {page}", { page: hit.page })}
                         </span>
                       ) : null}
                       {subject ? (
@@ -246,7 +250,7 @@ export function QuickOpen({
           </CommandGroup>
         ) : null}
         {commandHits.length > 0 ? (
-          <CommandGroup heading="Commands">
+          <CommandGroup heading={t("Commands")}>
             {commandHits.map((command) => {
               const Icon = commandIcons[command.icon];
               return (

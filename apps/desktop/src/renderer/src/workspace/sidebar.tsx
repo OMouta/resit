@@ -28,6 +28,7 @@ import {
   WorkspaceSidebar,
   type SidebarProject,
 } from "@resit/ui/patterns/navigation/workspace-sidebar";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { FolderInfo, WorkspaceSnapshot } from "../../../shared/workspace";
 
@@ -137,6 +138,7 @@ export function Sidebar({
   waitingSuggestions: number;
   actions: SidebarActions;
 }) {
+  const { t } = useLocale();
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [subjectsOpen, setSubjectsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
@@ -254,7 +256,7 @@ export function Sidebar({
                 <Button
                   variant="subtle"
                   size="icon-sm"
-                  aria-label="New note"
+                  aria-label={t("New note")}
                   onClick={(event) => {
                     event.stopPropagation();
                     actions.newNote(row.id);
@@ -262,46 +264,46 @@ export function Sidebar({
                 >
                   <FilePlusIcon />
                 </Button>
-                <RowMenu label="Subject actions">
+                <RowMenu label={t("Subject actions")}>
                   <DropdownMenuItem onSelect={() => actions.newNote(row.id)}>
-                    <FilePlusIcon /> New note
+                    <FilePlusIcon /> {t("New note")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => actions.newFolder(row.id)}>
-                    <FolderPlusIcon /> New folder…
+                    <FolderPlusIcon /> {t("New folder…")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => actions.importFiles(row.id)}
                   >
-                    <UploadIcon /> Import files…
+                    <UploadIcon /> {t("Import files…")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => actions.openMoodle(row.id)}>
-                    <GraduationCapIcon /> Moodle…
+                    <GraduationCapIcon /> {t("Moodle…")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() =>
                       actions.exportMarkdown({ subjectId: row.id })
                     }
                   >
-                    <FileDownIcon /> Export as Markdown…
+                    <FileDownIcon /> {t("Export as Markdown…")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={() => actions.editSubject(row.id)}
                   >
-                    <PencilIcon /> Rename or recolour…
+                    <PencilIcon /> {t("Rename or recolour…")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onSelect={() => actions.deleteSubject(row.id)}
                   >
-                    <Trash2Icon /> Move to trash…
+                    <Trash2Icon /> {t("Move to trash…")}
                   </DropdownMenuItem>
                 </RowMenu>
               </>
             );
           if (row.kind === "folder")
             return (
-              <RowMenu label="Folder actions">
+              <RowMenu label={t("Folder actions")}>
                 {row.folder.linked ? null : (
                   <>
                     <DropdownMenuItem
@@ -309,21 +311,21 @@ export function Sidebar({
                         actions.newNote(row.subjectId, row.folder.path)
                       }
                     >
-                      <FilePlusIcon /> New note
+                      <FilePlusIcon /> {t("New note")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() =>
                         actions.newFolder(row.subjectId, row.folder.path)
                       }
                     >
-                      <FolderPlusIcon /> New folder…
+                      <FolderPlusIcon /> {t("New folder…")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() =>
                         actions.importFiles(row.subjectId, row.folder.path)
                       }
                     >
-                      <UploadIcon /> Import files…
+                      <UploadIcon /> {t("Import files…")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -331,7 +333,7 @@ export function Sidebar({
                         actions.renameFolder(row.subjectId, row.folder.path)
                       }
                     >
-                      <PencilIcon /> Rename…
+                      <PencilIcon /> {t("Rename…")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -341,33 +343,33 @@ export function Sidebar({
                     actions.deleteFolder(row.subjectId, row.folder.path)
                   }
                 >
-                  <Trash2Icon /> Move to trash…
+                  <Trash2Icon /> {t("Move to trash…")}
                 </DropdownMenuItem>
               </RowMenu>
             );
           return (
-            <RowMenu label="File actions">
+            <RowMenu label={t("File actions")}>
               <DropdownMenuItem onSelect={() => actions.renameResource(row.id)}>
-                <PencilIcon /> Rename…
+                <PencilIcon /> {t("Rename…")}
               </DropdownMenuItem>
               {resources.get(row.id)?.kind === "note" ? (
                 <DropdownMenuItem
                   onSelect={() => actions.exportMarkdown({ noteId: row.id })}
                 >
-                  <FileDownIcon /> Export as Markdown…
+                  <FileDownIcon /> {t("Export as Markdown…")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
                   onSelect={() => actions.showFileHistory(row.id)}
                 >
-                  <HistoryIcon /> Version history…
+                  <HistoryIcon /> {t("Version history…")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
                 variant="destructive"
                 onSelect={() => actions.deleteResource(row.id)}
               >
-                <Trash2Icon /> Move to trash…
+                <Trash2Icon /> {t("Move to trash…")}
               </DropdownMenuItem>
             </RowMenu>
           );
@@ -401,14 +403,14 @@ export function Sidebar({
             className="w-full justify-start"
             onClick={actions.openTrash}
           >
-            <Trash2Icon /> Trash
+            <Trash2Icon /> {t("Trash")}
           </Button>
           <Button
             variant="subtle"
             className="w-full justify-start"
             onClick={actions.openSettings}
           >
-            <SettingsIcon /> Settings
+            <SettingsIcon /> {t("Settings")}
           </Button>
         </div>
       }

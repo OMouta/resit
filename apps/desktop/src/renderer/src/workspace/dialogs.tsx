@@ -30,8 +30,10 @@ import {
 import {
   SUBJECT_COLORS,
   subjectColorClasses,
+  subjectColorLabels,
 } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import {
   subjectNameFromCourse,
@@ -66,6 +68,7 @@ export function SubjectDialog({
   courses?: MoodleCourse[] | undefined;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const [name, setName] = useState("");
   const [color, setColor] = useState<SubjectColorValue>("blue");
   const [course, setCourse] = useState(NO_COURSE);
@@ -109,20 +112,20 @@ export function SubjectDialog({
               <DialogTitle>{request.title}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="subject-name">Name</Label>
+              <Label htmlFor="subject-name">{t("Name")}</Label>
               <Input
                 id="subject-name"
                 autoFocus
                 value={name}
-                placeholder="Mathematics"
+                placeholder={t("Mathematics")}
                 onChange={(event) => setName(event.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Colour</span>
+              <span className="text-sm font-medium">{t("Colour")}</span>
               <div
                 role="radiogroup"
-                aria-label="Subject colour"
+                aria-label={t("Subject colour")}
                 className="flex flex-wrap items-center gap-1.5"
               >
                 {SUBJECT_COLORS.map((entry) => (
@@ -131,7 +134,7 @@ export function SubjectDialog({
                     type="button"
                     role="radio"
                     aria-checked={color === entry}
-                    aria-label={entry}
+                    aria-label={t(subjectColorLabels[entry])}
                     onClick={() => setColor(entry)}
                     className={cn(
                       "flex size-7 items-center justify-center rounded-md",
@@ -148,14 +151,14 @@ export function SubjectDialog({
                     />
                   </button>
                 ))}
-                <span className="ml-1 text-xs text-muted-foreground capitalize">
-                  {color}
+                <span className="ml-1 text-xs text-muted-foreground">
+                  {t(subjectColorLabels[color])}
                 </span>
               </div>
             </div>
             {request.linkable && courses && courses.length > 0 ? (
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="subject-course">Moodle course</Label>
+                <Label htmlFor="subject-course">{t("Moodle course")}</Label>
                 <Select
                   value={course}
                   onValueChange={(value) => {
@@ -174,7 +177,7 @@ export function SubjectDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_COURSE}>Not linked</SelectItem>
+                    <SelectItem value={NO_COURSE}>{t("Not linked")}</SelectItem>
                     {courses.map((entry) => (
                       <SelectItem key={entry.id} value={String(entry.id)}>
                         {entry.fullname}
@@ -186,7 +189,7 @@ export function SubjectDialog({
             ) : null}
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={busy || !name.trim()}>
                 {request.submitLabel}
@@ -213,6 +216,7 @@ export function ConfirmDialog({
   request: ConfirmRequest | null;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <AlertDialog
       open={request !== null}
@@ -228,7 +232,7 @@ export function ConfirmDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 onClick={() => void request.onConfirm().finally(onClose)}

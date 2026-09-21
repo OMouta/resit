@@ -13,14 +13,16 @@ import {
   HistoryList,
   type HistoryRevision,
 } from "@resit/ui/patterns/files/history-row";
+import { useLocale } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
 
 import type { FileRevision, ResourceInfo } from "../../../shared/workspace";
 import { api } from "../lib/api";
 import { useNotices } from "../lib/notices";
 
 const SUMMARIES: Record<FileRevision["cause"], string> = {
-  replace: "Before a newer copy replaced it",
-  restore: "Before a restore",
+  replace: msg("Before a newer copy replaced it"),
+  restore: msg("Before a restore"),
 };
 
 const CAUSES: Record<FileRevision["cause"], HistoryRevision["cause"]> = {
@@ -37,6 +39,7 @@ export function FileHistory({
   resource: ResourceInfo | null;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [revisions, setRevisions] = useState<FileRevision[] | null>(null);
   const resourceId = resource?.id;
@@ -52,13 +55,13 @@ export function FileHistory({
       (error: unknown) => {
         if (cancelled) return;
         setRevisions([]);
-        notices.fail("The file's history could not be read", error);
+        notices.fail(t("The file's history could not be read"), error);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [resourceId, notices]);
+  }, [t, resourceId, notices]);
 
   const restore = async (revisionId: string) => {
     if (!resourceId) return;
@@ -67,11 +70,11 @@ export function FileHistory({
       onClose();
       notices.notify({
         tone: "success",
-        title: "The earlier copy is back",
-        detail: "The copy it replaced was kept, so you can undo this too.",
+        title: t("The earlier copy is back"),
+        detail: t("The copy it replaced was kept, so you can undo this too."),
       });
     } catch (error) {
-      notices.fail("That copy was not restored", error);
+      notices.fail(t("That copy was not restored"), error);
     }
   };
 
@@ -81,7 +84,7 @@ export function FileHistory({
     revision: total - index,
     at: revision.at,
     cause: CAUSES[revision.cause],
-    summary: SUMMARIES[revision.cause],
+    summary: t(SUMMARIES[revision.cause]),
     sizeBytes: revision.size,
   }));
 
@@ -92,10 +95,12 @@ export function FileHistory({
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Version history</DialogTitle>
+          <DialogTitle>{t("Version history")}</DialogTitle>
           <DialogDescription>
-            resit keeps a copy of {resource?.title ?? "this file"} before a
-            newer one replaces it. Restoring one keeps the copy it replaces.
+            {t(
+              "resit keeps a copy of {file} before a newer one replaces it. Restoring one keeps the copy it replaces.",
+              { file: resource?.title ?? t("this file") },
+            )}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="-mx-2 max-h-[50vh] px-2">
