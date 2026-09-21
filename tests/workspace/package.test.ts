@@ -17,8 +17,8 @@ import {
   exportPackage,
   extractPackage,
   readPackage,
-  type PackageOptions,
 } from "../../apps/desktop/src/main/workspace/package";
+import type { PackageOptions } from "../../apps/desktop/src/shared/workspace";
 import {
   createNote,
   createWorkspace,
