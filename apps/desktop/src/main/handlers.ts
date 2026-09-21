@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { dialog, nativeTheme, shell, type BrowserWindow } from "electron";
 import { z } from "zod";
@@ -5,7 +6,24 @@ import { z } from "zod";
 import { liveContextSchema } from "../shared/context";
 import { scopeSchema, turnContextSchema } from "../shared/conversations";
 import { CHANNELS, HEALTH_CHECK_CHANNEL } from "../shared/ipc";
+import { detailSchema, topicLevelSchema } from "../shared/learner";
 import type { MoodleLink } from "../shared/moodle";
+import {
+  availabilitySchema,
+  dateSchema,
+  SESSION_STATUS_VALUES,
+  sessionKindSchema,
+  sessionTargetSchema,
+  timeSchema,
+} from "../shared/planning";
+import {
+  CARD_ACTION_VALUES,
+  cardKindSchema,
+  outcomeSchema,
+  practiceSourceSchema,
+  questionKindSchema,
+  ratingSchema,
+} from "../shared/practice";
 import { providerIdSchema, settingsPatchSchema } from "../shared/settings";
 import {
   annotationColorSchema,
@@ -60,6 +78,43 @@ import {
   reopenLastWorkspace,
   saveLayout,
 } from "./session";
+import {
+  changeCards,
+  createCards,
+  deleteQuiz,
+  listPractice,
+  markResponse,
+  rateCard,
+  readQuiz,
+  reviewQueue,
+  saveQuiz,
+  saveResponses,
+  setNewCardsPerDay,
+  startAttempt,
+  submitAttempt,
+  undoReview,
+  updateCard,
+} from "./practice/store";
+import {
+  deleteTopic,
+  learnerProfile,
+  resolveTopicProposal,
+  saveTopic,
+  setPersonalization,
+  updatePreferences,
+} from "./learner/store";
+import { calendarFile } from "./planning/ics";
+import { refreshReminders } from "./planning/reminders";
+import {
+  deleteAssessment,
+  deleteSession,
+  readPlan,
+  resolveProposals,
+  saveAssessment,
+  saveSession,
+  setAvailability,
+  setSessionStatus,
+} from "./planning/store";
 import { claudeModels, claudeStatus } from "./providers/claude";
 import { codexModels, codexStatus } from "./providers/codex";
 import { loadSettings, updateSettings } from "./settings";
@@ -98,6 +153,56 @@ const MAX_NOTE_BYTES = 20 * 1024 * 1024;
 /** A drawn page arrives base64 encoded, so it is larger than the image. */
 const MAX_PAGE_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_COMMENT_CHARS = 4000;
+const MAX_CARD_CHARS = 20_000;
+const MAX_ANSWER_CHARS = 50_000;
+
+const topic = z.string().max(100).optional();
+const card = {
+  kind: cardKindSchema,
+  front: z.string().max(MAX_CARD_CHARS),
+  back: z.string().max(MAX_CARD_CHARS),
+  topic,
+  source: practiceSourceSchema.optional(),
+};
+const question = z.object({
+  id: z.string().max(100).optional(),
+  kind: questionKindSchema,
+  prompt: z.string().max(MAX_CARD_CHARS),
+  options: z.array(z.string().max(2000)).max(12).optional(),
+  answer: z.string().max(MAX_CARD_CHARS).optional(),
+  accept: z.array(z.string().max(2000)).max(20).optional(),
+  hint: z.string().max(MAX_CARD_CHARS).optional(),
+  solution: z.string().max(MAX_ANSWER_CHARS).optional(),
+  topic,
+  source: practiceSourceSchema.optional(),
+});
+const responses = z.record(
+  z.string().max(100),
+  z.object({
+    answer: z.string().max(MAX_ANSWER_CHARS),
+    flagged: z.boolean().optional(),
+    hintShown: z.boolean().optional(),
+  }),
+);
+const quizRef = { subjectId: id, quizId: id };
+
+const session = {
+  title,
+  subjectId: id.optional(),
+  kind: sessionKindSchema,
+  date: dateSchema,
+  start: timeSchema,
+  end: timeSchema,
+  target: sessionTargetSchema.optional(),
+  notes: z.string().max(4000).optional(),
+};
+const assessment = {
+  title,
+  subjectId: id.optional(),
+  date: dateSchema,
+  time: timeSchema.optional(),
+  notes: z.string().max(4000).optional(),
+};
 
 /** One selection: its pages, the lines on each, and the text they cover. */
 const segments = z
@@ -163,6 +268,7 @@ export function registerHandlers(
     async (patch) => {
       const settings = await updateSettings(patch);
       nativeTheme.themeSource = settings.theme;
+      if (patch.reminders) void refreshReminders();
       if (patch.claude && "executablePath" in patch.claude)
         void claudeStatus(true);
       if (
@@ -491,6 +597,316 @@ export function registerHandlers(
         throw new Error("Only web and email links open outside resit.");
       await shell.openExternal(parsed.href);
     },
+  );
+
+  /** Runs a practice change, then tells the window the subject changed. */
+  const practice =
+    <Input extends { subjectId: string }, Result>(
+      run: (input: Input) => Promise<Result>,
+    ) =>
+    async (input: Input) => {
+      const result = await run(input);
+      emitEvent({ type: "practice-changed", subjectId: input.subjectId });
+      return result;
+    };
+
+  handle(CHANNELS.listPractice, z.tuple([]), () =>
+    listPractice(currentWorkspace()),
+  );
+
+  handle(
+    CHANNELS.setNewCardsPerDay,
+    z.tuple([z.number().int().min(0).max(1000)]),
+    (value) => setNewCardsPerDay(currentWorkspace(), value),
+  );
+
+  handle(
+    CHANNELS.getReviewQueue,
+    z.tuple([z.object({ subjectId: id.optional(), topic })]),
+    (filter) => reviewQueue(currentWorkspace(), filter),
+  );
+
+  handle(
+    CHANNELS.rateCard,
+    z.tuple([
+      z.object({
+        subjectId: id,
+        cardId: id,
+        rating: ratingSchema,
+        durationMs: z.number().int().nonnegative().max(86_400_000).optional(),
+      }),
+    ]),
+    practice((input) => rateCard(currentWorkspace(), input)),
+  );
+
+  handle(
+    CHANNELS.undoReview,
+    z.tuple([z.object({ subjectId: id, reviewId: id })]),
+    practice((input) =>
+      undoReview(currentWorkspace(), input.subjectId, input.reviewId),
+    ),
+  );
+
+  handle(
+    CHANNELS.createCard,
+    z.tuple([z.object({ subjectId: id, ...card })]),
+    practice(async ({ subjectId, ...input }) => {
+      const [created] = await createCards(currentWorkspace(), subjectId, [
+        input,
+      ]);
+      if (!created) throw new Error("The card was not created.");
+      return created;
+    }),
+  );
+
+  handle(
+    CHANNELS.updateCard,
+    z.tuple([z.object({ subjectId: id, id, ...card })]),
+    practice(({ subjectId, id: cardId, ...input }) =>
+      updateCard(currentWorkspace(), subjectId, cardId, input),
+    ),
+  );
+
+  handle(
+    CHANNELS.changeCards,
+    z.tuple([
+      z.object({
+        subjectId: id,
+        ids: z.array(id).min(1).max(20_000),
+        action: z.enum(CARD_ACTION_VALUES),
+      }),
+    ]),
+    practice((input) =>
+      changeCards(currentWorkspace(), input.subjectId, input.ids, input.action),
+    ),
+  );
+
+  handle(CHANNELS.readQuiz, z.tuple([z.object(quizRef)]), (input) =>
+    readQuiz(currentWorkspace(), input.subjectId, input.quizId),
+  );
+
+  handle(
+    CHANNELS.saveQuiz,
+    z.tuple([
+      z.object({
+        subjectId: id,
+        id: id.optional(),
+        title,
+        topic,
+        questions: z.array(question).min(1).max(100),
+      }),
+    ]),
+    practice(({ subjectId, ...input }) =>
+      saveQuiz(currentWorkspace(), subjectId, input),
+    ),
+  );
+
+  handle(
+    CHANNELS.deleteQuiz,
+    z.tuple([z.object(quizRef)]),
+    practice((input) =>
+      deleteQuiz(currentWorkspace(), input.subjectId, input.quizId),
+    ),
+  );
+
+  handle(
+    CHANNELS.startAttempt,
+    z.tuple([z.object(quizRef)]),
+    practice((input) =>
+      startAttempt(currentWorkspace(), input.subjectId, input.quizId),
+    ),
+  );
+
+  handle(
+    CHANNELS.saveResponses,
+    z.tuple([z.object({ ...quizRef, attemptId: id, responses })]),
+    (input) =>
+      saveResponses(
+        currentWorkspace(),
+        input.subjectId,
+        input.quizId,
+        input.attemptId,
+        input.responses,
+      ),
+  );
+
+  handle(
+    CHANNELS.submitAttempt,
+    z.tuple([z.object({ ...quizRef, attemptId: id, responses })]),
+    practice((input) =>
+      submitAttempt(
+        currentWorkspace(),
+        input.subjectId,
+        input.quizId,
+        input.attemptId,
+        input.responses,
+      ),
+    ),
+  );
+
+  handle(
+    CHANNELS.markResponse,
+    z.tuple([
+      z.object({
+        ...quizRef,
+        attemptId: id,
+        questionId: id,
+        outcome: outcomeSchema,
+      }),
+    ]),
+    practice(({ subjectId, quizId, ...input }) =>
+      markResponse(currentWorkspace(), subjectId, quizId, input),
+    ),
+  );
+
+  /** Runs a plan change, then updates reminders and tells the window. */
+  const plan =
+    <Args extends unknown[], Result>(run: (...args: Args) => Promise<Result>) =>
+    async (...args: Args) => {
+      const result = await run(...args);
+      emitEvent({ type: "plan-changed" });
+      void refreshReminders();
+      return result;
+    };
+
+  handle(CHANNELS.getPlan, z.tuple([]), () => readPlan(currentWorkspace()));
+
+  handle(
+    CHANNELS.saveSession,
+    z.tuple([z.object({ id: id.optional(), ...session })]),
+    plan((input) => saveSession(currentWorkspace(), input)),
+  );
+
+  handle(
+    CHANNELS.deleteSession,
+    z.tuple([id]),
+    plan((sessionId) => deleteSession(currentWorkspace(), sessionId)),
+  );
+
+  handle(
+    CHANNELS.setSessionStatus,
+    z.tuple([z.object({ id, status: z.enum(SESSION_STATUS_VALUES) })]),
+    plan((input) =>
+      setSessionStatus(currentWorkspace(), input.id, input.status),
+    ),
+  );
+
+  handle(
+    CHANNELS.resolveProposals,
+    z.tuple([
+      z.object({ ids: z.array(id).min(1).max(500), accept: z.boolean() }),
+    ]),
+    plan((input) =>
+      resolveProposals(currentWorkspace(), input.ids, input.accept),
+    ),
+  );
+
+  handle(
+    CHANNELS.saveAssessment,
+    z.tuple([z.object({ id: id.optional(), ...assessment })]),
+    plan((input) => saveAssessment(currentWorkspace(), input)),
+  );
+
+  handle(
+    CHANNELS.deleteAssessment,
+    z.tuple([id]),
+    plan((assessmentId) => deleteAssessment(currentWorkspace(), assessmentId)),
+  );
+
+  handle(
+    CHANNELS.setAvailability,
+    z.tuple([z.array(availabilitySchema).max(100)]),
+    plan((slots) => setAvailability(currentWorkspace(), slots)),
+  );
+
+  handle(CHANNELS.exportCalendar, z.tuple([]), async () => {
+    const workspace = currentWorkspace();
+    const owner = window();
+    const options: Electron.SaveDialogOptions = {
+      title: "Export the study plan",
+      defaultPath: `${workspace.file.name.replace(/[<>:"/\\|?*]/g, " ").trim() || "Study plan"}.ics`,
+      filters: [{ name: "Calendar", extensions: ["ics"] }],
+    };
+    const result = owner
+      ? await dialog.showSaveDialog(owner, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return null;
+    const names = new Map(
+      [...workspace.subjects.values()].map((entry) => [
+        entry.info.id,
+        entry.info.name,
+      ]),
+    );
+    await writeFile(
+      result.filePath,
+      calendarFile(await readPlan(workspace), names),
+      "utf8",
+    );
+    return result.filePath;
+  });
+
+  /** Runs a profile change, then tells the window. */
+  const learner =
+    <Args extends unknown[], Result>(run: (...args: Args) => Promise<Result>) =>
+    async (...args: Args) => {
+      const result = await run(...args);
+      emitEvent({ type: "learner-changed" });
+      return result;
+    };
+
+  handle(CHANNELS.getLearnerProfile, z.tuple([]), () =>
+    learnerProfile(currentWorkspace()),
+  );
+
+  handle(
+    CHANNELS.setPersonalization,
+    z.tuple([z.boolean()]),
+    learner((on) => setPersonalization(currentWorkspace(), on)),
+  );
+
+  handle(
+    CHANNELS.updatePreferences,
+    z.tuple([
+      z.object({
+        detail: detailSchema.optional(),
+        hintsFirst: z.boolean().optional(),
+        about: z.string().max(2000).optional(),
+        goals: z.string().max(2000).optional(),
+      }),
+    ]),
+    learner((patch) => updatePreferences(currentWorkspace(), patch)),
+  );
+
+  handle(
+    CHANNELS.saveTopic,
+    z.tuple([
+      z.object({
+        id: id.optional(),
+        name: title,
+        subjectId: id.optional(),
+        level: topicLevelSchema,
+        note: z.string().max(2000).optional(),
+      }),
+    ]),
+    learner((input) => saveTopic(currentWorkspace(), input)),
+  );
+
+  handle(
+    CHANNELS.deleteTopic,
+    z.tuple([id]),
+    learner((topicId) => deleteTopic(currentWorkspace(), topicId)),
+  );
+
+  handle(
+    CHANNELS.resolveTopicProposal,
+    z.tuple([
+      z.object({
+        id,
+        accept: z.boolean(),
+        level: topicLevelSchema.optional(),
+      }),
+    ]),
+    learner((input) => resolveTopicProposal(currentWorkspace(), input)),
   );
 
   handle(CHANNELS.getMoodleStatus, z.tuple([z.boolean()]), (refresh) =>

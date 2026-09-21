@@ -6,7 +6,8 @@ import { abortAllTurns } from "./agent/turns";
 import { registerHandlers } from "./handlers";
 import { setIpcContext } from "./ipc";
 import { useNetworkFetch } from "./moodle/client";
-import { setEventSink } from "./session";
+import { startReminders } from "./planning/reminders";
+import { currentWorkspace, hasWorkspace, setEventSink } from "./session";
 import { loadSettings } from "./settings";
 
 const rendererFile = join(import.meta.dirname, "../renderer/index.html");
@@ -112,6 +113,20 @@ void app
     setIpcContext({ window: () => mainWindow, rendererUrl });
     setEventSink((event) => {
       mainWindow?.webContents.send(EVENT_CHANNEL, event);
+    });
+    // Windows names a notification's app by this ID; the installer's
+    // shortcut carries the same one.
+    if (process.platform === "win32") app.setAppUserModelId("study.resit");
+    startReminders({
+      workspace: () => (hasWorkspace() ? currentWorkspace() : null),
+      onOpen: () => {
+        const window = mainWindow;
+        if (!window) return;
+        if (window.isMinimized()) window.restore();
+        window.show();
+        window.focus();
+        window.webContents.send(EVENT_CHANNEL, { type: "show-schedule" });
+      },
     });
     nativeTheme.on("updated", () => {
       if (process.platform !== "darwin")

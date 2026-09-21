@@ -6,6 +6,7 @@ import { abandonRenders } from "./agent/render";
 import { abortAllTurns } from "./agent/turns";
 import { setLiveContext } from "./context";
 import { moodleConnection } from "./moodle/credentials";
+import { refreshReminders } from "./planning/reminders";
 import {
   forgetLastWorkspace,
   loadSettings,
@@ -68,6 +69,9 @@ function ignored(filename: string): boolean {
     path === ".resit" ||
     path.startsWith("conversations/") ||
     path.includes("/annotations/") ||
+    path === "plan.json" ||
+    path === "learner.json" ||
+    /^subjects\/[^/]+\/practice(\/|$)/.test(path) ||
     /^subjects\/[^/]+\/activities\.json$/.test(path) ||
     base.endsWith(".tmp")
   );
@@ -126,6 +130,7 @@ export async function activateWorkspace(
     console.error("Unable to save the recent workspaces", error);
   }
   startWatching(workspace);
+  void refreshReminders();
 }
 
 export async function closeCurrentWorkspace(): Promise<void> {
@@ -134,6 +139,7 @@ export async function closeCurrentWorkspace(): Promise<void> {
   abandonRenders();
   setLiveContext(null);
   current = null;
+  void refreshReminders();
   await forgetLastWorkspace();
 }
 

@@ -15,6 +15,36 @@ import type {
   MoodleDownloadResult,
   SubjectActivities,
 } from "./moodle";
+import type {
+  Attempt,
+  CardAction,
+  CardInput,
+  Flashcard,
+  Outcome,
+  PracticeOverview,
+  QuestionInput,
+  QuizFile,
+  Rating,
+  Response,
+  ReviewItem,
+} from "./practice";
+import type {
+  LearnerProfile,
+  Preferences,
+  PreferencesPatch,
+  Topic,
+  TopicInput,
+  TopicLevel,
+} from "./learner";
+import type {
+  Assessment,
+  AssessmentInput,
+  Availability,
+  PlanFile,
+  SessionInput,
+  SessionStatus,
+  StudySession,
+} from "./planning";
 import type { AppSettings, ProviderId, SettingsPatch } from "./settings";
 import type {
   Annotation,
@@ -83,6 +113,14 @@ export type DesktopEvent =
     }
   /** A subject's Moodle activities were read again. */
   | { type: "moodle-activities-changed" }
+  /** Cards or quizzes changed, in the window or through the assistant. */
+  | { type: "practice-changed"; subjectId: string }
+  /** The study plan changed, in the window or through the assistant. */
+  | { type: "plan-changed" }
+  /** The student clicked a session reminder. */
+  | { type: "show-schedule" }
+  /** The learner profile changed, in the window or through the assistant. */
+  | { type: "learner-changed" }
   | {
       type: "moodle-progress";
       subjectId: string;
@@ -220,6 +258,94 @@ export interface DesktopApi {
   /** Opens an http, https, or mailto link in the system browser. */
   openExternal(url: string): Promise<void>;
 
+  /** Every subject's cards and quizzes, and today's reviews. */
+  listPractice(): Promise<PracticeOverview>;
+  setNewCardsPerDay(value: number): Promise<void>;
+  /** Cards due now, in review order. Without a subject, every subject's. */
+  getReviewQueue(filter: {
+    subjectId?: string;
+    topic?: string;
+  }): Promise<ReviewItem[]>;
+  rateCard(input: {
+    subjectId: string;
+    cardId: string;
+    rating: Rating;
+    durationMs?: number;
+  }): Promise<{ reviewId: string; card: Flashcard }>;
+  undoReview(input: {
+    subjectId: string;
+    reviewId: string;
+  }): Promise<Flashcard>;
+  createCard(input: CardInput & { subjectId: string }): Promise<Flashcard>;
+  updateCard(
+    input: CardInput & { subjectId: string; id: string },
+  ): Promise<Flashcard>;
+  changeCards(input: {
+    subjectId: string;
+    ids: string[];
+    action: CardAction;
+  }): Promise<void>;
+  readQuiz(input: { subjectId: string; quizId: string }): Promise<QuizFile>;
+  /** Creates a quiz, or replaces one's title and questions when `id` is set. */
+  saveQuiz(input: {
+    subjectId: string;
+    id?: string;
+    title: string;
+    topic?: string;
+    questions: QuestionInput[];
+  }): Promise<QuizFile>;
+  deleteQuiz(input: { subjectId: string; quizId: string }): Promise<void>;
+  /** Carries on the quiz's unfinished attempt, or starts one. */
+  startAttempt(input: { subjectId: string; quizId: string }): Promise<Attempt>;
+  saveResponses(input: {
+    subjectId: string;
+    quizId: string;
+    attemptId: string;
+    responses: Record<string, Omit<Response, "mark">>;
+  }): Promise<void>;
+  submitAttempt(input: {
+    subjectId: string;
+    quizId: string;
+    attemptId: string;
+    responses: Record<string, Omit<Response, "mark">>;
+  }): Promise<Attempt>;
+  markResponse(input: {
+    subjectId: string;
+    quizId: string;
+    attemptId: string;
+    questionId: string;
+    outcome: Outcome;
+  }): Promise<Attempt>;
+
+  getPlan(): Promise<PlanFile>;
+  /** Adds a session, or changes one when `id` is set. */
+  saveSession(input: SessionInput & { id?: string }): Promise<StudySession>;
+  deleteSession(id: string): Promise<void>;
+  setSessionStatus(input: {
+    id: string;
+    status: SessionStatus;
+  }): Promise<StudySession>;
+  /** Accepts or declines the assistant's suggested sessions and moves. */
+  resolveProposals(input: { ids: string[]; accept: boolean }): Promise<void>;
+  saveAssessment(input: AssessmentInput & { id?: string }): Promise<Assessment>;
+  deleteAssessment(id: string): Promise<void>;
+  setAvailability(slots: Availability[]): Promise<Availability[]>;
+  /** Saves the plan as an .ics file. Returns where, or null if cancelled. */
+  exportCalendar(): Promise<string | null>;
+
+  /** The profile and what practice says about each topic. */
+  getLearnerProfile(): Promise<LearnerProfile>;
+  setPersonalization(on: boolean): Promise<void>;
+  updatePreferences(patch: PreferencesPatch): Promise<Preferences>;
+  saveTopic(input: TopicInput & { id?: string }): Promise<Topic>;
+  deleteTopic(id: string): Promise<void>;
+  /** Accepts the assistant's suggestion, at a corrected level if given, or rejects it. */
+  resolveTopicProposal(input: {
+    id: string;
+    accept: boolean;
+    level?: TopicLevel;
+  }): Promise<void>;
+
   /** `refresh` checks the stored token against the site. */
   getMoodleStatus(refresh: boolean): Promise<MoodleConnection>;
   connectMoodle(input: {
@@ -317,6 +443,36 @@ export const CHANNELS = {
   search: "resit:search",
   listLinks: "resit:links",
   openExternal: "resit:open-external",
+  listPractice: "resit:practice-list",
+  setNewCardsPerDay: "resit:practice-new-per-day",
+  getReviewQueue: "resit:review-queue",
+  rateCard: "resit:card-rate",
+  undoReview: "resit:card-undo",
+  createCard: "resit:card-create",
+  updateCard: "resit:card-update",
+  changeCards: "resit:cards-change",
+  readQuiz: "resit:quiz-read",
+  saveQuiz: "resit:quiz-save",
+  deleteQuiz: "resit:quiz-delete",
+  startAttempt: "resit:attempt-start",
+  saveResponses: "resit:attempt-save",
+  submitAttempt: "resit:attempt-submit",
+  markResponse: "resit:attempt-mark",
+  getPlan: "resit:plan",
+  saveSession: "resit:session-save",
+  deleteSession: "resit:session-delete",
+  setSessionStatus: "resit:session-status",
+  resolveProposals: "resit:plan-proposals",
+  saveAssessment: "resit:assessment-save",
+  deleteAssessment: "resit:assessment-delete",
+  setAvailability: "resit:availability",
+  exportCalendar: "resit:calendar-export",
+  getLearnerProfile: "resit:learner",
+  setPersonalization: "resit:learner-personalization",
+  updatePreferences: "resit:learner-preferences",
+  saveTopic: "resit:topic-save",
+  deleteTopic: "resit:topic-delete",
+  resolveTopicProposal: "resit:topic-proposal",
   getMoodleStatus: "resit:moodle-status",
   connectMoodle: "resit:moodle-connect",
   disconnectMoodle: "resit:moodle-disconnect",
