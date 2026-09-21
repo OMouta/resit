@@ -59,6 +59,7 @@ import {
   SCHEDULE_TAB_ID,
   type Layout,
 } from "./layout";
+import { ExportDialog } from "./export-dialog";
 import { FileHistory } from "./file-history";
 import { MoodleDialog } from "./moodle-dialog";
 import { WorkspacePane } from "./pane";
@@ -76,6 +77,8 @@ export interface WorkspaceViewProps {
   onSwitchWorkspace: (path: string) => void;
   onCreateWorkspace: () => void;
   onOpenFolder: () => void;
+  /** Picks a .resit archive to open. */
+  onOpenArchive: () => void;
   /** Opens settings, at a topic when the action points at one. */
   onOpenSettings: (topic?: SettingsTopic) => void;
   /** The AI panel, given the layout so it can read the focused tab. */
@@ -96,6 +99,7 @@ export function WorkspaceView({
   onSwitchWorkspace,
   onCreateWorkspace,
   onOpenFolder,
+  onOpenArchive,
   onOpenSettings,
   renderAiPanel,
 }: WorkspaceViewProps) {
@@ -117,6 +121,7 @@ export function WorkspaceView({
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const [historyId, setHistoryId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [moodleSubjectId, setMoodleSubjectId] = useState<string | null>(null);
   const [cardRequest, setCardRequest] = useState<CardRequest | null>(null);
   const [quizRequest, setQuizRequest] = useState<QuizEditorRequest | null>(
@@ -408,6 +413,34 @@ export function WorkspaceView({
     openFolder: () => {
       void flushAllViews().then(onOpenFolder);
     },
+    openArchive: () => {
+      void flushAllViews().then(onOpenArchive);
+    },
+    exportMarkdown: (input: { subjectId: string } | { noteId: string }) =>
+      void (async () => {
+        try {
+          await flushAllViews();
+          const result = await api.exportMarkdown(input);
+          if (!result) return;
+          notices.notify({
+            tone: "success",
+            title: `Exported ${result.notes} ${result.notes === 1 ? "note" : "notes"} as Markdown`,
+            detail: [
+              result.folder,
+              result.files > 0
+                ? `${result.files} linked ${result.files === 1 ? "file is" : "files are"} in its files folder.`
+                : "",
+              result.unresolved > 0
+                ? `${result.unresolved} ${result.unresolved === 1 ? "link points" : "links point"} to notes that were not exported, so ${result.unresolved === 1 ? "it keeps its" : "they keep their"} resit:// address.`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" "),
+          });
+        } catch (error) {
+          notices.fail("The notes were not exported", error);
+        }
+      })(),
     addSubject,
     editSubject: (subjectId: string) => {
       const subject = subjects.get(subjectId);
@@ -724,6 +757,8 @@ export function WorkspaceView({
               }}
               onCreate={actions.createWorkspace}
               onOpenFolder={actions.openFolder}
+              onOpenArchive={actions.openArchive}
+              onExport={() => setExportOpen(true)}
             />
             {focusedResource ? (
               <Breadcrumb
@@ -837,6 +872,12 @@ export function WorkspaceView({
               ]
             : []),
           {
+            id: "export",
+            label: "Export workspace",
+            icon: "export",
+            run: () => setExportOpen(true),
+          },
+          {
             id: "settings",
             label: "Settings",
             icon: "settings",
@@ -874,6 +915,7 @@ export function WorkspaceView({
           dispatch({ type: "open", resourceId, title: quiz.title });
         }}
       />
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
       <FileHistory
         resource={historyId ? (resources.get(historyId) ?? null) : null}
         onClose={() => setHistoryId(null)}

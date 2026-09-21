@@ -1,6 +1,8 @@
 import {
+  ArchiveIcon,
   CheckIcon,
   ChevronDownIcon,
+  DownloadIcon,
   FolderOpenIcon,
   PlusIcon,
 } from "lucide-react";
@@ -31,6 +33,10 @@ export interface WorkspaceSwitcherProps {
   onSwitch: (id: string) => void;
   onCreate: () => void;
   onOpenFolder: () => void;
+  /** Opens a workspace exported as a .resit archive. */
+  onOpenArchive?: () => void;
+  /** Exports this workspace as a .resit archive. */
+  onExport?: () => void;
   className?: string;
 }
 
@@ -45,6 +51,8 @@ export function WorkspaceSwitcher({
   onSwitch,
   onCreate,
   onOpenFolder,
+  onOpenArchive,
+  onExport,
   className,
 }: WorkspaceSwitcherProps) {
   const others = recent.filter((entry) => entry.id !== workspace.id);
@@ -105,6 +113,21 @@ export function WorkspaceSwitcher({
           <FolderOpenIcon />
           Open folder
         </DropdownMenuItem>
+        {onOpenArchive ? (
+          <DropdownMenuItem onSelect={onOpenArchive}>
+            <ArchiveIcon />
+            Open .resit archive
+          </DropdownMenuItem>
+        ) : null}
+        {onExport ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onExport}>
+              <DownloadIcon />
+              Export workspace…
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

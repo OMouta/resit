@@ -576,4 +576,59 @@ describe("desktop workspace", () => {
       expect.objectContaining({ name: "Limites", level: "developing" }),
     ]);
   });
+
+  // Last, because it leaves the window on the copy it opens.
+  it("exports the workspace and opens the archive as a copy", async () => {
+    const archive = join(directory, "Studies.resit");
+    const elsewhere = join(directory, "Other computer");
+    await application!.evaluate(
+      ({ dialog }, paths) => {
+        dialog.showSaveDialog = (async () => ({
+          canceled: false,
+          filePath: paths.archive,
+        })) as typeof dialog.showSaveDialog;
+        dialog.showOpenDialog = (async (...args: unknown[]) => {
+          const options = args.at(-1) as { properties?: string[] };
+          return {
+            canceled: false,
+            filePaths: [
+              options.properties?.includes("openDirectory")
+                ? paths.elsewhere
+                : paths.archive,
+            ],
+          };
+        }) as typeof dialog.showOpenDialog;
+      },
+      { archive, elsewhere },
+    );
+
+    await page.getByRole("button", { name: /Studies 2026\/27/ }).click();
+    await page.getByRole("menuitem", { name: /Export workspace/ }).click();
+    await page.getByRole("checkbox", { name: "Conversations" }).waitFor();
+    await page.getByRole("button", { name: "Export…" }).click();
+    await page.getByText("The workspace was exported").waitFor();
+
+    await page.getByRole("button", { name: /Studies 2026\/27/ }).click();
+    await page.getByRole("menuitem", { name: /Open .resit archive/ }).click();
+    await page
+      .getByRole("heading", { name: "Open “Studies 2026/27”" })
+      .waitFor();
+    await page.getByRole("button", { name: "Choose folder…" }).click();
+    // Tabs are this computer's layout, so the copy opens without them.
+    await page.getByText("Nothing open").waitFor();
+    await page
+      .getByRole("treeitem", { name: "Limites", exact: true })
+      .waitFor();
+    const copy = join(elsewhere, "Studies 2026 27");
+    const manifest = JSON.parse(
+      await readFile(join(copy, "workspace.json"), "utf8"),
+    );
+    expect(manifest.name).toBe("Studies 2026/27");
+    expect(manifest.id).not.toBe(
+      JSON.parse(await readFile(join(folder, "workspace.json"), "utf8")).id,
+    );
+    expect(await readFile(join(copy, "learner.json"), "utf8")).toBe(
+      await readFile(join(folder, "learner.json"), "utf8"),
+    );
+  });
 });

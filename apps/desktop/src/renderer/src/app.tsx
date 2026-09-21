@@ -30,6 +30,7 @@ import { PdfSettings } from "./settings/pdf-settings";
 import { ProviderSettings } from "./settings/provider-settings";
 import { SettingsDialog, type SettingsTopic } from "./settings/settings-dialog";
 import { flushAllViews } from "./views/view-registry";
+import { ArchiveDialog, type ChosenArchive } from "./workspace/archive-dialog";
 import { ConfirmDialog } from "./workspace/dialogs";
 import { WorkspaceView } from "./workspace/workspace-view";
 
@@ -49,6 +50,7 @@ export function App() {
   const [checkingMoodle, setCheckingMoodle] = useState(false);
   /** A workspace that another copy of resit has open. */
   const [locked, setLocked] = useState<LockedWorkspace | null>(null);
+  const [archive, setArchive] = useState<ChosenArchive | null>(null);
   const [providers, setProviders] = useState<Record<ProviderId, ProviderState>>(
     { claude: { status: "checking" }, codex: { status: "checking" } },
   );
@@ -172,6 +174,15 @@ export function App() {
     [apply, notices],
   );
 
+  const chooseArchive = useCallback(async () => {
+    try {
+      const chosen = await api.chooseArchive();
+      if (chosen) setArchive(chosen);
+    } catch (error) {
+      notices.fail("That archive cannot be opened", error);
+    }
+  }, [notices]);
+
   const openFolder = useCallback(async () => {
     const folder = await api.chooseFolder("Open a workspace folder");
     if (folder) await openPath(folder);
@@ -261,6 +272,8 @@ export function App() {
         recent={state.recent}
         onCreate={() => setCreating(true)}
         onOpenFolder={() => void openFolder()}
+        archiveAvailable
+        onOpenArchive={() => void chooseArchive()}
         onOpenRecent={(id) => {
           const entry = state.recent.find((recent) => recent.id === id);
           if (entry) void openPath(entry.path);
@@ -280,6 +293,7 @@ export function App() {
         onSwitchWorkspace={(path) => void openPath(path)}
         onCreateWorkspace={() => setCreating(true)}
         onOpenFolder={() => void openFolder()}
+        onOpenArchive={() => void chooseArchive()}
         onOpenSettings={openSettings}
         renderAiPanel={(context) => (
           <ChatPanel
@@ -347,6 +361,14 @@ export function App() {
             />
           ) : null}
         </SettingsDialog>
+        <ArchiveDialog
+          archive={archive}
+          onClose={() => setArchive(null)}
+          onOpened={(next) => {
+            if (next.locked) setLocked(next.locked);
+            else apply(next);
+          }}
+        />
         <ConfirmDialog
           request={
             locked

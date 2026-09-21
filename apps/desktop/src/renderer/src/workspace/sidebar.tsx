@@ -1,4 +1,5 @@
 import {
+  FileDownIcon,
   FilePlusIcon,
   FolderPlusIcon,
   GraduationCapIcon,
@@ -48,6 +49,8 @@ export interface SidebarActions {
     folder?: string,
   ) => void;
   deleteResource: (resourceId: string) => void;
+  /** Writes a subject's notes, or one note, as ordinary Markdown files. */
+  exportMarkdown: (input: { subjectId: string } | { noteId: string }) => void;
   /** Kept copies of an imported file. Notes show theirs in the editor. */
   showFileHistory: (resourceId: string) => void;
   openGraph: () => void;
@@ -248,6 +251,13 @@ export function Sidebar({
                   <DropdownMenuItem onSelect={() => actions.openMoodle(row.id)}>
                     <GraduationCapIcon /> Moodle…
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      actions.exportMarkdown({ subjectId: row.id })
+                    }
+                  >
+                    <FileDownIcon /> Export as Markdown…
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={() => actions.editSubject(row.id)}
@@ -314,7 +324,13 @@ export function Sidebar({
               <DropdownMenuItem onSelect={() => actions.renameResource(row.id)}>
                 <PencilIcon /> Rename…
               </DropdownMenuItem>
-              {resources.get(row.id)?.kind === "note" ? null : (
+              {resources.get(row.id)?.kind === "note" ? (
+                <DropdownMenuItem
+                  onSelect={() => actions.exportMarkdown({ noteId: row.id })}
+                >
+                  <FileDownIcon /> Export as Markdown…
+                </DropdownMenuItem>
+              ) : (
                 <DropdownMenuItem
                   onSelect={() => actions.showFileHistory(row.id)}
                 >

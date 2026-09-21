@@ -135,6 +135,12 @@ import {
 } from "./text-recognition";
 import { recognitionState } from "./workspace/ocr";
 import { workspaceLinks } from "./workspace/links";
+import { exportMarkdown } from "./workspace/markdown-export";
+import {
+  exportPackage,
+  extractPackage,
+  readPackage,
+} from "./workspace/package";
 import { searchWorkspace } from "./workspace/search";
 import {
   deleteFromTrash,
@@ -255,6 +261,39 @@ const NEVER_LAUNCH = new Set([
   ".appimage",
 ]);
 
+/** A name for a file the save dialog suggests, without characters it refuses. */
+function fileName(name: string, fallback: string): string {
+  return name.replace(/[<>:"/\\|?*]/g, " ").trim() || fallback;
+}
+
+/** The export or extraction running now. There is one at a time. */
+let packageJob: AbortController | null = null;
+/** Archives the student picked, the only ones that may be extracted. */
+const chosenArchives = new Set<string>();
+
+async function packageTask<T>(
+  run: (
+    signal: AbortSignal,
+    onProgress: (done: number, total: number) => void,
+  ) => Promise<T>,
+): Promise<T> {
+  if (packageJob)
+    throw new Error("An export or an archive is being written already.");
+  const controller = new AbortController();
+  packageJob = controller;
+  let last = 0;
+  try {
+    return await run(controller.signal, (done, total) => {
+      // Progress arrives per chunk; the window needs far fewer updates.
+      if (done < total && Date.now() - last < 100) return;
+      last = Date.now();
+      emitEvent({ type: "package-progress", done, total });
+    });
+  } finally {
+    packageJob = null;
+  }
+}
+
 /** Looks a course up among the student's enrolments before linking to it. */
 async function moodleLink(course: number): Promise<MoodleLink> {
   const session = await moodleSession();
@@ -341,6 +380,111 @@ export function registerHandlers(
     await closeCurrentWorkspace();
     return appState();
   });
+
+  handle(
+    CHANNELS.exportWorkspace,
+    z.tuple([
+      z.object({
+        conversations: z.boolean(),
+        learner: z.boolean(),
+        history: z.boolean(),
+        trash: z.boolean(),
+      }),
+    ]),
+    async (options) => {
+      const workspace = currentWorkspace();
+      const owner = window();
+      const dialogOptions: Electron.SaveDialogOptions = {
+        title: "Export the workspace",
+        defaultPath: `${fileName(workspace.file.name, "Workspace")}.resit`,
+        filters: [{ name: "resit workspace", extensions: ["resit"] }],
+      };
+      const result = owner
+        ? await dialog.showSaveDialog(owner, dialogOptions)
+        : await dialog.showSaveDialog(dialogOptions);
+      const destination = result.filePath;
+      if (result.canceled || !destination) return null;
+      await packageTask((signal, onProgress) =>
+        exportPackage(workspace, { destination, options, signal, onProgress }),
+      );
+      return destination;
+    },
+  );
+
+  handle(CHANNELS.chooseArchive, z.tuple([]), async () => {
+    const owner = window();
+    const options: Electron.OpenDialogOptions = {
+      title: "Open a .resit archive",
+      properties: ["openFile"],
+      filters: [
+        { name: "resit workspace", extensions: ["resit"] },
+        { name: "All files", extensions: ["*"] },
+      ],
+    };
+    const result = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    const archive = result.filePaths[0];
+    if (result.canceled || !archive) return null;
+    const summary = await readPackage(archive);
+    chosenArchives.add(archive);
+    return { path: archive, summary };
+  });
+
+  handle(CHANNELS.openArchive, z.tuple([path]), async (archive) => {
+    if (!chosenArchives.has(archive))
+      throw new Error("Choose the archive again.");
+    const owner = window();
+    const options: Electron.OpenDialogOptions = {
+      title: "Choose where to put the workspace",
+      properties: ["openDirectory", "createDirectory"],
+    };
+    const result = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    const parent = result.filePaths[0];
+    if (result.canceled || !parent) return null;
+    const root = await packageTask((signal, onProgress) =>
+      extractPackage(archive, parent, { signal, onProgress }),
+    );
+    chosenArchives.delete(archive);
+    return appState({ locked: await openFolder(root) });
+  });
+
+  handle(CHANNELS.stopPackage, z.tuple([]), () => {
+    packageJob?.abort(new Error("Stopped before it finished."));
+  });
+
+  handle(
+    CHANNELS.exportMarkdown,
+    z.tuple([z.union([z.object({ subjectId: id }), z.object({ noteId: id })])]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const notes =
+        "subjectId" in input
+          ? snapshot(workspace).resources.filter(
+              (resource) =>
+                resource.subjectId === input.subjectId &&
+                resource.kind === "note",
+            )
+          : [resourceInfo(workspace, input.noteId)];
+      const name =
+        "subjectId" in input
+          ? (workspace.subjects.get(input.subjectId)?.info.name ?? "Notes")
+          : (notes[0]?.title ?? "Note");
+      const owner = window();
+      const options: Electron.OpenDialogOptions = {
+        title: "Choose where to save the Markdown files",
+        properties: ["openDirectory", "createDirectory"],
+      };
+      const result = owner
+        ? await dialog.showOpenDialog(owner, options)
+        : await dialog.showOpenDialog(options);
+      const parent = result.filePaths[0];
+      if (result.canceled || !parent) return null;
+      return exportMarkdown(workspace, { notes, parent, name });
+    },
+  );
 
   handle(CHANNELS.saveLayout, z.tuple([z.unknown()]), async (layout) => {
     if (JSON.stringify(layout).length > MAX_LAYOUT_BYTES)

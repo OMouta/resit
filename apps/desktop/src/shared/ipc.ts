@@ -53,9 +53,12 @@ import type {
   AnnotationType,
   FileRevision,
   FolderInfo,
+  MarkdownExport,
   NoteDraft,
   NoteRevision,
   NoteRevisionContent,
+  PackageOptions,
+  PackageSummary,
   RecentWorkspace,
   ResourceInfo,
   SaveNoteResult,
@@ -152,6 +155,8 @@ export type DesktopEvent =
   | { type: "show-schedule" }
   /** The learner profile changed, in the window or through the assistant. */
   | { type: "learner-changed" }
+  /** Bytes written by an export, or extracted from an archive. */
+  | { type: "package-progress"; done: number; total: number }
   | ({ type: "ocr-progress" } & TextRecognitionProgress)
   | {
       type: "ocr-finished";
@@ -204,6 +209,21 @@ export interface DesktopApi {
    */
   openWorkspace(folder: string, force?: boolean): Promise<AppState>;
   closeWorkspace(): Promise<AppState>;
+  /** Saves the workspace as a .resit archive. Null if no file was chosen. */
+  exportWorkspace(options: PackageOptions): Promise<string | null>;
+  /** Picks a .resit archive and reads what it holds. */
+  chooseArchive(): Promise<{ path: string; summary: PackageSummary } | null>;
+  /**
+   * Extracts the chosen archive into a new folder and opens it. Null if no
+   * folder was chosen.
+   */
+  openArchive(path: string): Promise<AppState | null>;
+  /** Stops the export or extraction running now. */
+  stopPackage(): Promise<void>;
+  /** Writes a subject's notes, or one note, as ordinary Markdown. */
+  exportMarkdown(
+    input: { subjectId: string } | { noteId: string },
+  ): Promise<MarkdownExport | null>;
   saveLayout(layout: unknown): Promise<void>;
 
   createSubject(input: {
@@ -486,6 +506,11 @@ export const CHANNELS = {
   createWorkspace: "resit:workspace-create",
   openWorkspace: "resit:workspace-open",
   closeWorkspace: "resit:workspace-close",
+  exportWorkspace: "resit:workspace-export",
+  chooseArchive: "resit:archive-choose",
+  openArchive: "resit:archive-open",
+  stopPackage: "resit:package-stop",
+  exportMarkdown: "resit:markdown-export",
   saveLayout: "resit:layout-save",
   createSubject: "resit:subject-create",
   updateSubject: "resit:subject-update",

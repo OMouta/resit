@@ -1,6 +1,7 @@
 import {
   CalendarIcon,
   ClipboardListIcon,
+  DownloadIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
@@ -52,6 +53,7 @@ export interface QuickOpenCommand {
     | "practice"
     | "quiz"
     | "profile"
+    | "export"
     | "settings";
   run: () => void;
 }
@@ -64,6 +66,7 @@ const commandIcons = {
   practice: LayersIcon,
   quiz: ClipboardListIcon,
   profile: UserRoundIcon,
+  export: DownloadIcon,
   settings: SettingsIcon,
 };
 
