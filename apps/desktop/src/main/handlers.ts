@@ -177,6 +177,7 @@ import {
   updateFolder,
   updateSubject,
 } from "./workspace/workspace";
+import { t } from "./i18n";
 
 const path = z.string().min(1).max(4096);
 const folderPath = z.string().trim().min(1).max(200);
@@ -310,7 +311,9 @@ async function moodleLink(course: number): Promise<MoodleLink> {
   const courses = await userCourses(session, await moodleUserId());
   const found = courses.find((entry) => entry.id === course);
   if (!found)
-    throw new MoodleError("That course is not one of your Moodle enrolments.");
+    throw new MoodleError(
+      t("That course is not one of your Moodle enrolments."),
+    );
   return {
     siteUrl: session.siteUrl,
     courseId: found.id,

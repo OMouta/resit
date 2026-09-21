@@ -13,6 +13,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "./workspace";
+import { t } from "../i18n";
 
 /**
  * Text the editor had that did not reach the note: a save that failed or
@@ -77,7 +78,7 @@ export function restoreDraft(
 ): Promise<{ resource: ResourceInfo; body: string; revision: string }> {
   return withLock(workspace, `restore:${noteId}`, async () => {
     const draft = await readDraft(workspace, noteId);
-    if (!draft) throw new WorkspaceError("That text is no longer kept.");
+    if (!draft) throw new WorkspaceError(t("That text is no longer kept."));
     await snapshotNote(workspace, noteId, "restore");
     const current = await readNote(workspace, noteId);
     const result = await saveNote(workspace, {

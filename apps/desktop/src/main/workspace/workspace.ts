@@ -46,6 +46,7 @@ import {
   writeJson,
 } from "./files";
 import { noteRevision, parseNote, serializeNote } from "./frontmatter";
+import { t } from "../i18n";
 
 export const WORKSPACE_FORMAT_VERSION = 1;
 const SIDECAR_SUFFIX = ".resource.json";
@@ -162,7 +163,7 @@ export async function createWorkspace(input: {
   const root = input.folder;
   if (await exists(join(root, "workspace.json")))
     throw new WorkspaceError(
-      "This folder already contains a workspace. Open it instead.",
+      t("This folder already contains a workspace. Open it instead."),
     );
   await mkdir(root, { recursive: true });
   const at = now();
@@ -203,22 +204,28 @@ export async function readWorkspaceFile(
   const manifest = join(folder, "workspace.json");
   if (!(await exists(manifest)))
     throw new WorkspaceError(
-      "This folder is not a resit workspace. Choose a folder with a workspace.json file, or create a new workspace.",
+      t(
+        "This folder is not a resit workspace. Choose a folder with a workspace.json file, or create a new workspace.",
+      ),
     );
   let raw: unknown;
   try {
     raw = await readJson(manifest);
   } catch {
-    throw new WorkspaceError("workspace.json is not valid JSON.");
+    throw new WorkspaceError(t("workspace.json is not valid JSON."));
   }
   const parsed = workspaceFileSchema.safeParse(raw);
   if (!parsed.success)
     throw new WorkspaceError(
-      `workspace.json is not a valid resit workspace: ${parsed.error.issues[0]?.message ?? "unknown problem"}.`,
+      t("workspace.json is not a valid resit workspace: {problem}.", {
+        problem: parsed.error.issues[0]?.message ?? t("unknown problem"),
+      }),
     );
   if (parsed.data.formatVersion > WORKSPACE_FORMAT_VERSION)
     throw new WorkspaceError(
-      "This workspace was created by a newer version of resit. Update resit to open it.",
+      t(
+        "This workspace was created by a newer version of resit. Update resit to open it.",
+      ),
     );
   return parsed.data;
 }
@@ -551,13 +558,13 @@ export function snapshot(workspace: OpenWorkspace): WorkspaceSnapshot {
 
 function subjectEntry(workspace: OpenWorkspace, id: string): SubjectEntry {
   const entry = workspace.subjects.get(id);
-  if (!entry) throw new WorkspaceError("That subject no longer exists.");
+  if (!entry) throw new WorkspaceError(t("That subject no longer exists."));
   return entry;
 }
 
 function resourceEntry(workspace: OpenWorkspace, id: string): ResourceEntry {
   const entry = workspace.resources.get(id);
-  if (!entry) throw new WorkspaceError("That file no longer exists.");
+  if (!entry) throw new WorkspaceError(t("That file no longer exists."));
   return entry;
 }
 
@@ -750,12 +757,15 @@ export async function createFolder(
 ): Promise<FolderInfo> {
   const subject = subjectEntry(workspace, input.subjectId);
   const name = folderName(input.name);
-  if (!name) throw new WorkspaceError("That folder name cannot be used.");
+  if (!name) throw new WorkspaceError(t("That folder name cannot be used."));
   const parent = writableFolder(workspace, input.subjectId, input.parent);
   const path = parent ? `${parent}/${name}` : name;
   if (workspace.folders.has(folderKey(input.subjectId, path)))
     throw new WorkspaceError(
-      `${parent || subject.info.name} already has a ${name} folder.`,
+      t("{parent} already has a {name} folder.", {
+        parent: parent || subject.info.name,
+        name,
+      }),
     );
   const dir = join(subject.dir, "notes", ...path.split("/"));
   await mkdir(dir, { recursive: true });
@@ -772,7 +782,7 @@ function folderEntry(
   path: string,
 ): FolderEntry {
   const entry = workspace.folders.get(folderKey(subjectId, path));
-  if (!entry) throw new WorkspaceError("That folder no longer exists.");
+  if (!entry) throw new WorkspaceError(t("That folder no longer exists."));
   return entry;
 }
 
@@ -812,7 +822,7 @@ function writableFolder(
   const entry = folderEntry(workspace, subjectId, folder);
   if (moodleOwned(workspace, subjectId, entry.info.path))
     throw new WorkspaceError(
-      "This folder is filled from the Moodle course. Choose another folder.",
+      t("This folder is filled from the Moodle course. Choose another folder."),
     );
   return entry.info.path;
 }
@@ -834,22 +844,27 @@ export async function updateFolder(
   const entry = folderEntry(workspace, input.subjectId, input.path);
   if (moodleOwned(workspace, input.subjectId, entry.info.path))
     throw new WorkspaceError(
-      "resit keeps this folder in step with the Moodle course. Following the course again would download its files under the old name.",
+      t(
+        "resit keeps this folder in step with the Moodle course. Following the course again would download its files under the old name.",
+      ),
     );
   const current = splitFolder(entry.info.path);
   const name = input.name === undefined ? current.name : folderName(input.name);
-  if (!name) throw new WorkspaceError("That folder name cannot be used.");
+  if (!name) throw new WorkspaceError(t("That folder name cannot be used."));
   const parent =
     input.parent === undefined
       ? current.parent
       : writableFolder(workspace, input.subjectId, input.parent || undefined);
   if (parent === entry.info.path || parent.startsWith(`${entry.info.path}/`))
-    throw new WorkspaceError("A folder cannot go inside itself.");
+    throw new WorkspaceError(t("A folder cannot go inside itself."));
   const path = parent ? `${parent}/${name}` : name;
   if (path === entry.info.path) return entry.info;
   if (workspace.folders.has(folderKey(input.subjectId, path)))
     throw new WorkspaceError(
-      `${parent || subject.info.name} already has a ${name} folder.`,
+      t("{parent} already has a {name} folder.", {
+        parent: parent || subject.info.name,
+        name,
+      }),
     );
 
   for (const dir of entry.dirs) {
@@ -917,7 +932,7 @@ export async function readNote(
 ): Promise<{ resource: ResourceInfo; body: string; revision: string }> {
   const entry = resourceEntry(workspace, id);
   if (entry.info.kind !== "note")
-    throw new WorkspaceError("That resource is not a note.");
+    throw new WorkspaceError(t("That resource is not a note."));
   await assertInsideWorkspace(workspace.root, entry.absPath);
   const text = await readFile(entry.absPath, "utf8");
   const parsed = parseNote(text);
@@ -1268,7 +1283,7 @@ export function replaceFile(
   return withLock(workspace, input.resourceId, async () => {
     const entry = resourceEntry(workspace, input.resourceId);
     if (!entry.sidecarPath)
-      throw new WorkspaceError("That file has no resit record to update.");
+      throw new WorkspaceError(t("That file has no resit record to update."));
     await assertInsideWorkspace(workspace.root, entry.absPath);
     await writeFileAtomic(entry.absPath, input.bytes);
     const hash = await hashFile(entry.absPath);

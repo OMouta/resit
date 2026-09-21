@@ -6,6 +6,7 @@ import { z } from "zod";
 import { sha256, writeJson } from "./files";
 import { pdfPages } from "./pdf-text";
 import { WorkspaceError, type OpenWorkspace } from "./workspace";
+import { t } from "../i18n";
 
 /**
  * Text recognized on a PDF's scanned pages, in `.resit/cache/ocr`. It is
@@ -128,7 +129,7 @@ export async function recognizePdf(
 ): Promise<number> {
   const { documentId } = input;
   const revision = workspace.resources.get(documentId)?.info.revision;
-  if (!revision) throw new WorkspaceError("That file no longer exists.");
+  if (!revision) throw new WorkspaceError(t("That file no longer exists."));
   const { waiting } = await recognitionState(workspace, documentId);
   let done = 0;
   input.onProgress(done, waiting.length);
@@ -140,7 +141,7 @@ export async function recognizePdf(
     if (input.signal.aborted) break;
     if (workspace.resources.get(documentId)?.info.revision !== revision)
       throw new WorkspaceError(
-        "The PDF changed while its text was being read. Try again.",
+        t("The PDF changed while its text was being read. Try again."),
       );
     const file: OcrFile = (await readOcr(workspace, documentId)) ?? {
       format: "resit-ocr",

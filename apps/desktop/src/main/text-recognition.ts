@@ -4,6 +4,8 @@ import { gunzipSync } from "node:zlib";
 import { app, net } from "electron";
 import { createWorker, OEM, type Worker } from "tesseract.js";
 
+import { msg } from "@resit/ui/lib/i18n";
+
 import type { DesktopEvent, TextRecognitionProgress } from "../shared/ipc";
 import type { OcrLanguage } from "../shared/settings";
 import { renderPdfPage } from "./agent/render";
@@ -12,10 +14,11 @@ import { writeFileAtomic } from "./workspace/files";
 import { recognizePdf } from "./workspace/ocr";
 import { reindexResource } from "./workspace/search";
 import { WorkspaceError, type OpenWorkspace } from "./workspace/workspace";
+import { t } from "./i18n";
 
 const LANGUAGE_NAMES: Record<OcrLanguage, string> = {
-  eng: "English",
-  por: "Portuguese",
+  eng: msg("English"),
+  por: msg("Portuguese"),
 };
 /** About 200 dpi for an A4 page, enough for small print. */
 const PAGE_WIDTH = 2000;
@@ -36,7 +39,10 @@ async function download(
   );
   if (!response.ok || !response.body)
     throw new WorkspaceError(
-      `The ${LANGUAGE_NAMES[language]} text recognition data could not be downloaded (HTTP ${response.status}).`,
+      t(
+        "The {language} text recognition data could not be downloaded (HTTP {status}).",
+        { language: t(LANGUAGE_NAMES[language]), status: response.status },
+      ),
     );
   const total = Number(response.headers.get("content-length")) || 0;
   const chunks: Uint8Array[] = [];
@@ -86,11 +92,13 @@ export async function startTextRecognition(
 ): Promise<void> {
   if (job)
     throw new WorkspaceError(
-      "resit is already reading the text of another PDF. Wait for it to finish, or stop it.",
+      t(
+        "resit is already reading the text of another PDF. Wait for it to finish, or stop it.",
+      ),
     );
   const info = workspace.resources.get(resourceId)?.info;
   if (!info || info.kind !== "pdf")
-    throw new WorkspaceError("That file is not a PDF.");
+    throw new WorkspaceError(t("That file is not a PDF."));
   const languages = (await loadSettings()).pdf.ocrLanguages;
   const { emit } = options;
   const current = {

@@ -22,6 +22,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "../workspace/workspace";
+import { t } from "../i18n";
 
 export const LEARNER_FORMAT_VERSION = 1;
 const MAX_TOPICS = 1000;
@@ -57,17 +58,17 @@ export async function readLearner(
     raw = await readJson(path);
   } catch {
     throw new WorkspaceError(
-      "learner.json is not valid JSON. It was left unchanged.",
+      t("learner.json is not valid JSON. It was left unchanged."),
     );
   }
   const parsed = learnerFileSchema.safeParse(raw);
   if (!parsed.success)
     throw new WorkspaceError(
-      "learner.json could not be read. It was left unchanged.",
+      t("learner.json could not be read. It was left unchanged."),
     );
   if (parsed.data.formatVersion > LEARNER_FORMAT_VERSION)
     throw new WorkspaceError(
-      "This profile was written by a newer version of resit.",
+      t("This profile was written by a newer version of resit."),
     );
   return parsed.data;
 }
@@ -117,7 +118,7 @@ export function updatePreferences(
 
 function checkSubject(workspace: OpenWorkspace, subjectId?: string): void {
   if (subjectId && !workspace.subjects.has(subjectId))
-    throw new WorkspaceError("That subject no longer exists.");
+    throw new WorkspaceError(t("That subject no longer exists."));
 }
 
 /** Adds a topic the student names, or changes one already in the profile. */
@@ -126,7 +127,7 @@ export async function saveTopic(
   input: TopicInput & { id?: string | undefined },
 ): Promise<Topic> {
   const name = input.name.trim();
-  if (!name) throw new WorkspaceError("A topic needs a name.");
+  if (!name) throw new WorkspaceError(t("A topic needs a name."));
   checkSubject(workspace, input.subjectId);
   return editLearner(workspace, (file) => {
     const key = topicKey(name, input.subjectId);
@@ -135,7 +136,9 @@ export async function saveTopic(
         topic.id !== input.id && topicKey(topic.name, topic.subjectId) === key,
     );
     if (clash)
-      throw new WorkspaceError(`“${clash.name}” is already in your profile.`);
+      throw new WorkspaceError(
+        t("“{name}” is already in your profile.", { name: clash.name }),
+      );
     const at = now();
     const note = input.note?.trim();
     const fields = {
@@ -147,7 +150,8 @@ export async function saveTopic(
     if (input.id) {
       const index = file.topics.findIndex((topic) => topic.id === input.id);
       const current = file.topics[index];
-      if (!current) throw new WorkspaceError("That topic is no longer here.");
+      if (!current)
+        throw new WorkspaceError(t("That topic is no longer here."));
       const next: Topic = {
         id: current.id,
         source: current.source,
@@ -159,7 +163,7 @@ export async function saveTopic(
       return next;
     }
     if (file.topics.length >= MAX_TOPICS)
-      throw new WorkspaceError("The profile holds too many topics already.");
+      throw new WorkspaceError(t("The profile holds too many topics already."));
     const topic: Topic = {
       id: randomUUID(),
       ...fields,
@@ -179,7 +183,7 @@ export function deleteTopic(
   return editLearner(workspace, (file) => {
     const remaining = file.topics.filter((topic) => topic.id !== id);
     if (remaining.length === file.topics.length)
-      throw new WorkspaceError("That topic is no longer here.");
+      throw new WorkspaceError(t("That topic is no longer here."));
     file.topics = remaining;
   });
 }
@@ -257,7 +261,7 @@ export function resolveTopicProposal(
   return editLearner(workspace, (file) => {
     const proposal = file.proposals.find((entry) => entry.id === input.id);
     if (!proposal || proposal.status !== "proposed")
-      throw new WorkspaceError("That suggestion is no longer waiting.");
+      throw new WorkspaceError(t("That suggestion is no longer waiting."));
     const at = now();
     proposal.status = input.accept ? "accepted" : "rejected";
     proposal.decidedAt = at;

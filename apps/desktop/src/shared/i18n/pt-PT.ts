@@ -3,6 +3,7 @@
  * Keep placeholders like `{count}` as they are.
  */
 export const messages: Record<string, string> = {
+  "“{name}” is already in your profile.": "“{name}” já está no seu perfil.",
   "{count} activities resit does not download ({detail})":
     "{count} atividades que o resit não transfere ({detail})",
   "{count} activity resit does not download ({detail})":
@@ -62,6 +63,11 @@ export const messages: Record<string, string> = {
   "{link} so the assistant plans sessions when you are free.":
     "{link} para o assistente planear sessões quando estiver livre.",
   "{names} could not be checked.": "Não foi possível verificar {names}.",
+  "{parent} already has a {name} folder.": "{parent} já tem uma pasta {name}.",
+  "{path} in this resit file is damaged. Nothing was opened.":
+    "{path} neste ficheiro do resit está danificado. Nada foi aberto.",
+  "{path} is not a place inside this workspace.":
+    "{path} não é um local dentro deste espaço de trabalho.",
   "{provider} {version} at {path}": "{provider} {version} em {path}",
   "{provider} is installed but not signed in.":
     "O {provider} está instalado mas sem sessão iniciada.",
@@ -79,16 +85,48 @@ export const messages: Record<string, string> = {
   "{title}, p. {page}": "{title}, p. {page}",
   "{user} at {site}": "{user} em {site}",
   "{weekday}, {date}": "{weekday}, {date}",
+  "{what} has to end after it starts.":
+    "{what} tem de acabar depois de começar.",
+  "{what} is longer than eight hours.": "{what} dura mais de oito horas.",
+  "{what} is on a day that does not exist.":
+    "{what} está num dia que não existe.",
+  "{which} has no question.": "{which} não tem pergunta.",
+  "{which} lists the same option twice.":
+    "{which} tem a mesma opção duas vezes.",
+  "{which} needs at least two options.":
+    "{which} precisa de pelo menos duas opções.",
+  "{which} needs one of its options marked right.":
+    "{which} precisa de uma das opções marcada como certa.",
+  "{which} needs the answer to compare against.":
+    "{which} precisa da resposta com que comparar.",
   "1 card": "1 cartão",
   "1 question": "1 pergunta",
+  "A card needs an answer on its back.":
+    "Um cartão precisa de uma resposta no verso.",
+  "A card needs something on its front.":
+    "Um cartão precisa de algo na frente.",
+  "A cloze card needs at least one hidden part, written {{c1::like this}}.":
+    "Um cartão de preencher precisa de pelo menos uma parte escondida, escrita {{c1::assim}}.",
   "A conversation about this project reads these subjects and files.":
     "Uma conversa sobre este projeto lê estas disciplinas e ficheiros.",
+  "A folder cannot go inside itself.":
+    "Uma pasta não pode ir para dentro de si própria.",
   "A notification from your computer, while resit is open.":
     "Uma notificação do seu computador, enquanto o resit estiver aberto.",
   "A project gathers subjects and files for work that spans them. Nothing is copied.":
     "Um projeto junta disciplinas e ficheiros para trabalhos que as atravessam. Nada é copiado.",
+  "A quiz needs a title.": "Um questionário precisa de um título.",
+  "A quiz needs at least one question.":
+    "Um questionário precisa de pelo menos uma pergunta.",
+  "A session needs a title.": "Uma sessão precisa de um título.",
+  "A study time has to end after it starts.":
+    "Um horário de estudo tem de acabar depois de começar.",
+  "A subject holds at most {count} cards.":
+    "Uma disciplina tem no máximo {count} cartões.",
+  "A topic needs a name.": "Um tema precisa de um nome.",
   "About you": "Sobre si",
   "Accept all": "Aceitar todas",
+  "Accept the suggested session first.": "Aceite primeiro a sessão sugerida.",
   Account: "Conta",
   Activities: "Atividades",
   Add: "Adicionar",
@@ -120,6 +158,7 @@ export const messages: Record<string, string> = {
   Address: "Endereço",
   "AI providers": "Fornecedores de IA",
   "Also accept, one per line": "Aceitar também, uma por linha",
+  "An assessment needs a title.": "Uma avaliação precisa de um título.",
   "An hour before": "Uma hora antes",
   "Another copy of resit on this computer has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
     "Outra cópia do resit neste computador tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
@@ -289,6 +328,7 @@ export const messages: Record<string, string> = {
   "First year of Electrical Engineering. Resitting Calculus I.":
     "Primeiro ano de Engenharia Eletrotécnica. Em recurso a Cálculo I.",
   "Fit to view": "Ajustar à vista",
+  flashcards: "cartões",
   "Flashcards due in this subject": "Cartões para rever nesta disciplina",
   "Folder actions": "Ações da pasta",
   Follow: "Acompanhar",
@@ -311,6 +351,8 @@ export const messages: Record<string, string> = {
   "Go to": "Ir para",
   Goals: "Objetivos",
   "Graph tools": "Ferramentas do grafo",
+  "Hand the attempt in before marking it.":
+    "Entregue a tentativa antes de a classificar.",
   "Handing in…": "A entregar…",
   "Hide selected text": "Ocultar o texto selecionado",
   "Highlight · p. {page}": "Realce · p. {page}",
@@ -363,6 +405,10 @@ export const messages: Record<string, string> = {
   Language: "Língua",
   Languages: "Línguas",
   "Last {score}/{total}, {time}": "Último {score}/{total}, {time}",
+  "learner.json could not be read. It was left unchanged.":
+    "Não foi possível ler o learner.json. Não foi alterado.",
+  "learner.json is not valid JSON. It was left unchanged.":
+    "O learner.json não é JSON válido. Não foi alterado.",
   "Left out: {list}.": "Ficaram de fora: {list}.",
   Lesson: "Lição",
   Light: "Claro",
@@ -451,6 +497,8 @@ export const messages: Record<string, string> = {
   "Note outline": "Estrutura do apontamento",
   "Note text": "Texto do apontamento",
   "Notes and documents": "Apontamentos e documentos",
+  "Notes keep their own history.":
+    "Os apontamentos têm o seu próprio histórico.",
   "Notes whose Markdown the rich editor would change always open as Markdown.":
     "Os apontamentos cujo Markdown o editor visual alteraria abrem sempre em Markdown.",
   "Notes, PDF quotations, and AI replies.":
@@ -473,6 +521,7 @@ export const messages: Record<string, string> = {
   "Once, for each language. The PDF stays on this computer.":
     "Uma vez, para cada língua. O PDF fica neste computador.",
   "One page at a time": "Uma página de cada vez",
+  "Only PDFs can hold highlights.": "Só os PDFs podem ter realces.",
   "Open “{workspace}”": "Abrir “{workspace}”",
   "Open a note to add this reply":
     "Abra um apontamento para adicionar esta resposta",
@@ -506,6 +555,10 @@ export const messages: Record<string, string> = {
   "PDFs and other files": "PDFs e outros ficheiros",
   "Pick a note or document from the sidebar, or press Ctrl+K to find one.":
     "Escolha um apontamento ou documento na barra lateral, ou prima Ctrl+K para procurar.",
+  "plan.json could not be read: {problem}. It was left unchanged.":
+    "Não foi possível ler o plan.json: {problem}. Não foi alterado.",
+  "plan.json is not valid JSON. It was left unchanged.":
+    "O plan.json não é JSON válido. Não foi alterado.",
   Planned: "Planeada",
   Portuguese: "Português",
   "Practice could not be read": "Não foi possível ler a prática",
@@ -515,6 +568,7 @@ export const messages: Record<string, string> = {
   Question: "Pergunta",
   "Question {number} type": "Tipo da pergunta {number}",
   "Question and answer": "Pergunta e resposta",
+  quiz: "questionário",
   Quiz: "Questionário",
   "Quiz actions": "Ações do questionário",
   "Quiz: {title}": "Questionário: {title}",
@@ -542,10 +596,15 @@ export const messages: Record<string, string> = {
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
   "resit could not start": "O resit não conseguiu arrancar",
+  "resit is already reading the text of another PDF. Wait for it to finish, or stop it.":
+    "O resit já está a ler o texto de outro PDF. Espere que acabe, ou pare-o.",
   "resit keeps a copy of {file} before a newer one replaces it. Restoring one keeps the copy it replaces.":
     "O resit guarda uma cópia de {file} antes de uma mais recente o substituir. Restaurar uma guarda a cópia que substitui.",
+  "resit keeps this folder in step with the Moodle course. Following the course again would download its files under the old name.":
+    "O resit mantém esta pasta a par da unidade curricular do Moodle. Voltar a acompanhar a unidade curricular transferiria os ficheiros com o nome antigo.",
   "resit on {host} has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
     "O resit em {host} tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
+  "resit will not extract {path}.": "O resit não vai extrair {path}.",
   "Restore it": "Repor",
   "Restoring replaces the lines marked − with the lines marked +.":
     "Restaurar substitui as linhas marcadas com − pelas linhas marcadas com +.",
@@ -620,18 +679,65 @@ export const messages: Record<string, string> = {
   "Text you had not saved was kept":
     "O texto que não tinha guardado foi mantido",
   "That archive cannot be opened": "Não é possível abrir esse arquivo",
+  "That assessment is no longer in the plan.":
+    "Essa avaliação já não está no plano.",
+  "That attempt is no longer here.": "Essa tentativa já não está aqui.",
+  "That card has changed since, so the review can no longer be undone.":
+    "Esse cartão mudou entretanto, por isso a revisão já não pode ser anulada.",
+  "That card is no longer here.": "Esse cartão já não está aqui.",
+  "That copy is no longer kept.": "Essa cópia já não está guardada.",
   "That copy was not restored": "Essa cópia não foi restaurada",
+  "That course is not one of your Moodle enrolments.":
+    "Essa unidade curricular não é uma das suas inscrições no Moodle.",
+  "That deleted item is no longer in the trash.":
+    "Esse item eliminado já não está no lixo.",
+  "That file has no resit record to update.":
+    "Esse ficheiro não tem nenhum registo do resit para atualizar.",
+  "That file ID is not one resit can use.":
+    "Esse ID de ficheiro não pode ser usado pelo resit.",
+  "That file is not a PDF.": "Esse ficheiro não é um PDF.",
+  "That file no longer exists.": "Esse ficheiro já não existe.",
+  "That folder name cannot be used.": "Esse nome de pasta não pode ser usado.",
+  "That folder no longer exists.": "Essa pasta já não existe.",
   "That highlight is no longer in this PDF":
     "Esse realce já não está neste PDF",
+  "That highlight is no longer in this PDF.":
+    "Esse realce já não está neste PDF.",
+  "That is not a kept copy.": "Essa não é uma cópia guardada.",
+  "That is not a saved version.": "Essa não é uma versão guardada.",
   "That link points to a file that is no longer here":
     "Essa ligação aponta para um ficheiro que já não está aqui",
+  "That note ID is not one resit can use.":
+    "Esse ID de apontamento não pode ser usado pelo resit.",
+  "That project no longer exists.": "Esse projeto já não existe.",
+  "That question is not in this attempt.":
+    "Essa pergunta não está nesta tentativa.",
+  "That quiz is no longer here.": "Esse questionário já não está aqui.",
+  "That quiz is not in this subject.":
+    "Esse questionário não está nesta disciplina.",
+  "That resource is not a note.": "Esse recurso não é um apontamento.",
+  "That review can no longer be undone.":
+    "Essa revisão já não pode ser anulada.",
+  "That session is no longer in the plan.": "Essa sessão já não está no plano.",
+  "That subject no longer exists.": "Essa disciplina já não existe.",
+  "That suggestion is no longer waiting.":
+    "Essa sugestão já não está à espera.",
+  "That text is no longer kept.": "Esse texto já não está guardado.",
+  "That topic is no longer here.": "Esse tema já não está aqui.",
   "That version could not be read": "Não foi possível ler essa versão",
+  "That version is no longer kept.": "Essa versão já não está guardada.",
   "That version was not restored": "Essa versão não foi restaurada",
   "That workspace could not be opened":
     "Não foi possível abrir esse espaço de trabalho",
   "That's all for now": "Por agora é tudo",
   "The {count} items in the trash are removed from disk.":
     "Os {count} itens no lixo são removidos do disco.",
+  "The {language} text recognition data could not be downloaded (HTTP {status}).":
+    "Não foi possível transferir os dados do reconhecimento de texto em {language} (HTTP {status}).",
+  "The {what} file could not be read. It was left unchanged.":
+    "Não foi possível ler o ficheiro de {what}. Não foi alterado.",
+  "The {what} file is not valid JSON. It was left unchanged.":
+    "O ficheiro de {what} não é JSON válido. Não foi alterado.",
   "The archive was not opened": "O arquivo não foi aberto",
   "The assessment was not deleted": "A avaliação não foi eliminada",
   "The assessment was not saved": "A avaliação não foi guardada",
@@ -677,8 +783,15 @@ export const messages: Record<string, string> = {
   "The folder was not moved": "A pasta não foi movida",
   "The folder was not moved to the trash": "A pasta não foi movida para o lixo",
   "The folder was not renamed": "O nome da pasta não foi mudado",
+  "The frontmatter is not a YAML mapping.": "O cabeçalho não é um mapa YAML.",
+  "The frontmatter is not valid YAML: {problem}":
+    "O cabeçalho não é YAML válido: {problem}",
   "The highlight was not deleted": "O realce não foi eliminado",
   "The highlight was not saved": "O realce não foi guardado",
+  "The highlights saved for this PDF are not valid JSON. The file was left unchanged.":
+    "Os realces guardados para este PDF não são JSON válido. O ficheiro não foi alterado.",
+  "The highlights saved for this PDF could not be read: {problem}. The file was left unchanged.":
+    "Não foi possível ler os realces guardados para este PDF: {problem}. O ficheiro não foi alterado.",
   "The item": "O item",
   "The item in the trash is removed from disk.":
     "O item no lixo é removido do disco.",
@@ -695,9 +808,15 @@ export const messages: Record<string, string> = {
     "Não foi possível ler o histórico do apontamento",
   "The notes were not exported": "Os apontamentos não foram exportados",
   "The original file is unchanged.": "O ficheiro original não foi alterado.",
+  "The PDF changed while its text was being read. Try again.":
+    "O PDF mudou enquanto o texto estava a ser lido. Tente de novo.",
   "The plan could not be read": "Não foi possível ler o plano",
+  "The plan is full. Delete old sessions first.":
+    "O plano está cheio. Elimine primeiro sessões antigas.",
   "The preference was not saved": "A preferência não foi guardada",
   "The profile could not be read": "Não foi possível ler o perfil",
+  "The profile holds too many topics already.":
+    "O perfil já tem demasiados temas.",
   "The project goes to the trash. Its subjects and files stay where they are.":
     "O projeto vai para o lixo. As disciplinas e os ficheiros ficam onde estão.",
   "The project was not changed": "O projeto não foi alterado",
@@ -713,6 +832,7 @@ export const messages: Record<string, string> = {
   "The rating was not saved": "A avaliação do cartão não foi guardada",
   "The review was not undone": "A revisão não foi anulada",
   "The scope was not changed": "O âmbito não foi alterado",
+  "The session": "A sessão",
   "The session has to end after it starts.":
     "A sessão tem de acabar depois de começar.",
   "The session was not changed": "A sessão não foi alterada",
@@ -744,20 +864,40 @@ export const messages: Record<string, string> = {
   "The workspace was not created": "O espaço de trabalho não foi criado",
   "The workspace was not exported": "O espaço de trabalho não foi exportado",
   Theme: "Tema",
+  "There are no notes to export.": "Não há apontamentos para exportar.",
   "These apply to this computer only.": "Aplicam-se apenas a este computador.",
   "These cards are not reviewed until you keep them.":
     "Estes cartões só entram nas revisões quando os mantiver.",
+  "These flashcards were written by a newer version of resit.":
+    "Estes cartões foram escritos por uma versão mais recente do resit.",
+  "These highlights were written by a newer version of resit.":
+    "Estes realces foram escritos por uma versão mais recente do resit.",
   "This activity is no longer in the course":
     "Esta atividade já não está na unidade curricular",
+  "This attempt was already handed in.": "Esta tentativa já foi entregue.",
   "This cannot be undone.": "Não é possível anular esta ação.",
   "This course has no files resit can download.":
     "Esta unidade curricular não tem ficheiros que o resit possa transferir.",
+  "This deletion has no record of where it came from.":
+    "Não há registo de onde veio este item eliminado.",
   "this file": "este ficheiro",
+  "This file was exported by a newer version of resit. Update resit to open it.":
+    "Este ficheiro foi exportado por uma versão mais recente do resit. Atualize o resit para o abrir.",
+  "This folder already contains a workspace. Open it instead.":
+    "Esta pasta já tem um espaço de trabalho. Em vez disso, abra-o.",
   "This folder holds {count} file downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.":
     "Esta pasta tem {count} ficheiro transferido da unidade curricular do Moodle. Vai para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-o de novo.",
   "This folder holds {count} files downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.":
     "Esta pasta tem {count} ficheiros transferidos da unidade curricular do Moodle. Vão para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-os de novo.",
+  "This folder is filled from the Moodle course. Choose another folder.":
+    "Esta pasta é preenchida a partir da unidade curricular do Moodle. Escolha outra pasta.",
+  "This folder is not a resit workspace. Choose a folder with a workspace.json file, or create a new workspace.":
+    "Esta pasta não é um espaço de trabalho do resit. Escolha uma pasta com um ficheiro workspace.json, ou crie um espaço de trabalho novo.",
   "This image could not be opened": "Não foi possível abrir esta imagem",
+  "This is not a resit file, or it is damaged.":
+    "Isto não é um ficheiro do resit, ou está danificado.",
+  "This is not a resit workspace file.":
+    "Isto não é um ficheiro de espaço de trabalho do resit.",
   "This is outside your study times.":
     "Isto está fora dos seus horários de estudo.",
   "This note changed on disk while you were editing":
@@ -765,15 +905,51 @@ export const messages: Record<string, string> = {
   "This note could not be opened": "Não foi possível abrir este apontamento",
   "This note uses Markdown the rich editor would change, so it opens as source.":
     "Este apontamento usa Markdown que o editor visual alteraria, por isso abre como código-fonte.",
+  "This PDF already has {count} highlights. Delete some before adding more.":
+    "Este PDF já tem {count} realces. Elimine alguns antes de adicionar mais.",
   "This PDF could not be opened": "Não foi possível abrir este PDF",
   "This PDF does not carry a table of contents.": "Este PDF não tem índice.",
   "This PDF is scanned, so search cannot find what it says.":
     "Este PDF é digitalizado, por isso a pesquisa não encontra o que diz.",
+  "This plan was written by a newer version of resit.":
+    "Este plano foi escrito por uma versão mais recente do resit.",
+  "This profile was written by a newer version of resit.":
+    "Este perfil foi escrito por uma versão mais recente do resit.",
   "This project is no longer in the workspace":
     "Este projeto já não está no espaço de trabalho",
+  "This quiz has no questions yet.":
+    "Este questionário ainda não tem perguntas.",
   "This quiz is no longer here": "Este questionário já não está aqui",
+  "This quiz was written by a newer version of resit.":
+    "Este questionário foi escrito por uma versão mais recente do resit.",
+  "This resit file does not match its list of files.":
+    "Este ficheiro do resit não corresponde à sua lista de ficheiros.",
+  "This resit file has an entry resit will not extract: {name}":
+    "Este ficheiro do resit tem uma entrada que o resit não vai extrair: {name}",
+  "This resit file has no workspace in it.":
+    "Este ficheiro do resit não tem nenhum espaço de trabalho.",
+  "This resit file has two entries named {name}.":
+    "Este ficheiro do resit tem duas entradas chamadas {name}.",
+  "This resit file has two manifests.":
+    "Este ficheiro do resit tem dois manifestos.",
+  "This resit file holds too many files to open.":
+    "Este ficheiro do resit tem demasiados ficheiros para abrir.",
+  "This resit file is damaged.": "Este ficheiro do resit está danificado.",
+  "This resit file is encrypted.": "Este ficheiro do resit está encriptado.",
+  "This resit file is too large to open.":
+    "Este ficheiro do resit é demasiado grande para abrir.",
+  "This resit file's manifest cannot be read.":
+    "Não é possível ler o manifesto deste ficheiro do resit.",
+  "This resit file's manifest is not valid.":
+    "O manifesto deste ficheiro do resit não é válido.",
+  "This resit file's manifest is too large.":
+    "O manifesto deste ficheiro do resit é demasiado grande.",
   "This week": "Esta semana",
   "This workspace is already open": "Este espaço de trabalho já está aberto",
+  "This workspace needs {needed} MB, and the chosen drive has {free} MB free.":
+    "Este espaço de trabalho precisa de {needed} MB, e a unidade escolhida tem {free} MB livres.",
+  "This workspace was created by a newer version of resit. Update resit to open it.":
+    "Este espaço de trabalho foi criado por uma versão mais recente do resit. Atualize o resit para o abrir.",
   Thorough: "Detalhadas",
   Thursday: "Quinta-feira",
   "Time (optional)": "Hora (opcional)",
@@ -785,8 +961,10 @@ export const messages: Record<string, string> = {
   Topics: "Temas",
   Tuesday: "Terça-feira",
   "Two pages side by side": "Duas páginas lado a lado",
+  "Two questions share an ID.": "Duas perguntas têm o mesmo ID.",
   Typeface: "Tipo de letra",
   "Undo the last rating": "Anular a última avaliação",
+  "unknown problem": "problema desconhecido",
   "Untitled heading": "Título vazio",
   Upcoming: "Brevemente",
   Update: "Atualizar",
@@ -827,6 +1005,9 @@ export const messages: Record<string, string> = {
   workspace: "espaço de trabalho",
   "Workspace graph: {nodes} nodes, {edges} connections":
     "Grafo do espaço de trabalho: {nodes} nós, {edges} ligações",
+  "workspace.json is not a valid resit workspace: {problem}.":
+    "O workspace.json não é um espaço de trabalho válido do resit: {problem}.",
+  "workspace.json is not valid JSON.": "O workspace.json não é JSON válido.",
   "Write here. Type $x^2$ for math, or $$ and Enter for a block.":
     "Escreva aqui. Escreva $x^2$ para matemática, ou $$ e Enter para um bloco.",
   "Write LaTeX. Press Ctrl+Enter to apply.":

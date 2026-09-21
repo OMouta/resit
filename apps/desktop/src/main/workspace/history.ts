@@ -29,6 +29,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "./workspace";
+import { t } from "../i18n";
 
 /** Copies older than this are dropped once the note has enough of them. */
 const RETENTION_DAYS = 30;
@@ -45,7 +46,7 @@ const CAUSE_CODES: Record<RevisionCause, string> = {
 
 function historyDir(workspace: OpenWorkspace, noteId: string): string {
   if (!/^[\w-]+$/.test(noteId))
-    throw new WorkspaceError("That note ID is not one resit can use.");
+    throw new WorkspaceError(t("That note ID is not one resit can use."));
   return join(workspace.root, ".resit", "history", "notes", noteId);
 }
 
@@ -103,13 +104,13 @@ export async function readNoteRevision(
   revisionId: string,
 ): Promise<NoteRevisionContent> {
   const parsed = parseRevisionName(revisionId);
-  if (!parsed) throw new WorkspaceError("That is not a saved version.");
+  if (!parsed) throw new WorkspaceError(t("That is not a saved version."));
   const path = join(historyDir(workspace, noteId), revisionId);
   let body: string;
   try {
     body = await readFile(path, "utf8");
   } catch {
-    throw new WorkspaceError("That version is no longer kept.");
+    throw new WorkspaceError(t("That version is no longer kept."));
   }
   return {
     id: revisionId,
@@ -217,7 +218,7 @@ const FILE_ALWAYS_KEPT = 3;
 
 function fileHistoryDir(workspace: OpenWorkspace, resourceId: string): string {
   if (!/^[\w-]+$/.test(resourceId))
-    throw new WorkspaceError("That file ID is not one resit can use.");
+    throw new WorkspaceError(t("That file ID is not one resit can use."));
   return join(workspace.root, ".resit", "history", "files", resourceId);
 }
 
@@ -289,7 +290,7 @@ export async function snapshotFile(
 ): Promise<void> {
   const resource = resourceInfo(workspace, resourceId);
   if (resource.kind === "note")
-    throw new WorkspaceError("Notes keep their own history.");
+    throw new WorkspaceError(t("Notes keep their own history."));
   const hash = resource.revision.replace(/^sha256:/, "").slice(0, 12);
   const directory = fileHistoryDir(workspace, resourceId);
   const [newest] = await fileRevisionNames(directory);
@@ -332,14 +333,14 @@ export function restoreFileRevision(
 ): Promise<ResourceInfo> {
   return withLock(workspace, `restore:${resourceId}`, async () => {
     if (!parseFileRevisionName(revisionId))
-      throw new WorkspaceError("That is not a kept copy.");
+      throw new WorkspaceError(t("That is not a kept copy."));
     let bytes: Uint8Array;
     try {
       bytes = await readFile(
         join(fileHistoryDir(workspace, resourceId), revisionId),
       );
     } catch {
-      throw new WorkspaceError("That copy is no longer kept.");
+      throw new WorkspaceError(t("That copy is no longer kept."));
     }
     await snapshotFile(workspace, resourceId, "restore");
     return replaceFile(workspace, { resourceId, bytes });

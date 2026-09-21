@@ -16,6 +16,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "./workspace";
+import { t } from "../i18n";
 
 export const PACKAGE_FORMAT_VERSION = 1;
 
@@ -200,13 +201,15 @@ async function openArchive(path: string): Promise<yauzl.ZipFile> {
       strictFileNames: true,
     });
   } catch {
-    throw new WorkspaceError("This is not a resit file, or it is damaged.");
+    throw new WorkspaceError(t("This is not a resit file, or it is damaged."));
   }
 }
 
 async function readEntries(zip: yauzl.ZipFile): Promise<yauzl.Entry[]> {
   if (zip.entryCount > MAX_ENTRIES)
-    throw new WorkspaceError("This resit file holds too many files to open.");
+    throw new WorkspaceError(
+      t("This resit file holds too many files to open."),
+    );
   return new Promise((resolveEntries, reject) => {
     const entries: yauzl.Entry[] = [];
     zip.on("entry", (entry: yauzl.Entry) => {
@@ -215,7 +218,7 @@ async function readEntries(zip: yauzl.ZipFile): Promise<yauzl.Entry[]> {
     });
     zip.on("end", () => resolveEntries(entries));
     zip.on("error", () =>
-      reject(new WorkspaceError("This resit file is damaged.")),
+      reject(new WorkspaceError(t("This resit file is damaged."))),
     );
     zip.readEntry();
   });
@@ -243,7 +246,7 @@ async function readManifest(
   entry: yauzl.Entry,
 ): Promise<Manifest> {
   if (entry.uncompressedSize > MAX_MANIFEST_BYTES)
-    throw new WorkspaceError("This resit file's manifest is too large.");
+    throw new WorkspaceError(t("This resit file's manifest is too large."));
   const chunks: Buffer[] = [];
   for await (const chunk of await zip.openReadStreamPromise(entry))
     chunks.push(chunk as Buffer);
@@ -251,20 +254,22 @@ async function readManifest(
   try {
     raw = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new WorkspaceError("This resit file's manifest cannot be read.");
+    throw new WorkspaceError(t("This resit file's manifest cannot be read."));
   }
   const format = z
     .object({ format: z.literal("resit-package"), formatVersion: z.number() })
     .safeParse(raw);
   if (!format.success)
-    throw new WorkspaceError("This is not a resit workspace file.");
+    throw new WorkspaceError(t("This is not a resit workspace file."));
   if (format.data.formatVersion > PACKAGE_FORMAT_VERSION)
     throw new WorkspaceError(
-      "This file was exported by a newer version of resit. Update resit to open it.",
+      t(
+        "This file was exported by a newer version of resit. Update resit to open it.",
+      ),
     );
   const parsed = manifestSchema.safeParse(raw);
   if (!parsed.success)
-    throw new WorkspaceError("This resit file's manifest is not valid.");
+    throw new WorkspaceError(t("This resit file's manifest is not valid."));
   return parsed.data;
 }
 
@@ -294,44 +299,48 @@ async function checkPackage(path: string): Promise<CheckedPackage> {
       const name = entry.fileName;
       if (name === MANIFEST) {
         if (manifestEntry)
-          throw new WorkspaceError("This resit file has two manifests.");
+          throw new WorkspaceError(t("This resit file has two manifests."));
         manifestEntry = entry;
         continue;
       }
       if (!safePath(name) || isLink(entry))
         throw new WorkspaceError(
-          `This resit file has an entry resit will not extract: ${name.slice(0, 200)}`,
+          t("This resit file has an entry resit will not extract: {name}", {
+            name: name.slice(0, 200),
+          }),
         );
       if (entry.isEncrypted())
-        throw new WorkspaceError("This resit file is encrypted.");
+        throw new WorkspaceError(t("This resit file is encrypted."));
       const key = name.normalize("NFC").toLowerCase().replace(/\/$/, "");
       if (folded.has(key))
         throw new WorkspaceError(
-          `This resit file has two entries named ${name.slice(PREFIX.length, 200)}.`,
+          t("This resit file has two entries named {name}.", {
+            name: name.slice(PREFIX.length, 200),
+          }),
         );
       folded.add(key);
       if (name.endsWith("/")) continue;
       bytes += entry.uncompressedSize;
       if (bytes > MAX_BYTES)
-        throw new WorkspaceError("This resit file is too large to open.");
+        throw new WorkspaceError(t("This resit file is too large to open."));
       files.set(name.slice(PREFIX.length), entry);
     }
     if (!manifestEntry)
-      throw new WorkspaceError("This is not a resit workspace file.");
+      throw new WorkspaceError(t("This is not a resit workspace file."));
     const manifest = await readManifest(zip, manifestEntry);
     if (manifest.files.length !== files.size)
       throw new WorkspaceError(
-        "This resit file does not match its list of files.",
+        t("This resit file does not match its list of files."),
       );
     for (const listed of manifest.files) {
       const entry = files.get(listed.path);
       if (!entry || entry.uncompressedSize !== listed.size)
         throw new WorkspaceError(
-          "This resit file does not match its list of files.",
+          t("This resit file does not match its list of files."),
         );
     }
     if (!files.has("workspace.json"))
-      throw new WorkspaceError("This resit file has no workspace in it.");
+      throw new WorkspaceError(t("This resit file has no workspace in it."));
     return { zip, manifest, files, bytes };
   } catch (error) {
     zip.close();
@@ -379,14 +388,20 @@ export async function extractPackage(
     const free = await statfs(parent).catch(() => null);
     if (free && free.bavail * free.bsize < checked.bytes)
       throw new WorkspaceError(
-        `This workspace needs ${Math.ceil(checked.bytes / 1024 ** 2)} MB, and the chosen drive has ${Math.floor((free.bavail * free.bsize) / 1024 ** 2)} MB free.`,
+        t(
+          "This workspace needs {needed} MB, and the chosen drive has {free} MB free.",
+          {
+            needed: Math.ceil(checked.bytes / 1024 ** 2),
+            free: Math.floor((free.bavail * free.bsize) / 1024 ** 2),
+          },
+        ),
       );
     let done = 0;
     for (const [path, entry] of checked.files) {
       if (input.signal.aborted) throw stopped(input.signal);
       const output = resolve(staging, ...path.split("/"));
       if (!isInside(staging, output) || output === staging)
-        throw new WorkspaceError(`resit will not extract ${path}.`);
+        throw new WorkspaceError(t("resit will not extract {path}.", { path }));
       await mkdir(dirname(output), { recursive: true });
       const measure = new Measure((count) => {
         done += count;
@@ -400,7 +415,9 @@ export async function extractPackage(
       );
       if (measure.hash.digest("hex") !== hashes.get(path))
         throw new WorkspaceError(
-          `${path} in this resit file is damaged. Nothing was opened.`,
+          t("{path} in this resit file is damaged. Nothing was opened.", {
+            path,
+          }),
         );
     }
     // A copy is a workspace of its own, whatever the original was.

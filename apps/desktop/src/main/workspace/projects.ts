@@ -15,6 +15,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "./workspace";
+import { t } from "../i18n";
 
 /** Only subjects and files the workspace has, each once. */
 function known(
@@ -61,7 +62,7 @@ export async function createProject(
 
 function projectEntry(workspace: OpenWorkspace, id: string) {
   const entry = workspace.projects.get(id);
-  if (!entry) throw new WorkspaceError("That project no longer exists.");
+  if (!entry) throw new WorkspaceError(t("That project no longer exists."));
   return entry;
 }
 

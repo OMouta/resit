@@ -41,6 +41,7 @@ import {
   rate,
   SCHEDULER_INFO,
 } from "./scheduler";
+import { t } from "../i18n";
 
 export const PRACTICE_FORMAT_VERSION = 1;
 const MAX_CARDS_PER_SUBJECT = 20_000;
@@ -71,7 +72,7 @@ function quizPath(
   quizId: string,
 ): string {
   if (!SAFE_ID.test(quizId))
-    throw new WorkspaceError("That quiz is not in this subject.");
+    throw new WorkspaceError(t("That quiz is not in this subject."));
   return join(quizzesDir(workspace, subjectId), `${quizId}.json`);
 }
 
@@ -90,13 +91,13 @@ async function readRecord<T>(
     raw = await readJson(path);
   } catch {
     throw new WorkspaceError(
-      `The ${what} file is not valid JSON. It was left unchanged.`,
+      t("The {what} file is not valid JSON. It was left unchanged.", { what }),
     );
   }
   const parsed = parse(raw);
   if (!parsed.success)
     throw new WorkspaceError(
-      `The ${what} file could not be read. It was left unchanged.`,
+      t("The {what} file could not be read. It was left unchanged.", { what }),
     );
   return parsed.data;
 }
@@ -107,12 +108,12 @@ async function loadCards(
 ): Promise<CardsFile> {
   const file = await readRecord(
     cardsPath(workspace, subjectId),
-    "flashcards",
+    t("flashcards"),
     (raw) => cardsFileSchema.safeParse(raw),
   );
   if (file && file.formatVersion > PRACTICE_FORMAT_VERSION)
     throw new WorkspaceError(
-      "These flashcards were written by a newer version of resit.",
+      t("These flashcards were written by a newer version of resit."),
     );
   return (
     file ?? {
@@ -300,13 +301,15 @@ export async function listPractice(
 
 function checkCard(input: CardInput): void {
   if (!input.front.trim())
-    throw new WorkspaceError("A card needs something on its front.");
+    throw new WorkspaceError(t("A card needs something on its front."));
   if (input.kind === "cloze" && !hasCloze(input.front))
     throw new WorkspaceError(
-      "A cloze card needs at least one hidden part, written {{c1::like this}}.",
+      t(
+        "A cloze card needs at least one hidden part, written {{c1::like this}}.",
+      ),
     );
   if (input.kind === "basic" && !input.back.trim())
-    throw new WorkspaceError("A card needs an answer on its back.");
+    throw new WorkspaceError(t("A card needs an answer on its back."));
 }
 
 function cleanTopic(topic: string | undefined): string | undefined {
@@ -325,12 +328,14 @@ export async function createCards(
   options: { author?: "assistant" } = {},
 ): Promise<Flashcard[]> {
   if (!workspace.subjects.has(subjectId))
-    throw new WorkspaceError("That subject no longer exists.");
+    throw new WorkspaceError(t("That subject no longer exists."));
   inputs.forEach(checkCard);
   return editCards(workspace, subjectId, (file) => {
     if (file.cards.length + inputs.length > MAX_CARDS_PER_SUBJECT)
       throw new WorkspaceError(
-        `A subject holds at most ${MAX_CARDS_PER_SUBJECT} cards.`,
+        t("A subject holds at most {count} cards.", {
+          count: MAX_CARDS_PER_SUBJECT,
+        }),
       );
     const at = new Date();
     const created = inputs.map((input): Flashcard => {
@@ -365,7 +370,7 @@ export async function updateCard(
   return editCards(workspace, subjectId, (file) => {
     const index = file.cards.findIndex((card) => card.id === id);
     const current = file.cards[index];
-    if (!current) throw new WorkspaceError("That card is no longer here.");
+    if (!current) throw new WorkspaceError(t("That card is no longer here."));
     const topic = cleanTopic(input.topic);
     const source = input.source ?? current.source;
     const { topic: _topic, source: _source, ...rest } = current;
@@ -493,7 +498,7 @@ export async function rateCard(
   const card = await editCards(workspace, input.subjectId, (file) => {
     const index = file.cards.findIndex((entry) => entry.id === input.cardId);
     const current = file.cards[index];
-    if (!current) throw new WorkspaceError("That card is no longer here.");
+    if (!current) throw new WorkspaceError(t("That card is no longer here."));
     const schedule = rate(current.schedule, input.rating, at);
     event = {
       type: "review",
@@ -526,14 +531,17 @@ export async function undoReview(
 ): Promise<Flashcard> {
   const events = await readReviews(workspace, subjectId);
   const review = standingReviews(events).find((event) => event.id === reviewId);
-  if (!review) throw new WorkspaceError("That review can no longer be undone.");
+  if (!review)
+    throw new WorkspaceError(t("That review can no longer be undone."));
   const card = await editCards(workspace, subjectId, (file) => {
     const index = file.cards.findIndex((entry) => entry.id === review.cardId);
     const current = file.cards[index];
-    if (!current) throw new WorkspaceError("That card is no longer here.");
+    if (!current) throw new WorkspaceError(t("That card is no longer here."));
     if (JSON.stringify(current.schedule) !== JSON.stringify(review.next))
       throw new WorkspaceError(
-        "That card has changed since, so the review can no longer be undone.",
+        t(
+          "That card has changed since, so the review can no longer be undone.",
+        ),
       );
     const next = { ...current, schedule: review.previous };
     file.cards[index] = next;
@@ -568,13 +576,13 @@ export async function readQuiz(
 ): Promise<QuizFile> {
   const quiz = await readRecord(
     quizPath(workspace, subjectId, quizId),
-    "quiz",
+    t("quiz"),
     (raw) => quizFileSchema.safeParse(raw),
   );
-  if (!quiz) throw new WorkspaceError("That quiz is no longer here.");
+  if (!quiz) throw new WorkspaceError(t("That quiz is no longer here."));
   if (quiz.formatVersion > PRACTICE_FORMAT_VERSION)
     throw new WorkspaceError(
-      "This quiz was written by a newer version of resit.",
+      t("This quiz was written by a newer version of resit."),
     );
   return quiz;
 }
@@ -601,23 +609,30 @@ function editQuiz<T>(
 }
 
 function toQuestion(input: QuestionInput, index: number): Question {
-  const which = `Question ${index + 1}`;
+  const which = t("Question {number}", { number: index + 1 });
   const prompt = input.prompt.trim();
-  if (!prompt) throw new WorkspaceError(`${which} has no question.`);
+  if (!prompt)
+    throw new WorkspaceError(t("{which} has no question.", { which }));
   const answer = input.answer?.trim();
   const options = input.options?.map((option) => option.trim()).filter(Boolean);
   if (input.kind === "choice") {
     if (!options || options.length < 2)
-      throw new WorkspaceError(`${which} needs at least two options.`);
+      throw new WorkspaceError(
+        t("{which} needs at least two options.", { which }),
+      );
     if (new Set(options).size !== options.length)
-      throw new WorkspaceError(`${which} lists the same option twice.`);
+      throw new WorkspaceError(
+        t("{which} lists the same option twice.", { which }),
+      );
     if (!answer || !options.includes(answer))
       throw new WorkspaceError(
-        `${which} needs one of its options marked right.`,
+        t("{which} needs one of its options marked right.", { which }),
       );
   }
   if (input.kind === "short" && !answer)
-    throw new WorkspaceError(`${which} needs the answer to compare against.`);
+    throw new WorkspaceError(
+      t("{which} needs the answer to compare against.", { which }),
+    );
   const accept = input.accept?.map((entry) => entry.trim()).filter(Boolean);
   const optional = (key: "hint" | "solution" | "topic") => {
     const value = input[key]?.trim();
@@ -650,16 +665,16 @@ export async function saveQuiz(
   },
 ): Promise<QuizFile> {
   if (!workspace.subjects.has(subjectId))
-    throw new WorkspaceError("That subject no longer exists.");
+    throw new WorkspaceError(t("That subject no longer exists."));
   const title = input.title.trim();
-  if (!title) throw new WorkspaceError("A quiz needs a title.");
+  if (!title) throw new WorkspaceError(t("A quiz needs a title."));
   if (input.questions.length === 0)
-    throw new WorkspaceError("A quiz needs at least one question.");
+    throw new WorkspaceError(t("A quiz needs at least one question."));
   const questions = input.questions.map(toQuestion);
   if (
     new Set(questions.map((question) => question.id)).size !== questions.length
   )
-    throw new WorkspaceError("Two questions share an ID.");
+    throw new WorkspaceError(t("Two questions share an ID."));
   const topic = cleanTopic(input.topic);
   if (input.id) {
     return editQuiz(workspace, subjectId, input.id, (quiz) => {
@@ -713,7 +728,7 @@ export function startAttempt(
     const open = quiz.attempts.find((attempt) => !attempt.submittedAt);
     if (open) return open;
     if (quiz.questions.length === 0)
-      throw new WorkspaceError("This quiz has no questions yet.");
+      throw new WorkspaceError(t("This quiz has no questions yet."));
     const at = now();
     const attempt: Attempt = {
       id: randomUUID(),
@@ -729,7 +744,7 @@ export function startAttempt(
 
 function findAttempt(quiz: QuizFile, attemptId: string): Attempt {
   const attempt = quiz.attempts.find((entry) => entry.id === attemptId);
-  if (!attempt) throw new WorkspaceError("That attempt is no longer here.");
+  if (!attempt) throw new WorkspaceError(t("That attempt is no longer here."));
   return attempt;
 }
 
@@ -744,7 +759,7 @@ export function saveResponses(
   return editQuiz(workspace, subjectId, quizId, (quiz) => {
     const attempt = findAttempt(quiz, attemptId);
     if (attempt.submittedAt)
-      throw new WorkspaceError("This attempt was already handed in.");
+      throw new WorkspaceError(t("This attempt was already handed in."));
     attempt.responses = pickResponses(attempt, responses);
     attempt.updatedAt = now();
   });
@@ -835,7 +850,7 @@ export function submitAttempt(
   return editQuiz(workspace, subjectId, quizId, (quiz) => {
     const attempt = findAttempt(quiz, attemptId);
     if (attempt.submittedAt)
-      throw new WorkspaceError("This attempt was already handed in.");
+      throw new WorkspaceError(t("This attempt was already handed in."));
     const kept = pickResponses(attempt, responses);
     for (const question of attempt.questions) {
       const response = kept[question.id] ?? { answer: "" };
@@ -864,9 +879,9 @@ export function markResponse(
   return editQuiz(workspace, subjectId, quizId, (quiz) => {
     const attempt = findAttempt(quiz, input.attemptId);
     if (!attempt.submittedAt)
-      throw new WorkspaceError("Hand the attempt in before marking it.");
+      throw new WorkspaceError(t("Hand the attempt in before marking it."));
     if (!attempt.questions.some((question) => question.id === input.questionId))
-      throw new WorkspaceError("That question is not in this attempt.");
+      throw new WorkspaceError(t("That question is not in this attempt."));
     const response = attempt.responses[input.questionId] ?? { answer: "" };
     attempt.responses[input.questionId] = {
       ...response,

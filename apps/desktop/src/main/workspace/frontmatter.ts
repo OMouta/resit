@@ -1,5 +1,6 @@
 import { parse, stringify } from "yaml";
 
+import { t } from "../i18n";
 import { sha256 } from "./files";
 
 const FRONTMATTER = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
@@ -19,12 +20,17 @@ export function parseNote(text: string): ParsedNote {
   } catch (error) {
     return {
       ok: false,
-      message: `The frontmatter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
+      message: t("The frontmatter is not valid YAML: {problem}", {
+        problem: error instanceof Error ? error.message : String(error),
+      }),
     };
   }
   if (data === null || data === undefined) data = {};
   if (typeof data !== "object" || Array.isArray(data))
-    return { ok: false, message: "The frontmatter is not a YAML mapping." };
+    return {
+      ok: false,
+      message: t("The frontmatter is not a YAML mapping."),
+    };
   return {
     ok: true,
     data: data as Record<string, unknown>,

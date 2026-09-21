@@ -15,6 +15,7 @@ import {
   uniquePath,
 } from "./files";
 import { scanWorkspace, WorkspaceError, type OpenWorkspace } from "./workspace";
+import { t } from "../i18n";
 
 const trashRecordSchema = z.looseObject({
   kind: z.string().min(1),
@@ -130,7 +131,7 @@ async function trashEntryDir(
     !isInside(directory, path) ||
     !(await isDirectory(path))
   )
-    throw new WorkspaceError("That deleted item is no longer in the trash.");
+    throw new WorkspaceError(t("That deleted item is no longer in the trash."));
   return path;
 }
 
@@ -166,7 +167,7 @@ export async function restoreFromTrash(
   );
   if (!parsed.success)
     throw new WorkspaceError(
-      "This deletion has no record of where it came from.",
+      t("This deletion has no record of where it came from."),
     );
 
   for (const file of parsed.data.files) {
@@ -176,7 +177,7 @@ export async function restoreFromTrash(
     const reserved = join(workspace.root, ".resit");
     if (!isInside(workspace.root, target) || isInside(reserved, target))
       throw new WorkspaceError(
-        `${file.from} is not a place inside this workspace.`,
+        t("{path} is not a place inside this workspace.", { path: file.from }),
       );
     await mkdir(dirname(target), { recursive: true });
     if (!(await exists(target))) {

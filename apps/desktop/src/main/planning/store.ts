@@ -23,6 +23,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "../workspace/workspace";
+import { t } from "../i18n";
 
 export const PLAN_FORMAT_VERSION = 1;
 const MAX_SESSIONS = 5000;
@@ -57,17 +58,19 @@ export async function readPlan(workspace: OpenWorkspace): Promise<PlanFile> {
     raw = await readJson(path);
   } catch {
     throw new WorkspaceError(
-      "plan.json is not valid JSON. It was left unchanged.",
+      t("plan.json is not valid JSON. It was left unchanged."),
     );
   }
   const parsed = planFileSchema.safeParse(raw);
   if (!parsed.success)
     throw new WorkspaceError(
-      `plan.json could not be read: ${parsed.error.issues[0]?.message ?? "unknown problem"}. It was left unchanged.`,
+      t("plan.json could not be read: {problem}. It was left unchanged.", {
+        problem: parsed.error.issues[0]?.message ?? t("unknown problem"),
+      }),
     );
   if (parsed.data.formatVersion > PLAN_FORMAT_VERSION)
     throw new WorkspaceError(
-      "This plan was written by a newer version of resit.",
+      t("This plan was written by a newer version of resit."),
     );
   return parsed.data;
 }
@@ -87,19 +90,21 @@ function editPlan<T>(
   });
 }
 
-function checkSlot(slot: TimeSlot, what = "The session"): void {
+function checkSlot(slot: TimeSlot, what = t("The session")): void {
   const length = minutesOf(slot.end) - minutesOf(slot.start);
   if (length <= 0)
-    throw new WorkspaceError(`${what} has to end after it starts.`);
+    throw new WorkspaceError(t("{what} has to end after it starts.", { what }));
   if (length > MAX_SESSION_MINUTES)
-    throw new WorkspaceError(`${what} is longer than eight hours.`);
+    throw new WorkspaceError(t("{what} is longer than eight hours.", { what }));
   if (Number.isNaN(localInstant(slot.date, slot.start).getTime()))
-    throw new WorkspaceError(`${what} is on a day that does not exist.`);
+    throw new WorkspaceError(
+      t("{what} is on a day that does not exist.", { what }),
+    );
 }
 
 function checkSubject(workspace: OpenWorkspace, subjectId?: string): void {
   if (subjectId && !workspace.subjects.has(subjectId))
-    throw new WorkspaceError("That subject no longer exists.");
+    throw new WorkspaceError(t("That subject no longer exists."));
 }
 
 function cleanText(value: string | undefined): string | undefined {
@@ -126,7 +131,8 @@ export async function saveSession(
   workspace: OpenWorkspace,
   input: SessionInput & { id?: string | undefined },
 ): Promise<StudySession> {
-  if (!input.title.trim()) throw new WorkspaceError("A session needs a title.");
+  if (!input.title.trim())
+    throw new WorkspaceError(t("A session needs a title."));
   checkSlot(input);
   checkSubject(workspace, input.subjectId);
   return editPlan(workspace, (plan) => {
@@ -135,7 +141,7 @@ export async function saveSession(
       const index = plan.sessions.findIndex((entry) => entry.id === input.id);
       const current = plan.sessions[index];
       if (!current)
-        throw new WorkspaceError("That session is no longer in the plan.");
+        throw new WorkspaceError(t("That session is no longer in the plan."));
       const {
         subjectId: _subject,
         target: _target,
@@ -152,7 +158,9 @@ export async function saveSession(
       return next;
     }
     if (plan.sessions.length >= MAX_SESSIONS)
-      throw new WorkspaceError("The plan is full. Delete old sessions first.");
+      throw new WorkspaceError(
+        t("The plan is full. Delete old sessions first."),
+      );
     const session: StudySession = {
       id: randomUUID(),
       ...sessionFields(input),
@@ -172,7 +180,7 @@ export function deleteSession(
   return editPlan(workspace, (plan) => {
     const remaining = plan.sessions.filter((entry) => entry.id !== id);
     if (remaining.length === plan.sessions.length)
-      throw new WorkspaceError("That session is no longer in the plan.");
+      throw new WorkspaceError(t("That session is no longer in the plan."));
     plan.sessions = remaining;
   });
 }
@@ -187,9 +195,9 @@ export function setSessionStatus(
     const index = plan.sessions.findIndex((entry) => entry.id === id);
     const current = plan.sessions[index];
     if (!current)
-      throw new WorkspaceError("That session is no longer in the plan.");
+      throw new WorkspaceError(t("That session is no longer in the plan."));
     if (current.proposal)
-      throw new WorkspaceError("Accept the suggested session first.");
+      throw new WorkspaceError(t("Accept the suggested session first."));
     const at = now();
     const { completedAt: _completed, ...rest } = current;
     const next: StudySession = {
@@ -246,7 +254,7 @@ export async function saveAssessment(
   input: AssessmentInput & { id?: string | undefined },
 ): Promise<Assessment> {
   if (!input.title.trim())
-    throw new WorkspaceError("An assessment needs a title.");
+    throw new WorkspaceError(t("An assessment needs a title."));
   checkSubject(workspace, input.subjectId);
   return editPlan(workspace, (plan) => {
     const at = now();
@@ -264,7 +272,9 @@ export async function saveAssessment(
       );
       const current = plan.assessments[index];
       if (!current)
-        throw new WorkspaceError("That assessment is no longer in the plan.");
+        throw new WorkspaceError(
+          t("That assessment is no longer in the plan."),
+        );
       const next: Assessment = {
         id: current.id,
         createdAt: current.createdAt,
@@ -292,7 +302,7 @@ export function deleteAssessment(
   return editPlan(workspace, (plan) => {
     const remaining = plan.assessments.filter((entry) => entry.id !== id);
     if (remaining.length === plan.assessments.length)
-      throw new WorkspaceError("That assessment is no longer in the plan.");
+      throw new WorkspaceError(t("That assessment is no longer in the plan."));
     plan.assessments = remaining;
   });
 }
@@ -304,7 +314,7 @@ export async function setAvailability(
 ): Promise<Availability[]> {
   for (const slot of slots)
     if (minutesOf(slot.end) <= minutesOf(slot.start))
-      throw new WorkspaceError("A study time has to end after it starts.");
+      throw new WorkspaceError(t("A study time has to end after it starts."));
   const merged: Availability[] = [];
   const sorted = [...slots].sort(
     (a, b) => a.weekday - b.weekday || minutesOf(a.start) - minutesOf(b.start),

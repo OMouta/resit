@@ -9,6 +9,7 @@ import {
   WorkspaceError,
   type OpenWorkspace,
 } from "./workspace";
+import { t } from "../i18n";
 
 /** A link into the workspace, with the page or highlight after it. */
 const LINK = /resit:\/\/resource\/([A-Za-z0-9._~%-]+)(\?[^)\s>"']*)?/g;
@@ -44,7 +45,7 @@ export async function exportMarkdown(
 ): Promise<MarkdownExport> {
   const notes = input.notes.filter((resource) => resource.kind === "note");
   if (notes.length === 0)
-    throw new WorkspaceError("There are no notes to export.");
+    throw new WorkspaceError(t("There are no notes to export."));
   const name = folderName(input.name) || "Notes";
   let folder = join(input.parent, name);
   for (let index = 2; await exists(folder); index += 1)
