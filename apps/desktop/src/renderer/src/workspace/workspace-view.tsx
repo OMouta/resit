@@ -59,6 +59,7 @@ import {
   SCHEDULE_TAB_ID,
   type Layout,
 } from "./layout";
+import { FileHistory } from "./file-history";
 import { MoodleDialog } from "./moodle-dialog";
 import { WorkspacePane } from "./pane";
 import { QuickOpen } from "./quick-open";
@@ -115,6 +116,7 @@ export function WorkspaceView({
   );
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [historyId, setHistoryId] = useState<string | null>(null);
   const [moodleSubjectId, setMoodleSubjectId] = useState<string | null>(null);
   const [cardRequest, setCardRequest] = useState<CardRequest | null>(null);
   const [quizRequest, setQuizRequest] = useState<QuizEditorRequest | null>(
@@ -573,6 +575,7 @@ export function WorkspaceView({
         },
       });
     },
+    showFileHistory: (resourceId: string) => setHistoryId(resourceId),
     openGraph: () =>
       dispatch({ type: "open", resourceId: GRAPH_TAB_ID, title: "Graph" }),
     openSchedule: () =>
@@ -870,6 +873,10 @@ export function WorkspaceView({
           dispatch({ type: "rename-resource", resourceId, title: quiz.title });
           dispatch({ type: "open", resourceId, title: quiz.title });
         }}
+      />
+      <FileHistory
+        resource={historyId ? (resources.get(historyId) ?? null) : null}
+        onClose={() => setHistoryId(null)}
       />
       <TrashDialog
         open={trashOpen}

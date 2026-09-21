@@ -51,6 +51,7 @@ import type {
   AnnotationColorValue,
   AnnotationSegment,
   AnnotationType,
+  FileRevision,
   FolderInfo,
   NoteDraft,
   NoteRevision,
@@ -247,6 +248,13 @@ export interface DesktopApi {
     noteId: string;
     revisionId: string;
   }): Promise<NoteDocument>;
+  /** Kept copies of an imported file, newest first. */
+  listFileRevisions(resourceId: string): Promise<FileRevision[]>;
+  /** Puts a kept copy of an imported file back, keeping what it replaces. */
+  restoreFileRevision(input: {
+    resourceId: string;
+    revisionId: string;
+  }): Promise<ResourceInfo>;
   renameResource(input: { id: string; title: string }): Promise<ResourceInfo>;
   /** Moves a file to another subject or folder, keeping its ID. */
   moveResource(input: {
@@ -459,6 +467,8 @@ export const CHANNELS = {
   listNoteRevisions: "resit:note-history",
   readNoteRevision: "resit:note-revision",
   restoreNoteRevision: "resit:note-restore",
+  listFileRevisions: "resit:file-history",
+  restoreFileRevision: "resit:file-restore",
   renameResource: "resit:resource-rename",
   moveResource: "resit:resource-move",
   deleteResource: "resit:resource-delete",

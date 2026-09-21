@@ -47,8 +47,10 @@ import {
   restoreDraft,
 } from "./workspace/drafts";
 import {
+  listFileRevisions,
   listNoteRevisions,
   readNoteRevision,
+  restoreFileRevision,
   restoreNoteRevision,
   saveNoteWithHistory,
 } from "./workspace/history";
@@ -504,6 +506,25 @@ export function registerHandlers(
       );
       emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
       return { resource: resourceInfo(workspace, input.noteId), ...restored };
+    },
+  );
+
+  handle(CHANNELS.listFileRevisions, z.tuple([id]), (resourceId) =>
+    listFileRevisions(currentWorkspace(), resourceId),
+  );
+
+  handle(
+    CHANNELS.restoreFileRevision,
+    z.tuple([z.object({ resourceId: id, revisionId: z.string().max(200) })]),
+    async (input) => {
+      const workspace = currentWorkspace();
+      const resource = await restoreFileRevision(
+        workspace,
+        input.resourceId,
+        input.revisionId,
+      );
+      emitEvent({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      return resource;
     },
   );
 

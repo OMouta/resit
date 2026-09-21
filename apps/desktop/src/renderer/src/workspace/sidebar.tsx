@@ -2,6 +2,7 @@ import {
   FilePlusIcon,
   FolderPlusIcon,
   GraduationCapIcon,
+  HistoryIcon,
   MoreHorizontalIcon,
   PencilIcon,
   SettingsIcon,
@@ -47,6 +48,8 @@ export interface SidebarActions {
     folder?: string,
   ) => void;
   deleteResource: (resourceId: string) => void;
+  /** Kept copies of an imported file. Notes show theirs in the editor. */
+  showFileHistory: (resourceId: string) => void;
   openGraph: () => void;
   openSchedule: () => void;
   openPractice: () => void;
@@ -311,6 +314,13 @@ export function Sidebar({
               <DropdownMenuItem onSelect={() => actions.renameResource(row.id)}>
                 <PencilIcon /> Rename…
               </DropdownMenuItem>
+              {resources.get(row.id)?.kind === "note" ? null : (
+                <DropdownMenuItem
+                  onSelect={() => actions.showFileHistory(row.id)}
+                >
+                  <HistoryIcon /> Version history…
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 variant="destructive"
                 onSelect={() => actions.deleteResource(row.id)}
