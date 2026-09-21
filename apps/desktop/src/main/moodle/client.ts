@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { MoodleCourse } from "../../shared/moodle";
+import { t } from "../i18n";
 
 /** The external service the Moodle mobile app uses. */
 const SERVICE = "moodle_mobile_app";
@@ -40,17 +41,19 @@ export function redact(text: string): string {
  */
 export function normalizeSiteUrl(value: string): string {
   const trimmed = value.trim();
-  if (!trimmed) throw new MoodleError("Enter your Moodle address.");
+  if (!trimmed) throw new MoodleError(t("Enter your Moodle address."));
   let url: URL;
   try {
     url = new URL(
       /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`,
     );
   } catch {
-    throw new MoodleError(`${trimmed} is not a valid address.`);
+    throw new MoodleError(
+      t("{address} is not a valid address.", { address: trimmed }),
+    );
   }
   if (url.protocol !== "https:" && url.hostname !== "localhost")
-    throw new MoodleError("Moodle must be reached over https.");
+    throw new MoodleError(t("Moodle must be reached over https."));
   const path = url.pathname
     .replace(/\/(login|webservice|my|course)(\/.*)?$/i, "")
     .replace(/\/+$/, "");
@@ -71,14 +74,19 @@ function assertNotError(body: unknown, siteHost: string): void {
   const { exception, errorcode, error, message } = parsed.data;
   if (!exception && !error && !errorcode) return;
   const detail = redact(
-    message ?? error ?? errorcode ?? "Moodle refused the request.",
+    message ?? error ?? errorcode ?? t("Moodle refused the request."),
   );
   if (errorcode === "invalidtoken" || errorcode === "accessexception")
     throw new MoodleError(
-      `${siteHost} no longer accepts this connection. Connect again in settings.`,
+      t(
+        "{site} no longer accepts this connection. Connect again in settings.",
+        { site: siteHost },
+      ),
     );
   if (errorcode === "nopermissions" || errorcode === "requireloginerror")
-    throw new MoodleError(`Your account cannot see that in Moodle. ${detail}`);
+    throw new MoodleError(
+      `${t("Your account cannot see that in Moodle.")} ${detail}`,
+    );
   throw new MoodleError(detail);
 }
 
@@ -89,13 +97,16 @@ async function readJson(
   const text = await response.text();
   if (!response.ok)
     throw new MoodleError(
-      `${siteHost} answered ${response.status}. ${redact(text.slice(0, 200))}`.trim(),
+      `${t("{site} answered {status}.", { site: siteHost, status: response.status })} ${redact(text.slice(0, 200))}`.trim(),
     );
   try {
     return JSON.parse(text) as unknown;
   } catch {
     throw new MoodleError(
-      `${siteHost} did not answer with web-service data. Check the address, and that web services are enabled.`,
+      t(
+        "{site} did not answer with web-service data. Check the address, and that web services are enabled.",
+        { site: siteHost },
+      ),
     );
   }
 }
@@ -121,7 +132,7 @@ async function call<T>(
     });
   } catch (error) {
     throw new MoodleError(
-      `resit could not reach ${siteHost}. ${redact(error instanceof Error ? error.message : String(error))}`,
+      `${t("resit could not reach {site}.", { site: siteHost })} ${redact(error instanceof Error ? error.message : String(error))}`,
     );
   }
   const body = await readJson(response, siteHost);
@@ -129,7 +140,10 @@ async function call<T>(
   const parsed = schema.safeParse(body);
   if (!parsed.success)
     throw new MoodleError(
-      `${siteHost} answered ${wsfunction} in a shape resit does not understand.`,
+      t("{site} answered {function} in a shape resit does not understand.", {
+        site: siteHost,
+        function: wsfunction,
+      }),
     );
   return parsed.data;
 }
@@ -158,7 +172,7 @@ export async function requestToken(input: {
     });
   } catch (error) {
     throw new MoodleError(
-      `resit could not reach ${siteHost}. ${redact(error instanceof Error ? error.message : String(error))}`,
+      `${t("resit could not reach {site}.", { site: siteHost })} ${redact(error instanceof Error ? error.message : String(error))}`,
     );
   }
   const payload = await readJson(response, siteHost);
@@ -166,19 +180,24 @@ export async function requestToken(input: {
   if (failure.success && (failure.data.error || failure.data.errorcode)) {
     const code = failure.data.errorcode;
     if (code === "invalidlogin")
-      throw new MoodleError("That username or password was not accepted.");
+      throw new MoodleError(t("That username or password was not accepted."));
     if (code === "enablewsdescription")
       throw new MoodleError(
-        `${siteHost} has web services turned off, so resit cannot connect.`,
+        t("{site} has web services turned off, so resit cannot connect.", {
+          site: siteHost,
+        }),
       );
     throw new MoodleError(
-      redact(failure.data.error ?? code ?? "Moodle refused the sign-in."),
+      redact(failure.data.error ?? code ?? t("Moodle refused the sign-in.")),
     );
   }
   const parsed = tokenSchema.safeParse(payload);
   if (!parsed.success)
     throw new MoodleError(
-      `${siteHost} did not return a token. Its mobile web service may be turned off.`,
+      t(
+        "{site} did not return a token. Its mobile web service may be turned off.",
+        { site: siteHost },
+      ),
     );
   return parsed.data.token;
 }
@@ -214,7 +233,10 @@ export async function siteInfo(
     const missing = NEEDED.filter((name) => !available.has(name));
     if (missing.length > 0)
       throw new MoodleError(
-        `${new URL(session.siteUrl).host} does not let this account read course contents through its web service.`,
+        t(
+          "{site} does not let this account read course contents through its web service.",
+          { site: new URL(session.siteUrl).host },
+        ),
       );
   }
   return {
@@ -246,7 +268,10 @@ export async function userCourses(
   return courses.map((course) => ({
     id: course.id,
     shortname: course.shortname,
-    fullname: course.fullname || course.shortname || `Course ${course.id}`,
+    fullname:
+      course.fullname ||
+      course.shortname ||
+      t("Course {id}", { id: course.id }),
   }));
 }
 
@@ -358,10 +383,12 @@ export async function downloadFile(
   try {
     url = new URL(fileUrl);
   } catch {
-    throw new MoodleError("Moodle gave an address resit cannot read.");
+    throw new MoodleError(t("Moodle gave an address resit cannot read."));
   }
   if (url.origin !== site.origin)
-    throw new MoodleError(`That file is stored outside ${site.host}.`);
+    throw new MoodleError(
+      t("That file is stored outside {site}.", { site: site.host }),
+    );
   url.searchParams.set("token", session.token);
 
   let response: Response;
@@ -372,19 +399,24 @@ export async function downloadFile(
     });
   } catch (error) {
     throw new MoodleError(
-      `The download stopped. ${redact(error instanceof Error ? error.message : String(error))}`,
+      `${t("The download stopped.")} ${redact(error instanceof Error ? error.message : String(error))}`,
     );
   }
   if (!response.ok)
-    throw new MoodleError(`${site.host} answered ${response.status}.`);
+    throw new MoodleError(
+      t("{site} answered {status}.", {
+        site: site.host,
+        status: response.status,
+      }),
+    );
 
   const declared = Number(response.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > maxBytes)
-    throw new MoodleError("The file is larger than resit downloads.");
+    throw new MoodleError(t("The file is larger than resit downloads."));
 
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > maxBytes)
-    throw new MoodleError("The file is larger than resit downloads.");
+    throw new MoodleError(t("The file is larger than resit downloads."));
 
   // An expired token answers the file endpoint with a JSON error, not a file.
   if (response.headers.get("content-type")?.includes("application/json")) {

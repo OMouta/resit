@@ -34,6 +34,7 @@ import {
   type MoodleSection,
   type MoodleSession,
 } from "./client";
+import { t } from "../i18n";
 
 /** Held in memory while it is written, so a course video cannot fill it. */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -233,9 +234,11 @@ async function saveActivities(
 
 function subjectLink(workspace: OpenWorkspace, subjectId: string): MoodleLink {
   const subject = workspace.subjects.get(subjectId);
-  if (!subject) throw new WorkspaceError("That subject no longer exists.");
+  if (!subject) throw new WorkspaceError(t("That subject no longer exists."));
   if (!subject.info.moodle)
-    throw new WorkspaceError("That subject does not follow a Moodle course.");
+    throw new WorkspaceError(
+      t("That subject does not follow a Moodle course."),
+    );
   return subject.info.moodle;
 }
 

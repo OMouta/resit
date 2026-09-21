@@ -12,6 +12,7 @@ import {
   siteInfo,
   type MoodleSession,
 } from "./client";
+import { t } from "../i18n";
 
 /**
  * The Moodle account belongs to the computer, not to a workspace. The token is
@@ -68,7 +69,7 @@ export async function moodleConnection(): Promise<MoodleConnection> {
 export async function moodleSession(): Promise<MoodleSession> {
   const account = await load();
   if (!account)
-    throw new MoodleError("Connect your Moodle account in settings first.");
+    throw new MoodleError(t("Connect your Moodle account in settings first."));
   return {
     siteUrl: account.siteUrl,
     token: safeStorage.decryptString(Buffer.from(account.token, "base64")),
@@ -79,7 +80,7 @@ export async function moodleSession(): Promise<MoodleSession> {
 export async function moodleUserId(): Promise<number> {
   const account = await load();
   if (!account)
-    throw new MoodleError("Connect your Moodle account in settings first.");
+    throw new MoodleError(t("Connect your Moodle account in settings first."));
   return account.userId;
 }
 
@@ -90,7 +91,9 @@ export async function connectMoodle(input: {
 }): Promise<MoodleConnection> {
   if (!safeStorage.isEncryptionAvailable())
     throw new MoodleError(
-      "This computer has no secure store for the Moodle token, so resit will not save one.",
+      t(
+        "This computer has no secure store for the Moodle token, so resit will not save one.",
+      ),
     );
   const siteUrl = normalizeSiteUrl(input.siteUrl);
   const token = await requestToken({ ...input, siteUrl });

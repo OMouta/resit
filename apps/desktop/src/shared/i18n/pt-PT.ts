@@ -4,6 +4,7 @@
  */
 export const messages: Record<string, string> = {
   "“{name}” is already in your profile.": "“{name}” já está no seu perfil.",
+  "{address} is not a valid address.": "{address} não é um endereço válido.",
   "{count} activities resit does not download ({detail})":
     "{count} atividades que o resit não transfere ({detail})",
   "{count} activity resit does not download ({detail})":
@@ -75,6 +76,19 @@ export const messages: Record<string, string> = {
     "{right} de {count} resposta de questionário certa",
   "{right} of {count} quiz answers right":
     "{right} de {count} respostas de questionário certas",
+  "{site} answered {function} in a shape resit does not understand.":
+    "{site} respondeu a {function} num formato que o resit não entende.",
+  "{site} answered {status}.": "{site} respondeu {status}.",
+  "{site} did not answer with web-service data. Check the address, and that web services are enabled.":
+    "{site} não respondeu com dados de serviço web. Verifique o endereço e se os serviços web estão ativos.",
+  "{site} did not return a token. Its mobile web service may be turned off.":
+    "{site} não devolveu um token. O serviço web móvel pode estar desligado.",
+  "{site} does not let this account read course contents through its web service.":
+    "{site} não deixa esta conta ler o conteúdo das unidades curriculares através do serviço web.",
+  "{site} has web services turned off, so resit cannot connect.":
+    "{site} tem os serviços web desligados, por isso o resit não se consegue ligar.",
+  "{site} no longer accepts this connection. Connect again in settings.":
+    "{site} já não aceita esta ligação. Volte a ligar nas definições.",
   "{size} · added {time}. Search and AI cannot read this file type.":
     "{size} · adicionado {time}. A pesquisa e a IA não conseguem ler este tipo de ficheiro.",
   "{title} (suggested)": "{title} (sugerida)",
@@ -221,6 +235,8 @@ export const messages: Record<string, string> = {
   "Connect {provider} in Settings to ask questions":
     "Ligue o {provider} nas Definições para fazer perguntas",
   "Connect Moodle": "Ligar o Moodle",
+  "Connect your Moodle account in settings first.":
+    "Ligue primeiro a sua conta do Moodle nas definições.",
   "Connect your Moodle account to follow a course.":
     "Ligue a sua conta do Moodle para acompanhar uma unidade curricular.",
   "Connected ({count})": "Ligados ({count})",
@@ -232,6 +248,7 @@ export const messages: Record<string, string> = {
   "Conversations could not be loaded": "Não foi possível carregar as conversas",
   "Copy failed": "Não foi possível copiar",
   "Copying files": "A copiar ficheiros",
+  "Course {id}": "Unidade curricular {id}",
   "Course files": "Ficheiros da unidade curricular",
   "Create folder": "Criar pasta",
   "Create note": "Criar apontamento",
@@ -282,6 +299,7 @@ export const messages: Record<string, string> = {
   "Empty the trash?": "Esvaziar o lixo?",
   English: "Inglês",
   "English and Portuguese": "Inglês e português",
+  "Enter your Moodle address.": "Introduza o endereço do seu Moodle.",
   "Every answer is marked.": "Todas as respostas estão classificadas.",
   "Every file is in a chosen subject.":
     "Todos os ficheiros estão numa disciplina escolhida.",
@@ -440,8 +458,14 @@ export const messages: Record<string, string> = {
   "Moodle did not connect": "O Moodle não se ligou",
   "Moodle did not list it the last time resit checked.":
     "O Moodle não a mostrou da última vez que o resit verificou.",
+  "Moodle gave an address resit cannot read.":
+    "O Moodle deu um endereço que o resit não consegue ler.",
   "Moodle lists no courses for your account.":
     "O Moodle não mostra unidades curriculares para a sua conta.",
+  "Moodle must be reached over https.":
+    "O Moodle tem de ser acedido por https.",
+  "Moodle refused the request.": "O Moodle recusou o pedido.",
+  "Moodle refused the sign-in.": "O Moodle recusou o início de sessão.",
   "Moodle was not disconnected": "O Moodle não foi desligado",
   "Moodle…": "Moodle…",
   "More planning actions": "Mais ações de planeamento",
@@ -595,6 +619,7 @@ export const messages: Record<string, string> = {
   "Replace with": "Substituir por",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
+  "resit could not reach {site}.": "O resit não conseguiu chegar a {site}.",
   "resit could not start": "O resit não conseguiu arrancar",
   "resit is already reading the text of another PDF. Wait for it to finish, or stop it.":
     "O resit já está a ler o texto de outro PDF. Espere que acabe, ou pare-o.",
@@ -696,6 +721,8 @@ export const messages: Record<string, string> = {
   "That file ID is not one resit can use.":
     "Esse ID de ficheiro não pode ser usado pelo resit.",
   "That file is not a PDF.": "Esse ficheiro não é um PDF.",
+  "That file is stored outside {site}.":
+    "Esse ficheiro está guardado fora de {site}.",
   "That file no longer exists.": "Esse ficheiro já não existe.",
   "That folder name cannot be used.": "Esse nome de pasta não pode ser usado.",
   "That folder no longer exists.": "Essa pasta já não existe.",
@@ -719,11 +746,15 @@ export const messages: Record<string, string> = {
   "That review can no longer be undone.":
     "Essa revisão já não pode ser anulada.",
   "That session is no longer in the plan.": "Essa sessão já não está no plano.",
+  "That subject does not follow a Moodle course.":
+    "Essa disciplina não acompanha nenhuma unidade curricular do Moodle.",
   "That subject no longer exists.": "Essa disciplina já não existe.",
   "That suggestion is no longer waiting.":
     "Essa sugestão já não está à espera.",
   "That text is no longer kept.": "Esse texto já não está guardado.",
   "That topic is no longer here.": "Esse tema já não está aqui.",
+  "That username or password was not accepted.":
+    "Esse nome de utilizador ou palavra-passe não foi aceite.",
   "That version could not be read": "Não foi possível ler essa versão",
   "That version is no longer kept.": "Essa versão já não está guardada.",
   "That version was not restored": "Essa versão não foi restaurada",
@@ -768,8 +799,11 @@ export const messages: Record<string, string> = {
   "The derivative of $\\sin x$ is {{c1::$\\cos x$}}.":
     "A derivada de $\\sin x$ é {{c1::$\\cos x$}}.",
   "The download stopped": "A transferência parou",
+  "The download stopped.": "A transferência parou.",
   "The earlier copy is back": "A cópia anterior está de volta",
   "The earlier version is back": "A versão anterior está de volta",
+  "The file is larger than resit downloads.":
+    "O ficheiro é maior do que o que o resit transfere.",
   "The file is no longer in the workspace. Copy your text before closing this tab.":
     "O ficheiro já não está no espaço de trabalho. Copie o seu texto antes de fechar este separador.",
   "The file was not moved": "O ficheiro não foi movido",
@@ -876,6 +910,8 @@ export const messages: Record<string, string> = {
     "Esta atividade já não está na unidade curricular",
   "This attempt was already handed in.": "Esta tentativa já foi entregue.",
   "This cannot be undone.": "Não é possível anular esta ação.",
+  "This computer has no secure store for the Moodle token, so resit will not save one.":
+    "Este computador não tem um local seguro para guardar o token do Moodle, por isso o resit não o vai guardar.",
   "This course has no files resit can download.":
     "Esta unidade curricular não tem ficheiros que o resit possa transferir.",
   "This deletion has no record of where it came from.":
@@ -1017,6 +1053,8 @@ export const messages: Record<string, string> = {
   Wrong: "Errada",
   "You reviewed {count} card.": "Reviu {count} cartão.",
   "You reviewed {count} cards.": "Reviu {count} cartões.",
+  "Your account cannot see that in Moodle.":
+    "A sua conta não pode ver isso no Moodle.",
   "Your answers were not saved": "As suas respostas não foram guardadas",
   "Your mark": "A sua classificação",
   "Your practice in the last 30 days": "A sua prática nos últimos 30 dias",
