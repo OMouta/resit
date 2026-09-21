@@ -16,6 +16,7 @@ import {
   type Annotation,
   type ResourceInfo,
 } from "../../shared/workspace";
+import { listActivities } from "../moodle/sync";
 import {
   createAnnotation,
   deleteAnnotation,
@@ -170,6 +171,10 @@ export function describeToolCall(
       return `Searched for “${String(input.query ?? "")}”`;
     case "study_get_open_files":
       return "Checked what you have open";
+    case "study_list_activities":
+      return "Listed the Moodle activities";
+    case "study_read_activity":
+      return "Read a Moodle activity";
     case "study_create_note":
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
@@ -668,6 +673,75 @@ export function studyTools(
       },
     ),
     define(
+      "study_list_activities",
+      "List the Moodle activities of the subjects in scope, such as assignments, quizzes, and forums, with their dates. Dates are what Moodle said at checkedAt.",
+      {
+        subjectId: z
+          .string()
+          .optional()
+          .describe("Only list one subject's activities"),
+      },
+      async ({ subjectId }) => {
+        const subjects = (await listActivities(workspace)).filter(
+          (entry) =>
+            scope.subjectIds.includes(entry.subjectId) &&
+            (!subjectId || entry.subjectId === subjectId),
+        );
+        return ok({
+          subjects: subjects.map((entry) => ({
+            subjectId: entry.subjectId,
+            subject: subjectNames.get(entry.subjectId) ?? null,
+            checkedAt: entry.checkedAt,
+            activities: entry.activities.map((activity) => ({
+              activityId: String(activity.moduleId),
+              name: activity.name,
+              type: activity.modname,
+              section: activity.sectionName,
+              dates: activity.dates,
+              hasBrief: Boolean(activity.brief),
+            })),
+          })),
+        });
+      },
+    ),
+    define(
+      "study_read_activity",
+      "Read one Moodle activity: its brief or description as Markdown, its dates, and the files attached to it. Attached files already in the workspace come with a resourceId you can read.",
+      {
+        activityId: z
+          .string()
+          .describe("The activityId from study_list_activities"),
+      },
+      async ({ activityId }) => {
+        for (const entry of await listActivities(workspace)) {
+          const activity = entry.activities.find(
+            (candidate) => String(candidate.moduleId) === activityId,
+          );
+          if (!activity) continue;
+          if (!scope.subjectIds.includes(entry.subjectId))
+            return failure(
+              "OUT_OF_SCOPE",
+              "That activity's subject is not in this conversation. Ask the student to add it.",
+            );
+          const {
+            moduleId: _moduleId,
+            modname,
+            sectionName,
+            ...rest
+          } = activity;
+          return ok({
+            activityId,
+            type: modname,
+            section: sectionName,
+            subject: subjectNames.get(entry.subjectId) ?? null,
+            checkedAt: entry.checkedAt,
+            ...rest,
+          });
+        }
+        return failure("NOT_FOUND", `No activity has the ID ${activityId}.`);
+      },
+    ),
+    define(
       "study_create_note",
       "Create a note in one of the student's subjects and write Markdown into it. Use it for summaries, worked solutions, and study sheets they asked for.",
       {
@@ -944,6 +1018,8 @@ export const STUDY_TOOLS = [
   "study_read_file",
   "study_search",
   "study_get_open_files",
+  "study_list_activities",
+  "study_read_activity",
   "study_create_note",
   "study_edit_note",
   "study_highlight_pdf",

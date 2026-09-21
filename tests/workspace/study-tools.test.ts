@@ -13,10 +13,12 @@ import {
 } from "../../apps/desktop/src/main/workspace/annotations";
 import { listNoteRevisions } from "../../apps/desktop/src/main/workspace/history";
 import {
+  activitiesPath,
   createNote,
   createSubject,
   createWorkspace,
   importFile,
+  linkSubject,
   readNote,
   snapshot,
   type OpenWorkspace,
@@ -344,5 +346,61 @@ describe("study read tools", () => {
     );
     const files = open.data.openFiles as { id: string; readable: boolean }[];
     expect(files.map((file) => file.readable)).toEqual([true, false]);
+  });
+
+  it("reads Moodle activities of the subjects in scope only", async () => {
+    const siteUrl = "https://moodle.example.edu";
+    for (const [subjectId, courseId, moduleId] of [
+      [mathematicsId, 7, 301],
+      [physicsId, 8, 302],
+    ] as const) {
+      await linkSubject(workspace, {
+        subjectId,
+        link: { siteUrl, courseId, shortname: "C", fullname: "Course" },
+      });
+      await writeFile(
+        activitiesPath(workspace, subjectId),
+        JSON.stringify({
+          format: "resit-moodle-activities",
+          formatVersion: 1,
+          siteUrl,
+          courseId,
+          checkedAt: "2026-09-20T10:00:00.000Z",
+          activities: [
+            {
+              moduleId,
+              name: `Project ${moduleId}`,
+              modname: "assign",
+              sectionName: "Week 1",
+              url: `${siteUrl}/mod/assign/view.php?id=${moduleId}`,
+              dates: [
+                {
+                  type: "duedate",
+                  label: "Due",
+                  at: "2026-10-01T22:59:00.000Z",
+                },
+              ],
+              brief: "Write a report.",
+            },
+          ],
+        }),
+      );
+    }
+
+    const listed = await run("study_list_activities", {});
+    const subjects = listed.data.subjects as {
+      subjectId: string;
+      activities: { activityId: string; hasBrief: boolean }[];
+    }[];
+    expect(subjects.map((entry) => entry.subjectId)).toEqual([mathematicsId]);
+    expect(subjects[0]?.activities).toMatchObject([
+      { activityId: "301", hasBrief: true },
+    ]);
+
+    const read = await run("study_read_activity", { activityId: "301" });
+    expect(read.data.brief).toBe("Write a report.");
+
+    const refused = await run("study_read_activity", { activityId: "302" });
+    expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
   });
 });
