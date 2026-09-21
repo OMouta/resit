@@ -28,13 +28,25 @@ export function translate(
   locale: Locale,
   text: string,
   values?: MessageValues,
+  context?: string,
 ): string {
+  const key = context ? contextKey(context, text) : text;
+  // English, and text without a translation, show without the context.
+  const plain = key.slice(key.indexOf("\u0004") + 1);
   const template =
-    locale === "en" ? text : (catalogs[locale].get(text) ?? text);
+    locale === "en" ? plain : (catalogs[locale].get(key) ?? plain);
   if (!values) return template;
   return template.replace(/\{(\w+)\}/g, (whole, key: string) =>
     key in values ? String(values[key]) : whole,
   );
+}
+
+/**
+ * The catalog key for English that needs telling apart, such as "Correct"
+ * as a verb and as a verdict. The separator is the one gettext uses.
+ */
+export function contextKey(context: string, text: string): string {
+  return `${context}\u0004${text}`;
 }
 
 /**
@@ -43,4 +55,9 @@ export function translate(
  */
 export function msg(text: string): string {
   return text;
+}
+
+/** Like `msg`, for English that needs a context. `t` shows it as the text. */
+export function msgc(context: string, text: string): string {
+  return contextKey(context, text);
 }

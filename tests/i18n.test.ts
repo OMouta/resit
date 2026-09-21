@@ -14,11 +14,14 @@ const DESKTOP_SOURCES = [
   "apps/desktop/src/shared",
 ];
 
-/** `t("…")` or `msg("…")` with a plain string, in any quotes. */
+/** `t("…")`, `tx("…")`, or `msg("…")` with a plain string, in any quotes. */
 const CALL =
-  /(?<![\w$.])(?:t|msg)\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`((?:[^`\\$]|\\.|\$(?!\{))*)`)/g;
+  /(?<![\w$.])(?:t|tx|msg)\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`((?:[^`\\$]|\\.|\$(?!\{))*)`)/g;
 /** Text built with `${}` cannot be looked up; it needs `{name}` values. */
-const BUILT = /(?<![\w$.])(?:t|msg)\(\s*`[^`]*\$\{/g;
+const BUILT = /(?<![\w$.])(?:t|tx|tc|msg|msgc)\(\s*`[^`]*\$\{/g;
+/** `tc("context", "…")` or `msgc(…)`, keyed as gettext keys context. */
+const CONTEXT_CALL =
+  /(?<![\w$.])(?:tc|msgc)\(\s*"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"/g;
 
 async function files(directory: string): Promise<string[]> {
   const found: string[] = [];
@@ -51,6 +54,8 @@ async function texts(directories: string[]) {
       const source = await readFile(join(root, path), "utf8");
       for (const match of source.matchAll(CALL))
         found.set(unquote(match[1], match[2], match[3]), path);
+      for (const match of source.matchAll(CONTEXT_CALL))
+        found.set(`${unquote(match[1])}\u0004${unquote(match[2])}`, path);
       for (const match of source.matchAll(BUILT))
         built.push(`${path}: ${match[0]}`);
     }

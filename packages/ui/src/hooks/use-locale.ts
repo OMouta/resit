@@ -1,6 +1,7 @@
 import {
   createContext,
   createElement,
+  Fragment,
   useContext,
   useMemo,
   type ReactNode,
@@ -14,6 +15,10 @@ export interface LocaleFormatters {
   locale: Locale;
   /** English text in the current language. See `translate`. */
   t: (text: string, values?: MessageValues) => string;
+  /** Like `t`, with elements in the placeholders, such as a link or code. */
+  tx: (text: string, values: Record<string, ReactNode>) => ReactNode;
+  /** Like `t`, for English that means more than one thing, such as "Correct". */
+  tc: (context: string, text: string, values?: MessageValues) => string;
   date: (value: Date | string, options?: Intl.DateTimeFormatOptions) => string;
   time: (value: Date | string) => string;
   dateTime: (value: Date | string) => string;
@@ -51,6 +56,24 @@ export function createFormatters(locale: Locale): LocaleFormatters {
   return {
     locale,
     t: (text, values) => translate(locale, text, values),
+    tc: (context, text, values) => translate(locale, text, values, context),
+    tx: (text, values) => {
+      const template = translate(locale, text);
+      const parts: ReactNode[] = [];
+      let last = 0;
+      for (const match of template.matchAll(/\{(\w+)\}/g)) {
+        const key = match[1] ?? "";
+        parts.push(template.slice(last, match.index));
+        parts.push(
+          key in values
+            ? createElement(Fragment, { key: match.index }, values[key])
+            : match[0],
+        );
+        last = match.index + match[0].length;
+      }
+      parts.push(template.slice(last));
+      return createElement(Fragment, null, ...parts);
+    },
     date: (value, options) =>
       new Intl.DateTimeFormat(locale, {
         day: "numeric",
