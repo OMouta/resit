@@ -4,7 +4,14 @@ import {
   ExternalLinkIcon,
   RefreshCwIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { Button } from "@resit/ui/components/button";
 import { EmptyState } from "@resit/ui/components/empty-state";
@@ -48,17 +55,24 @@ function dayKey(value: Date): string {
   return `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
 }
 
+/** An activity is worth a page when there is something to read in it. */
+function hasPage(activity: Activity): boolean {
+  return Boolean(activity.brief || activity.attachments?.length);
+}
+
 /** Dates from Moodle across every followed subject, soonest first. */
 export function ScheduleView({
   snapshot,
   moodle,
   active,
+  onOpenActivity,
   onOpenSettings,
 }: {
   snapshot: WorkspaceSnapshot;
   moodle: MoodleConnection;
   /** The tab is on top, so a stale schedule is worth checking. */
   active: boolean;
+  onOpenActivity: (subjectId: string, activity: Activity) => void;
   onOpenSettings: () => void;
 }) {
   const { relative, time, weekday, date, number } = useLocale();
@@ -235,6 +249,12 @@ export function ScheduleView({
                       key={`${entry.activity.moduleId}:${entry.date.type}:${entry.date.at}`}
                       entry={entry}
                       time={time(entry.date.at)}
+                      onOpen={
+                        hasPage(entry.activity)
+                          ? () =>
+                              onOpenActivity(entry.subject.id, entry.activity)
+                          : undefined
+                      }
                       onOpenInMoodle={() => openInMoodle(entry.activity)}
                     />
                   ))}
@@ -300,6 +320,11 @@ export function ScheduleView({
                         <ActivityRow
                           key={activity.moduleId}
                           activity={activity}
+                          onOpen={
+                            hasPage(activity)
+                              ? () => onOpenActivity(subject.id, activity)
+                              : undefined
+                          }
                           onOpenInMoodle={() => openInMoodle(activity)}
                         />
                       ))}
@@ -315,13 +340,41 @@ export function ScheduleView({
   );
 }
 
+/** The row's main area opens the activity's page, when it has one. */
+function RowBody({
+  onOpen,
+  children,
+}: {
+  onOpen: (() => void) | undefined;
+  children: ReactNode;
+}) {
+  const className =
+    "flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2 text-left";
+  return onOpen ? (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        className,
+        "hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none",
+      )}
+    >
+      {children}
+    </button>
+  ) : (
+    <div className={className}>{children}</div>
+  );
+}
+
 function UpcomingRow({
   entry,
   time,
+  onOpen,
   onOpenInMoodle,
 }: {
   entry: Entry;
   time: string;
+  onOpen: (() => void) | undefined;
   onOpenInMoodle: () => void;
 }) {
   const { subject, activity, date } = entry;
@@ -329,7 +382,7 @@ function UpcomingRow({
   const deadline = isDeadline(date);
   return (
     <li className={cn("flex items-center gap-1", passed && "opacity-60")}>
-      <div className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2">
+      <RowBody onOpen={onOpen}>
         <span className="w-12 shrink-0 text-sm tabular-nums text-muted-foreground">
           {time}
         </span>
@@ -358,7 +411,7 @@ function UpcomingRow({
         >
           {dateLabel(date)}
         </span>
-      </div>
+      </RowBody>
       <ToolbarButton label="Open in Moodle" onClick={onOpenInMoodle}>
         <ExternalLinkIcon />
       </ToolbarButton>
@@ -368,9 +421,11 @@ function UpcomingRow({
 
 function ActivityRow({
   activity,
+  onOpen,
   onOpenInMoodle,
 }: {
   activity: Activity;
+  onOpen: (() => void) | undefined;
   onOpenInMoodle: () => void;
 }) {
   const { dateTime } = useLocale();
@@ -379,7 +434,7 @@ function ActivityRow({
   );
   return (
     <li className="flex items-center gap-1">
-      <div className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2">
+      <RowBody onOpen={onOpen}>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm" title={activity.name}>
             {activity.name}
@@ -394,7 +449,7 @@ function ActivityRow({
               .join(" · ")}
           </span>
         </span>
-      </div>
+      </RowBody>
       <ToolbarButton label="Open in Moodle" onClick={onOpenInMoodle}>
         <ExternalLinkIcon />
       </ToolbarButton>

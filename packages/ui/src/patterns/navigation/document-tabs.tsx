@@ -2,6 +2,7 @@ import {
   AlertTriangleIcon,
   CalendarIcon,
   ChevronDownIcon,
+  ClipboardListIcon,
   FileTextIcon,
   ImageIcon,
   PaperclipIcon,
@@ -48,7 +49,8 @@ export interface DocumentTabItem {
     | "project"
     | "study"
     | "graph"
-    | "schedule";
+    | "schedule"
+    | "activity";
   subject?: { name: string; color: SubjectColor };
   /** Show the subject beside the title (title collision or foreign subject). */
   showSubject?: boolean;
@@ -94,6 +96,7 @@ const icons = {
   study: FileTextIcon,
   graph: WaypointsIcon,
   schedule: CalendarIcon,
+  activity: ClipboardListIcon,
 };
 
 /**

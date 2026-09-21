@@ -19,13 +19,16 @@ import type {
   WorkspaceSnapshot,
 } from "../../../shared/workspace";
 import { NoteView } from "../editor/note-view";
+import { ActivityView } from "../views/activity-view";
 import { AttachmentView, ImageView } from "../views/file-views";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
 import { ScheduleView } from "../views/schedule-view";
 import type { DocumentTarget } from "../views/view-registry";
 import {
+  activityTabId,
   GRAPH_TAB_ID,
+  parseActivityTabId,
   SCHEDULE_TAB_ID,
   type LayoutAction,
   type Pane,
@@ -108,6 +111,18 @@ export function WorkspacePane({
       return { id: tab.id, title: "Graph", kind: "graph" };
     if (tab.resourceId === SCHEDULE_TAB_ID)
       return { id: tab.id, title: "Schedule", kind: "schedule" };
+    const activity = parseActivityTabId(tab.resourceId);
+    if (activity) {
+      const subject = subjects.get(activity.subjectId);
+      return {
+        id: tab.id,
+        title: tab.title,
+        kind: "activity",
+        ...(subject
+          ? { subject: { name: subject.name, color: subject.color } }
+          : {}),
+      };
+    }
     const resource = resources.get(tab.resourceId);
     const subject = resource ? subjects.get(resource.subjectId) : undefined;
     return {
@@ -135,7 +150,23 @@ export function WorkspacePane({
           snapshot={snapshot}
           moodle={moodle}
           active={active}
+          onOpenActivity={(subjectId, activity) =>
+            dispatch({
+              type: "open",
+              resourceId: activityTabId(subjectId, activity.moduleId),
+              title: activity.name,
+            })
+          }
           onOpenSettings={onOpenSettings}
+        />
+      );
+    const activity = parseActivityTabId(tab.resourceId);
+    if (activity)
+      return (
+        <ActivityView
+          subject={subjects.get(activity.subjectId)}
+          moduleId={activity.moduleId}
+          onOpenResource={openResource}
         />
       );
     if (resource)

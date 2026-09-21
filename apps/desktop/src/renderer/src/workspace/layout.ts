@@ -30,6 +30,20 @@ export type Layout = z.infer<typeof layoutSchema>;
 export const GRAPH_TAB_ID = "resit:graph";
 export const SCHEDULE_TAB_ID = "resit:schedule";
 
+/** A Moodle activity's page, by subject and Moodle module. */
+export function activityTabId(subjectId: string, moduleId: number): string {
+  return `resit:activity:${subjectId}:${moduleId}`;
+}
+
+export function parseActivityTabId(
+  tabResourceId: string,
+): { subjectId: string; moduleId: number } | null {
+  const match = /^resit:activity:([^:]+):(\d+)$/.exec(tabResourceId);
+  return match?.[1] && match[2]
+    ? { subjectId: match[1], moduleId: Number(match[2]) }
+    : null;
+}
+
 const newId = () => crypto.randomUUID();
 
 export function emptyLayout(expanded: string[] = []): Layout {
