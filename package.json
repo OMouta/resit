@@ -11,6 +11,7 @@
     "dev:ui": "pnpm --filter @resit/ui-viewer dev",
     "build:desktop": "pnpm --filter @resit/desktop build",
     "build:ui": "pnpm --filter @resit/ui-viewer build",
+    "package:desktop": "pnpm --filter @resit/desktop package",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r typecheck",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write package.json pnpm-workspace.yaml tsconfig*.json eslint.config.mjs vitest.config.ts README.md apps packages tests",

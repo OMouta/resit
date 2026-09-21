@@ -1,0 +1,23 @@
+appId: study.resit
+productName: resit
+copyright: Copyright © 2026 Tiago Mouta
+directories:
+  output: dist
+# Electron names the app, and its data folder, from package.json.
+extraMetadata:
+  productName: resit
+files:
+  - out/**
+  # resit runs the Claude Code the user installed, not the copy bundled with the SDK.
+  - "!**/node_modules/@anthropic-ai/claude-agent-sdk-*/**"
+  # PDF text extraction never draws, so PDF.js's optional canvas stays out.
+  - "!**/node_modules/@napi-rs/**"
+win:
+  target: nsis
+mac:
+  target: dmg
+  icon: build/icon-mac.png
+  category: public.app-category.education
+linux:
+  target: AppImage
+  category: Education
