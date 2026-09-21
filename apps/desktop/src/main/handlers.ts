@@ -135,6 +135,11 @@ import {
 } from "./text-recognition";
 import { recognitionState } from "./workspace/ocr";
 import { workspaceLinks } from "./workspace/links";
+import {
+  createProject,
+  deleteProject,
+  updateProject,
+} from "./workspace/projects";
 import { exportMarkdown } from "./workspace/markdown-export";
 import {
   exportPackage,
@@ -528,6 +533,36 @@ export function registerHandlers(
   handle(CHANNELS.deleteSubject, z.tuple([id]), async (subjectId) => {
     const workspace = currentWorkspace();
     await deleteSubject(workspace, subjectId);
+    return snapshot(workspace);
+  });
+
+  const projectContents = {
+    subjectIds: z.array(id).max(100),
+    resourceIds: z.array(id).max(2000),
+  };
+
+  handle(
+    CHANNELS.createProject,
+    z.tuple([z.object({ title, ...projectContents })]),
+    (input) => createProject(currentWorkspace(), input),
+  );
+
+  handle(
+    CHANNELS.updateProject,
+    z.tuple([
+      z.object({
+        id,
+        title: title.optional(),
+        subjectIds: projectContents.subjectIds.optional(),
+        resourceIds: projectContents.resourceIds.optional(),
+      }),
+    ]),
+    (input) => updateProject(currentWorkspace(), input),
+  );
+
+  handle(CHANNELS.deleteProject, z.tuple([id]), async (projectId) => {
+    const workspace = currentWorkspace();
+    await deleteProject(workspace, projectId);
     return snapshot(workspace);
   });
 

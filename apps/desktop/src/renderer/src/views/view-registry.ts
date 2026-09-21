@@ -131,3 +131,25 @@ export function onReviewRequest(
     reviewListeners.delete(listener);
   };
 }
+
+let pendingProjectChat: string | null = null;
+const projectChatListeners = new Set<(projectId: string) => void>();
+
+/** Starts a conversation about a project in the AI panel, once it shows. */
+export function requestProjectChat(projectId: string): void {
+  if (projectChatListeners.size === 0) pendingProjectChat = projectId;
+  for (const listener of projectChatListeners) listener(projectId);
+}
+
+export function onProjectChatRequest(
+  listener: (projectId: string) => void,
+): () => void {
+  projectChatListeners.add(listener);
+  if (pendingProjectChat) {
+    listener(pendingProjectChat);
+    pendingProjectChat = null;
+  }
+  return () => {
+    projectChatListeners.delete(listener);
+  };
+}

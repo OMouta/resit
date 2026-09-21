@@ -19,6 +19,7 @@ import { AppShell } from "@resit/ui/patterns/screens/app-shell";
 import type { MoodleConnection, MoodleCourse } from "../../../shared/moodle";
 import type { AppSettings } from "../../../shared/settings";
 import type {
+  ProjectInfo,
   RecentWorkspace,
   ResourceInfo,
   SubjectInfo,
@@ -38,6 +39,7 @@ import {
   flushAllViews,
   onAskRequest,
   onCardRequest,
+  requestProjectChat,
   showTarget,
   viewFor,
   type DocumentTarget,
@@ -52,8 +54,10 @@ import {
   activeTab,
   GRAPH_TAB_ID,
   layoutReducer,
+  parseProjectTabId,
   PRACTICE_TAB_ID,
   PROFILE_TAB_ID,
+  projectTabId,
   quizTabId,
   restoreLayout,
   SCHEDULE_TAB_ID,
@@ -61,6 +65,7 @@ import {
 } from "./layout";
 import { ExportDialog } from "./export-dialog";
 import { FileHistory } from "./file-history";
+import { ProjectDialog, type ProjectRequest } from "./project-dialog";
 import { MoodleDialog } from "./moodle-dialog";
 import { WorkspacePane } from "./pane";
 import { QuickOpen } from "./quick-open";
@@ -86,6 +91,7 @@ export interface WorkspaceViewProps {
     layout: Layout;
     resources: ReadonlyMap<string, ResourceInfo>;
     subjects: ReadonlyMap<string, SubjectInfo>;
+    projects: ReadonlyMap<string, ProjectInfo>;
     setConversation: (conversationId: string | null) => void;
   }) => ReactNode;
 }
@@ -122,6 +128,9 @@ export function WorkspaceView({
   const [trashOpen, setTrashOpen] = useState(false);
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(
+    null,
+  );
   const [moodleSubjectId, setMoodleSubjectId] = useState<string | null>(null);
   const [cardRequest, setCardRequest] = useState<CardRequest | null>(null);
   const [quizRequest, setQuizRequest] = useState<QuizEditorRequest | null>(
@@ -137,6 +146,10 @@ export function WorkspaceView({
   const subjects = useMemo(
     () => new Map(snapshot.subjects.map((subject) => [subject.id, subject])),
     [snapshot.subjects],
+  );
+  const projects = useMemo(
+    () => new Map(snapshot.projects.map((project) => [project.id, project])),
+    [snapshot.projects],
   );
   const subjectIds = useMemo(
     () => snapshot.subjects.map((subject) => subject.id),
@@ -183,6 +196,9 @@ export function WorkspaceView({
   useLiveContext(layout, resources);
 
   const focusedTab = activeTab(layout);
+  const focusedProjectId = focusedTab
+    ? (parseProjectTabId(focusedTab.resourceId) ?? undefined)
+    : undefined;
   const focusedResource = focusedTab
     ? resources.get(focusedTab.resourceId)
     : undefined;
@@ -402,8 +418,88 @@ export function WorkspaceView({
     [setSnapshot, notices],
   );
 
+  /** Saves a project's name and contents, new or changed. */
+  const editProject = (project?: ProjectInfo) =>
+    setProjectRequest({
+      title: project ? "Edit project" : "New project",
+      submitLabel: project ? "Save" : "Create project",
+      ...(project ? { project } : {}),
+      onSubmit: async (values) => {
+        try {
+          const saved = project
+            ? await api.updateProject({ id: project.id, ...values })
+            : await api.createProject(values);
+          setSnapshot((current) => ({
+            ...current,
+            projects: [
+              ...current.projects.filter((entry) => entry.id !== saved.id),
+              saved,
+            ].sort((a, b) => a.title.localeCompare(b.title)),
+          }));
+          dispatch({
+            type: "open",
+            resourceId: projectTabId(saved.id),
+            title: saved.title,
+          });
+          dispatch({
+            type: "rename-resource",
+            resourceId: projectTabId(saved.id),
+            title: saved.title,
+          });
+        } catch (error) {
+          notices.fail(
+            project
+              ? "The project was not changed"
+              : "The project was not created",
+            error,
+          );
+        }
+      },
+    });
+
+  const projectActions = {
+    ask: (projectId: string) => {
+      dispatch({ type: "set-ai-open", open: true });
+      requestProjectChat(projectId);
+    },
+    edit: (projectId: string) => editProject(projects.get(projectId)),
+    remove: (projectId: string) => {
+      const project = projects.get(projectId);
+      if (!project) return;
+      setConfirm({
+        title: `Delete “${project.title}”?`,
+        description:
+          "The project goes to the trash. Its subjects and files stay where they are.",
+        confirmLabel: "Delete project",
+        onConfirm: async () => {
+          try {
+            refresh(await api.deleteProject(projectId));
+            dispatch({
+              type: "close-resource",
+              resourceId: projectTabId(projectId),
+            });
+          } catch (error) {
+            notices.fail("The project was not deleted", error);
+          }
+        },
+      });
+    },
+    revealSubject: (subjectId: string) =>
+      dispatch({ type: "set-expanded", id: subjectId, expanded: true }),
+  };
+
   const actions = {
     openResource,
+    addProject: () => editProject(),
+    openProject: (projectId: string) => {
+      const project = projects.get(projectId);
+      if (project)
+        dispatch({
+          type: "open",
+          resourceId: projectTabId(projectId),
+          title: project.title,
+        });
+    },
     switchWorkspace: (path: string) => {
       void flushAllViews().then(() => onSwitchWorkspace(path));
     },
@@ -713,6 +809,7 @@ export function WorkspaceView({
     layout,
     resources,
     subjects,
+    projects,
     setConversation,
   });
 
@@ -735,6 +832,7 @@ export function WorkspaceView({
       onOpenResource={openResource}
       onEditCard={setCardRequest}
       onEditQuiz={setQuizRequest}
+      projectActions={projectActions}
     />
   ));
 
@@ -779,6 +877,7 @@ export function WorkspaceView({
               dispatch({ type: "set-expanded", id, expanded })
             }
             activeResourceId={focusedResource?.id}
+            activeProjectId={focusedProjectId}
             practiceDue={practiceDue}
             waitingSuggestions={waitingSuggestions}
             actions={actions}
@@ -916,6 +1015,12 @@ export function WorkspaceView({
         }}
       />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+      <ProjectDialog
+        request={projectRequest}
+        subjects={liveSubjects}
+        resources={snapshot.resources}
+        onClose={() => setProjectRequest(null)}
+      />
       <FileHistory
         resource={historyId ? (resources.get(historyId) ?? null) : null}
         onClose={() => setHistoryId(null)}

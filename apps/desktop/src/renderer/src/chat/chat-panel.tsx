@@ -1,6 +1,7 @@
 import {
   CheckIcon,
   FileTextIcon,
+  FolderKanbanIcon,
   HistoryIcon,
   PlusIcon,
   Trash2Icon,
@@ -64,17 +65,22 @@ import type {
   TurnContext,
 } from "../../../shared/conversations";
 import type { AppSettings, SettingsPatch } from "../../../shared/settings";
-import type { ResourceInfo, SubjectInfo } from "../../../shared/workspace";
+import type {
+  ProjectInfo,
+  ResourceInfo,
+  SubjectInfo,
+} from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import { insertIntoNote } from "../lib/citations";
 import { useNotices } from "../lib/notices";
 import {
   flushAllViews,
   onAskRequest,
+  onProjectChatRequest,
   viewFor,
   type AskRequest,
 } from "../views/view-registry";
-import { activeTab, type Layout } from "../workspace/layout";
+import { activeTab, parseProjectTabId, type Layout } from "../workspace/layout";
 import { ChatMarkdown } from "./markdown";
 
 interface Streaming {
@@ -88,6 +94,7 @@ export interface ChatPanelProps {
   layout: Layout;
   resources: ReadonlyMap<string, ResourceInfo>;
   subjects: ReadonlyMap<string, SubjectInfo>;
+  projects: ReadonlyMap<string, ProjectInfo>;
   providers: Record<ProviderId, ProviderState>;
   /** Checks a provider that has not been looked at yet. */
   onCheckProvider: (provider: ProviderId) => void;
@@ -190,11 +197,32 @@ function toTurn(message: ChatMessage): Turn {
   };
 }
 
-function inScope(scope: ConversationScope, resource: ResourceInfo): boolean {
+/** The subjects and files a scope reaches, its project's included. */
+function reach(
+  scope: ConversationScope,
+  projects: ReadonlyMap<string, ProjectInfo>,
+): { subjectIds: string[]; resourceIds: string[] } {
+  const project = scope.projectId ? projects.get(scope.projectId) : undefined;
+  return {
+    subjectIds: [...scope.subjectIds, ...(project?.subjectIds ?? [])],
+    resourceIds: [...scope.resourceIds, ...(project?.resourceIds ?? [])],
+  };
+}
+
+function inScope(
+  scope: { subjectIds: string[]; resourceIds: string[] },
+  resource: ResourceInfo,
+): boolean {
   return (
     scope.subjectIds.includes(resource.subjectId) ||
     scope.resourceIds.includes(resource.id)
   );
+}
+
+/** A scope with its project taken out. */
+function withoutProject(scope: ConversationScope): ConversationScope {
+  const { projectId: _project, ...rest } = scope;
+  return rest;
 }
 
 /** The AI panel for the open workspace: conversations with a provider. */
@@ -202,6 +230,7 @@ export function ChatPanel({
   layout,
   resources,
   subjects,
+  projects,
   providers,
   onCheckProvider,
   settings,
@@ -254,12 +283,16 @@ export function ChatPanel({
 
   const tab = activeTab(layout);
   const focused = tab ? resources.get(tab.resourceId) : undefined;
+  const focusedProjectId = tab ? parseProjectTabId(tab.resourceId) : null;
   const defaultScope = useCallback((): ConversationScope => {
+    // A project's page starts a conversation about the project.
+    if (focusedProjectId)
+      return { subjectIds: [], resourceIds: [], projectId: focusedProjectId };
     const subjectId =
       focused?.subjectId ??
       [...subjects.values()].find((subject) => !subject.archived)?.id;
     return { subjectIds: subjectId ? [subjectId] : [], resourceIds: [] };
-  }, [focused, subjects]);
+  }, [focused, focusedProjectId, subjects]);
 
   const open = useCallback(
     async (id: string) => {
@@ -429,6 +462,19 @@ export function ChatPanel({
     [notices, remember, setConversation, settings.provider],
   );
 
+  // "Ask about this project" starts a conversation with the project's scope.
+  useEffect(
+    () =>
+      onProjectChatRequest((projectId) => {
+        void createConversation({
+          subjectIds: [],
+          resourceIds: [],
+          projectId,
+        });
+      }),
+    [createConversation],
+  );
+
   const updateScope = useCallback(
     async (scope: ConversationScope) => {
       if (!current) return;
@@ -482,7 +528,12 @@ export function ChatPanel({
   };
 
   const scope = current?.meta.scope ?? defaultScope();
+  const reached = reach(scope, projects);
+  const project = scope.projectId ? projects.get(scope.projectId) : undefined;
   const scopeItems: ScopeItem[] = [
+    ...(project
+      ? [{ kind: "project" as const, id: project.id, label: project.title }]
+      : []),
     ...scope.subjectIds.flatMap((id): ScopeItem[] => {
       const subject = subjects.get(id);
       return subject
@@ -540,7 +591,7 @@ export function ChatPanel({
   const mismatch =
     current &&
     focused &&
-    !inScope(current.meta.scope, focused) &&
+    !inScope(reach(current.meta.scope, projects), focused) &&
     dismissed !== `${current.meta.id}:${focused.id}`
       ? focused
       : null;
@@ -554,16 +605,14 @@ export function ChatPanel({
   };
 
   const unscopedSubjects = [...subjects.values()].filter(
-    (subject) => !subject.archived && !scope.subjectIds.includes(subject.id),
+    (subject) => !subject.archived && !reached.subjectIds.includes(subject.id),
   );
   // Files already covered by a subject in scope do not need adding.
   const unscopedResources = [...resources.values()]
-    .filter(
-      (resource) =>
-        !scope.subjectIds.includes(resource.subjectId) &&
-        !scope.resourceIds.includes(resource.id),
-    )
+    .filter((resource) => !inScope(reached, resource))
     .slice(0, 100);
+  // A conversation follows one project at most.
+  const otherProjects = project ? [] : [...projects.values()];
 
   /**
    * A conversation stays with the provider that started it: its saved
@@ -614,7 +663,8 @@ export function ChatPanel({
       scope={{
         items: scopeItems,
         onRemove: (item) => {
-          if (item.kind === "subject")
+          if (item.kind === "project") void updateScope(withoutProject(scope));
+          else if (item.kind === "subject")
             void updateScope({
               ...scope,
               subjectIds: scope.subjectIds.filter((id) => id !== item.id),
@@ -647,6 +697,23 @@ export function ChatPanel({
                 <CommandInput placeholder="Add a subject or file…" />
                 <CommandList>
                   <CommandEmpty>Nothing left to add.</CommandEmpty>
+                  {otherProjects.length > 0 ? (
+                    <CommandGroup heading="Projects">
+                      {otherProjects.map((entry) => (
+                        <CommandItem
+                          key={entry.id}
+                          value={`project ${entry.title}`}
+                          onSelect={() => {
+                            setScopeOpen(false);
+                            void updateScope({ ...scope, projectId: entry.id });
+                          }}
+                        >
+                          <FolderKanbanIcon className="text-subtle-foreground" />
+                          <span className="truncate">{entry.title}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : null}
                   {unscopedSubjects.length > 0 ? (
                     <CommandGroup heading="Subjects">
                       {unscopedSubjects.map((subject) => (

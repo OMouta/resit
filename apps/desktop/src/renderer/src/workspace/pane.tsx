@@ -27,6 +27,7 @@ import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
 import { PracticeView } from "../views/practice-view";
 import { ProfileView } from "../views/profile-view";
+import { ProjectView } from "../views/project-view";
 import { QuizView } from "../views/quiz-view";
 import { ScheduleView } from "../views/schedule-view";
 import { requestReview, type DocumentTarget } from "../views/view-registry";
@@ -36,6 +37,7 @@ import {
   parseActivityTabId,
   parseQuizTabId,
   PRACTICE_TAB_ID,
+  parseProjectTabId,
   PROFILE_TAB_ID,
   quizTabId,
   SCHEDULE_TAB_ID,
@@ -62,6 +64,13 @@ export interface PaneProps {
   onOpenResource: (resourceId: string, page?: number) => void;
   onEditCard: (request: CardRequest) => void;
   onEditQuiz: (request: QuizEditorRequest) => void;
+  /** What a project's tab can do. */
+  projectActions: {
+    ask: (projectId: string) => void;
+    edit: (projectId: string) => void;
+    remove: (projectId: string) => void;
+    revealSubject: (subjectId: string) => void;
+  };
 }
 
 function ResourceView({
@@ -116,6 +125,7 @@ export function WorkspacePane({
   onOpenResource,
   onEditCard,
   onEditQuiz,
+  projectActions,
 }: PaneProps) {
   const openResource = (resourceId: string) => {
     const target = resources.get(resourceId);
@@ -131,6 +141,15 @@ export function WorkspacePane({
       return { id: tab.id, title: "Practice", kind: "practice" };
     if (tab.resourceId === PROFILE_TAB_ID)
       return { id: tab.id, title: "Learner profile", kind: "profile" };
+    const projectId = parseProjectTabId(tab.resourceId);
+    if (projectId)
+      return {
+        id: tab.id,
+        title:
+          snapshot.projects.find((project) => project.id === projectId)
+            ?.title ?? tab.title,
+        kind: "project",
+      };
     const quiz = parseQuizTabId(tab.resourceId);
     if (quiz) {
       const subject = subjects.get(quiz.subjectId);
@@ -227,6 +246,21 @@ export function WorkspacePane({
       );
     if (tab.resourceId === PROFILE_TAB_ID)
       return <ProfileView snapshot={snapshot} />;
+    const projectId = parseProjectTabId(tab.resourceId);
+    if (projectId)
+      return (
+        <ProjectView
+          project={snapshot.projects.find(
+            (project) => project.id === projectId,
+          )}
+          snapshot={snapshot}
+          onOpenResource={openResource}
+          onRevealSubject={projectActions.revealSubject}
+          onAsk={() => projectActions.ask(projectId)}
+          onEdit={() => projectActions.edit(projectId)}
+          onDelete={() => projectActions.remove(projectId)}
+        />
+      );
     const quiz = parseQuizTabId(tab.resourceId);
     if (quiz)
       return (

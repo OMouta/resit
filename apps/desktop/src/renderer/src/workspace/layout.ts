@@ -46,6 +46,15 @@ export function parseQuizTabId(
     : null;
 }
 
+/** A project's page, listing what it holds. */
+export function projectTabId(projectId: string): string {
+  return `resit:project:${projectId}`;
+}
+
+export function parseProjectTabId(tabResourceId: string): string | null {
+  return /^resit:project:([^:]+)$/.exec(tabResourceId)?.[1] ?? null;
+}
+
 /** A Moodle activity's page, by subject and Moodle module. */
 export function activityTabId(subjectId: string, moduleId: number): string {
   return `resit:activity:${subjectId}:${moduleId}`;

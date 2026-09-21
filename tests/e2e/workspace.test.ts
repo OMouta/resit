@@ -577,6 +577,37 @@ describe("desktop workspace", () => {
     ]);
   });
 
+  it("gathers subjects and files into a project and asks about it", async () => {
+    await page.getByRole("button", { name: "Add project" }).click();
+    const dialog = page.getByRole("dialog", { name: "New project" });
+    await dialog.getByLabel("Name").fill("Exam preparation");
+    await dialog
+      .getByRole("checkbox", { name: "Análise Matemática", exact: true })
+      .click();
+    await dialog.getByRole("button", { name: "Create project" }).click();
+    const main = page.locator("main");
+    await main.getByRole("heading", { name: "Exam preparation" }).waitFor();
+    await main.getByRole("region", { name: "Subjects" }).waitFor();
+    const [file] = await readdir(join(folder, "projects"));
+    expect(
+      JSON.parse(await readFile(join(folder, "projects", file!), "utf8")),
+    ).toMatchObject({
+      title: "Exam preparation",
+      subjectIds: [expect.any(String)],
+    });
+
+    await main.getByRole("button", { name: "Ask about this project" }).click();
+    await expect
+      .poll(async () =>
+        (await page.evaluate(() => window.resit.listConversations())).map(
+          (conversation) => conversation.scope.projectId,
+        ),
+      )
+      .toContain(
+        JSON.parse(await readFile(join(folder, "projects", file!), "utf8")).id,
+      );
+  });
+
   // Last, because it leaves the window on the copy it opens.
   it("exports the workspace and opens the archive as a copy", async () => {
     const archive = join(directory, "Studies.resit");

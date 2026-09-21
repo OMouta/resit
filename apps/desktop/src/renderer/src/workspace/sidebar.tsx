@@ -24,12 +24,17 @@ import type {
   TreeRow,
   TreeSubject,
 } from "@resit/ui/patterns/navigation/subject-tree";
-import { WorkspaceSidebar } from "@resit/ui/patterns/navigation/workspace-sidebar";
+import {
+  WorkspaceSidebar,
+  type SidebarProject,
+} from "@resit/ui/patterns/navigation/workspace-sidebar";
 
 import type { FolderInfo, WorkspaceSnapshot } from "../../../shared/workspace";
 
 export interface SidebarActions {
   openResource: (resourceId: string) => void;
+  addProject: () => void;
+  openProject: (projectId: string) => void;
   addSubject: () => void;
   editSubject: (subjectId: string) => void;
   deleteSubject: (subjectId: string) => void;
@@ -116,6 +121,7 @@ export function Sidebar({
   expanded,
   onExpandedChange,
   activeResourceId,
+  activeProjectId,
   practiceDue,
   waitingSuggestions,
   actions,
@@ -124,6 +130,7 @@ export function Sidebar({
   expanded: readonly string[];
   onExpandedChange: (id: string, expanded: boolean) => void;
   activeResourceId: string | undefined;
+  activeProjectId: string | undefined;
   /** Cards to review now, shown beside Practice. */
   practiceDue: number;
   /** The assistant's profile suggestions, shown beside Learner profile. */
@@ -132,6 +139,7 @@ export function Sidebar({
 }) {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [subjectsOpen, setSubjectsOpen] = useState(true);
+  const [projectsOpen, setProjectsOpen] = useState(true);
 
   const subjects = useMemo<TreeSubject[]>(() => {
     const fromMoodle = moodleFolders(snapshot.folders);
@@ -157,6 +165,24 @@ export function Sidebar({
           title: resource.title,
           ...(resource.folder ? { folder: resource.folder } : {}),
         })),
+    }));
+  }, [snapshot]);
+  const projects = useMemo<SidebarProject[]>(() => {
+    const colours = new Map(
+      snapshot.subjects.map((subject) => [subject.id, subject]),
+    );
+    return snapshot.projects.map((project) => ({
+      id: project.id,
+      name: project.title,
+      subjects: project.subjectIds.flatMap((id) => {
+        const subject = colours.get(id);
+        return subject ? [{ name: subject.name, color: subject.color }] : [];
+      }),
+      resourceCount: snapshot.resources.filter(
+        (resource) =>
+          project.subjectIds.includes(resource.subjectId) ||
+          project.resourceIds.includes(resource.id),
+      ).length,
     }));
   }, [snapshot]);
   const expandedIds = useMemo(() => new Set(expanded), [expanded]);
@@ -347,7 +373,10 @@ export function Sidebar({
           );
         },
       }}
-      onOpenProject={() => undefined}
+      projects={projects}
+      activeProjectId={activeProjectId}
+      onOpenProject={actions.openProject}
+      onAddProject={actions.addProject}
       onNavigate={(destination) => {
         if (destination === "graph") actions.openGraph();
         if (destination === "study") actions.openPractice();
@@ -360,9 +389,10 @@ export function Sidebar({
         ...(waitingSuggestions > 0 ? { profile: waitingSuggestions } : {}),
       }}
       onAddSubject={actions.addSubject}
-      sections={{ subjects: subjectsOpen, projects: false }}
+      sections={{ subjects: subjectsOpen, projects: projectsOpen }}
       onSectionToggle={(section, open) => {
         if (section === "subjects") setSubjectsOpen(open);
+        else setProjectsOpen(open);
       }}
       footer={
         <div className="flex flex-col">

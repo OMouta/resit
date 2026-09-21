@@ -58,6 +58,7 @@ import type {
   NoteRevision,
   NoteRevisionContent,
   PackageOptions,
+  ProjectInfo,
   PackageSummary,
   RecentWorkspace,
   ResourceInfo,
@@ -239,6 +240,20 @@ export interface DesktopApi {
     sortOrder?: number;
   }): Promise<WorkspaceSnapshot>;
   deleteSubject(id: string): Promise<WorkspaceSnapshot>;
+
+  createProject(input: {
+    title: string;
+    subjectIds: string[];
+    resourceIds: string[];
+  }): Promise<ProjectInfo>;
+  updateProject(input: {
+    id: string;
+    title?: string;
+    subjectIds?: string[];
+    resourceIds?: string[];
+  }): Promise<ProjectInfo>;
+  /** Moves the project to the trash. Its subjects and files stay. */
+  deleteProject(id: string): Promise<WorkspaceSnapshot>;
 
   /** Makes a folder inside a subject, or inside one of its folders. */
   createFolder(input: {
@@ -515,6 +530,9 @@ export const CHANNELS = {
   createSubject: "resit:subject-create",
   updateSubject: "resit:subject-update",
   deleteSubject: "resit:subject-delete",
+  createProject: "resit:project-create",
+  updateProject: "resit:project-update",
+  deleteProject: "resit:project-delete",
   createFolder: "resit:folder-create",
   updateFolder: "resit:folder-update",
   deleteFolder: "resit:folder-delete",
