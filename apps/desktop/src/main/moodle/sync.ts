@@ -16,8 +16,10 @@ import {
   type OpenWorkspace,
 } from "../workspace/workspace";
 import {
+  courseAssignments,
   courseContents,
   downloadFile,
+  type MoodleAssignment,
   type MoodleSection,
   type MoodleSession,
 } from "./client";
@@ -26,8 +28,34 @@ import {
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const CONCURRENCY = 3;
 
-/** Moodle activities whose files resit stores. Others are listed as skipped. */
-const FILE_MODULES = new Set(["resource", "folder"]);
+/**
+ * Moodle activities whose files resit stores: an assignment's are the ones
+ * attached to its brief. Others with files are listed as skipped.
+ */
+const FILE_MODULES = new Set(["resource", "folder", "assign"]);
+
+/** A course as Moodle describes it, with its assignments keyed by module. */
+interface CourseRead {
+  sections: MoodleSection[];
+  assignments: ReadonlyMap<number, MoodleAssignment>;
+}
+
+async function readCourse(
+  session: MoodleSession,
+  link: MoodleLink,
+): Promise<CourseRead> {
+  const sections = await courseContents(session, link.courseId);
+  const hasAssignments = sections.some((section) =>
+    section.modules.some((module) => module.modname === "assign"),
+  );
+  const assignments = hasAssignments
+    ? await courseAssignments(session, link.courseId)
+    : [];
+  return {
+    sections,
+    assignments: new Map(assignments.map((entry) => [entry.cmid, entry])),
+  };
+}
 
 /** Section 0 holds the course's loose material and gets no folder. */
 function sectionFolder(section: MoodleSection): string {
@@ -57,6 +85,7 @@ export function planCourse(
   sections: MoodleSection[],
   link: MoodleLink,
   existing: Map<string, { resourceId: string; ref: MoodleFileRef }>,
+  assignments: ReadonlyMap<number, MoodleAssignment> = new Map(),
 ): MoodleCourseContents {
   const items: MoodleItem[] = [];
   const skipped = new Map<MoodleSkipped["reason"], MoodleSkipped>();
@@ -66,9 +95,11 @@ export function planCourse(
     const sectionName = section.name.trim();
     for (const module of section.modules) {
       if (module.uservisible === false) continue;
-      const files = (module.contents ?? []).filter(
-        (content) => content.type === "file",
-      );
+      const files = (
+        module.modname === "assign"
+          ? (assignments.get(module.id)?.introattachments ?? [])
+          : (module.contents ?? [])
+      ).filter((content) => content.type === "file");
       if (files.length === 0) continue;
       if (!FILE_MODULES.has(module.modname)) {
         count(skipped, "unsupported", module.modname);
@@ -146,11 +177,12 @@ export async function listItems(
   subjectId: string,
 ): Promise<MoodleCourseContents> {
   const link = subjectLink(workspace, subjectId);
-  const sections = await courseContents(session, link.courseId);
+  const course = await readCourse(session, link);
   return planCourse(
-    sections,
+    course.sections,
     link,
     await downloaded(workspace, subjectId, link),
+    course.assignments,
   );
 }
 

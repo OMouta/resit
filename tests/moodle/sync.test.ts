@@ -321,6 +321,141 @@ describe("downloading", () => {
   });
 });
 
+/** A file, a label, and three activities: a forum, an assignment, a quiz. */
+function activityCourse() {
+  const view = (type: string, id: number) =>
+    `${SITE}/mod/${type}/view.php?id=${id}`;
+  return [
+    {
+      id: 1,
+      name: "General",
+      section: 0,
+      modules: [
+        {
+          id: 200,
+          name: "Course outline",
+          modname: "resource",
+          url: view("resource", 200),
+          contents: [file("outline.pdf")],
+        },
+        { id: 201, name: "Welcome", modname: "label" },
+        {
+          id: 202,
+          name: "Announcements",
+          modname: "forum",
+          url: view("forum", 202),
+        },
+      ],
+    },
+    {
+      id: 2,
+      name: "Week 2",
+      section: 1,
+      modules: [
+        {
+          id: 203,
+          name: "Project 1",
+          modname: "assign",
+          url: view("assign", 203),
+          dates: [
+            {
+              label: "Aberto:",
+              timestamp: 1790000000,
+              dataid: "allowsubmissionsfromdate",
+            },
+            { label: "Data limite:", timestamp: 1791000000, dataid: "duedate" },
+          ],
+        },
+        {
+          id: 204,
+          name: "Quiz 1",
+          modname: "quiz",
+          url: view("quiz", 204),
+          description: "<p>Covers <b>limits</b>.</p>",
+          dates: [
+            { label: "Fecha:", timestamp: 1792000000, dataid: "timeclose" },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
+const assignments = {
+  courses: [
+    {
+      id: 7,
+      assignments: [
+        {
+          id: 1,
+          cmid: 203,
+          name: "Project 1",
+          intro:
+            "<p>Build a <strong>limit</strong> calculator.</p><ul><li>Report</li><li>Code</li></ul>",
+          introattachments: [
+            {
+              filename: "brief.pdf",
+              filepath: "/",
+              filesize: 10,
+              fileurl: `${SITE}/webservice/pluginfile.php/9/mod_assign/introattachment/0/brief.pdf`,
+              timemodified: 1700000000,
+              mimetype: "application/pdf",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  warnings: [],
+};
+
+/** Answers each web-service function, and one course ID with an error. */
+function serveActivities(failCourse?: number): void {
+  const json = (body: unknown) =>
+    Promise.resolve(
+      new Response(JSON.stringify(body), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  useNetworkFetch((url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/server.php")) {
+      const course = Number(
+        parsed.searchParams.get("courseid") ??
+          parsed.searchParams.get("courseids[0]"),
+      );
+      if (course === failCourse)
+        return json({ exception: "x", errorcode: "nopermissions" });
+      return json(
+        parsed.searchParams.get("wsfunction") === "mod_assign_get_assignments"
+          ? assignments
+          : activityCourse(),
+      );
+    }
+    const name = parsed.pathname.split("/").at(-1) ?? "";
+    downloads.push(name);
+    return Promise.resolve(
+      new Response(new Uint8Array(Buffer.from(name)), {
+        headers: { "content-type": "application/pdf" },
+      }),
+    );
+  });
+}
+
+describe("activities", () => {
+  beforeEach(() => serveActivities());
+
+  it("offers the files attached to an assignment brief", async () => {
+    const plan = await listItems(workspace, session, subjectId);
+    expect(
+      plan.items.map((item) => [item.key, item.name, item.section]),
+    ).toEqual([
+      ["200:/outline.pdf", "Course outline", ""],
+      ["203:/brief.pdf", "Project 1", "week-2"],
+    ]);
+  });
+});
+
 describe("naming a subject after a course", () => {
   const named = (fullname: string, shortname = "X") =>
     subjectNameFromCourse({ id: 1, shortname, fullname });

@@ -288,6 +288,48 @@ export function courseContents(
   );
 }
 
+const assignmentsSchema = z.looseObject({
+  courses: z
+    .array(
+      z.looseObject({
+        assignments: z
+          .array(
+            z.looseObject({
+              cmid: z.number().int(),
+              /** HTML. Left out until Moodle shows the brief to students. */
+              intro: z.string().optional(),
+              /** Extra instructions, sent while submissions are open. */
+              activity: z.string().optional(),
+              introattachments: z.array(moodleContentSchema).catch([]),
+            }),
+          )
+          .catch([]),
+      }),
+    )
+    .catch([]),
+});
+
+export type MoodleAssignment = z.infer<
+  typeof assignmentsSchema
+>["courses"][number]["assignments"][number];
+
+/**
+ * Assignment briefs and their attachments. `core_course_get_contents` sends
+ * neither: assignments have no files there.
+ */
+export async function courseAssignments(
+  session: MoodleSession,
+  courseId: number,
+): Promise<MoodleAssignment[]> {
+  const result = await call(
+    session,
+    "mod_assign_get_assignments",
+    assignmentsSchema,
+    { "courseids[0]": courseId },
+  );
+  return result.courses.flatMap((course) => course.assignments);
+}
+
 /**
  * Downloads one course file. Only the configured site is fetched, so a course
  * cannot point resit at another host with the token attached.
