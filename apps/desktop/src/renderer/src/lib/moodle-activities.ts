@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+import type { LocaleFormatters } from "@resit/ui/hooks/use-locale";
+import { msg } from "@resit/ui/lib/i18n";
+
 import type {
   MoodleActivityDate,
   SubjectActivities,
@@ -44,19 +47,20 @@ export function useMoodleActivities(): SubjectActivities[] | null {
  * moment resit checked ("Opened", "Opens"), so the common dates get ours.
  */
 const DATE_LABELS: Record<string, string> = {
-  duedate: "Due",
-  cutoffdate: "Closes",
-  timeclose: "Closes",
-  timeopen: "Opens",
-  allowsubmissionsfromdate: "Opens",
-  timeavailablefrom: "Opens",
-  timeavailableto: "Closes",
-  submissionstart: "Opens",
-  submissionend: "Due",
+  duedate: msg("Due"),
+  cutoffdate: msg("Closes"),
+  timeclose: msg("Closes"),
+  timeopen: msg("Opens"),
+  allowsubmissionsfromdate: msg("Opens"),
+  timeavailablefrom: msg("Opens"),
+  timeavailableto: msg("Closes"),
+  submissionstart: msg("Opens"),
+  submissionend: msg("Due"),
 };
 
+/** English for `t`, or Moodle's own label, which `t` leaves alone. */
 export function dateLabel(date: MoodleActivityDate): string {
-  return DATE_LABELS[date.type] ?? (date.label || "Date");
+  return DATE_LABELS[date.type] ?? (date.label || msg("Date"));
 }
 
 /** A due date or a closing time: what a student must beat. */
@@ -66,25 +70,26 @@ export function isDeadline(date: MoodleActivityDate): boolean {
 }
 
 const TYPE_NAMES: Record<string, string> = {
-  assign: "Assignment",
-  quiz: "Quiz",
-  forum: "Forum",
-  url: "Link",
-  page: "Page",
-  book: "Book",
-  choice: "Choice",
-  feedback: "Feedback",
-  lesson: "Lesson",
-  workshop: "Workshop",
-  glossary: "Glossary",
-  wiki: "Wiki",
-  data: "Database",
-  scorm: "SCORM package",
+  assign: msg("Assignment"),
+  quiz: msg("Quiz"),
+  forum: msg("Forum"),
+  url: msg("Link"),
+  page: msg("Page"),
+  book: msg("Book"),
+  choice: msg("Choice"),
+  feedback: msg("Feedback"),
+  lesson: msg("Lesson"),
+  workshop: msg("Workshop"),
+  glossary: msg("Glossary"),
+  wiki: msg("Wiki"),
+  data: msg("Database"),
+  scorm: msg("SCORM package"),
   h5pactivity: "H5P",
-  lti: "External tool",
-  bigbluebuttonbn: "Video meeting",
+  lti: msg("External tool"),
+  bigbluebuttonbn: msg("Video meeting"),
 };
 
+/** English for `t`, or Moodle's module name. */
 export function activityType(modname: string): string {
   return TYPE_NAMES[modname] ?? modname;
 }
@@ -92,10 +97,10 @@ export function activityType(modname: string): string {
 /** "Checked 3 hours ago", without the "Checked now" Intl would give. */
 export function checkedLabel(
   at: string | number,
-  relative: (value: Date) => string,
+  { t, relative }: Pick<LocaleFormatters, "t" | "relative">,
 ): string {
   const time = new Date(at);
   return Date.now() - time.getTime() < 60_000
-    ? "Checked just now"
-    : `Checked ${relative(time)}`;
+    ? t("Checked just now")
+    : t("Checked {time}", { time: relative(time) });
 }

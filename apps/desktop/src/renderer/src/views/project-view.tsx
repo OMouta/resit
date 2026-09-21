@@ -13,6 +13,7 @@ import { EmptyState } from "@resit/ui/components/empty-state";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type {
   ProjectInfo,
@@ -53,13 +54,14 @@ export function ProjectView({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLocale();
   if (!project)
     return (
       <EmptyState
         className="h-full"
         icon={<FolderKanbanIcon />}
-        title="This project is no longer in the workspace"
-        description="It was moved to the trash or deleted outside resit."
+        title={t("This project is no longer in the workspace")}
+        description={t("It was moved to the trash or deleted outside resit.")}
       />
     );
   const subjects = snapshot.subjects.filter((subject) =>
@@ -84,20 +86,22 @@ export function ProjectView({
               {project.title}
             </h1>
             <p className="text-sm text-muted-foreground">
-              A conversation about this project reads these subjects and files.
+              {t(
+                "A conversation about this project reads these subjects and files.",
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={onAsk}>
-              <MessageSquareIcon /> Ask about this project
+              <MessageSquareIcon /> {t("Ask about this project")}
             </Button>
             <Button variant="outline" onClick={onEdit}>
-              <PencilIcon /> Edit
+              <PencilIcon /> {t("Edit")}
             </Button>
             <Button
               variant="subtle"
               size="icon"
-              aria-label="Delete project"
+              aria-label={t("Delete project")}
               onClick={onDelete}
             >
               <Trash2Icon />
@@ -108,18 +112,18 @@ export function ProjectView({
         {subjects.length === 0 && files.length === 0 ? (
           <EmptyState
             icon={<FolderKanbanIcon />}
-            title="Nothing in this project yet"
-            description="Choose the subjects and files it covers."
+            title={t("Nothing in this project yet")}
+            description={t("Choose the subjects and files it covers.")}
             actions={
               <Button variant="outline" onClick={onEdit}>
-                Choose subjects and files
+                {t("Choose subjects and files")}
               </Button>
             }
           />
         ) : null}
 
         {subjects.length > 0 ? (
-          <section className="flex flex-col gap-2" aria-label="Subjects">
+          <section className="flex flex-col gap-2" aria-label={t("Subjects")}>
             <SectionTitle>Subjects · {subjects.length}</SectionTitle>
             <ul className="flex flex-col">
               {subjects.map((subject) => (
@@ -151,7 +155,7 @@ export function ProjectView({
         ) : null}
 
         {files.length > 0 ? (
-          <section className="flex flex-col gap-2" aria-label="Files">
+          <section className="flex flex-col gap-2" aria-label={t("Files")}>
             <SectionTitle>Files · {files.length}</SectionTitle>
             <ul className="flex flex-col">
               {files.map((resource) => {

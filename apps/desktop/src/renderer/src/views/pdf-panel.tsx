@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@resit/ui/components/empty-state";
 import { cn } from "@resit/ui/lib/utils";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 /** Width a page thumbnail is drawn at, in CSS pixels. */
 const THUMBNAIL_WIDTH = 124;
@@ -140,6 +141,7 @@ export interface PdfOutlineProps {
 
 /** The PDF's table of contents, as the file itself records it. */
 export function PdfOutline({ document, onGoTo }: PdfOutlineProps) {
+  const { t } = useLocale();
   const [items, setItems] = useState<OutlineItem[] | null>(null);
 
   useEffect(() => {
@@ -163,8 +165,8 @@ export function PdfOutline({ document, onGoTo }: PdfOutlineProps) {
     return (
       <EmptyState
         size="compact"
-        title="No contents"
-        description="This PDF does not carry a table of contents."
+        title={t("No contents")}
+        description={t("This PDF does not carry a table of contents.")}
         className="m-3"
       />
     );
@@ -208,6 +210,7 @@ function OutlineRow({
   depth: number;
   onGoTo: (destination: string | unknown[]) => void;
 }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(depth === 0);
   const children = item.items.length > 0;
   return (
@@ -219,7 +222,7 @@ function OutlineRow({
         {children ? (
           <button
             type="button"
-            aria-label={open ? "Collapse" : "Expand"}
+            aria-label={open ? t("Collapse") : t("Expand")}
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
             className="flex size-5 shrink-0 items-center justify-center rounded-sm text-subtle-foreground hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"

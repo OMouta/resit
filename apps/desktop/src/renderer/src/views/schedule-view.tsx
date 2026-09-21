@@ -784,7 +784,7 @@ function MoodleSections({
   onOpenSettings,
   records,
 }: ScheduleViewProps & { records: SubjectActivities[] | null }) {
-  const { relative, time, weekday, date, number } = useLocale();
+  const { t, relative, time, weekday, date, number } = useLocale();
   const [checking, setChecking] = useState(false);
   const [failures, setFailures] = useState<
     { subjectId: string; message: string }[]
@@ -894,7 +894,7 @@ function MoodleSections({
                 ? records === null
                   ? ""
                   : "Not checked yet"
-                : checkedLabel(oldest, relative)}
+                : checkedLabel(oldest, { t, relative })}
           </p>
         </div>
         {connected ? (

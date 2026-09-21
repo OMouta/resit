@@ -37,6 +37,7 @@ import {
   type PdfZoom,
 } from "@resit/ui/patterns/document/pdf-toolbar";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { PdfPanel, PdfZoomSetting } from "../../../shared/settings";
 import type {
@@ -105,6 +106,7 @@ export interface PdfViewProps {
 
 /** A PDF read with PDF.js, with the student's saved highlights drawn on it. */
 export function PdfView({ resource, active, onCite }: PdfViewProps) {
+  const { t } = useLocale();
   const notices = useNotices();
   const settings = useSettings();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -241,10 +243,10 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     () =>
       notices.notify({
         tone: "info",
-        title: "That highlight is no longer in this PDF",
-        detail: "The link opened the page it was on.",
+        title: t("That highlight is no longer in this PDF"),
+        detail: t("The link opened the page it was on."),
       }),
-    [notices],
+    [t, notices],
   );
 
   // The student's highlights for this PDF, and anything waiting to be shown.
@@ -436,7 +438,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
     if (segments.length === 0) {
       notices.notify({
         tone: "info",
-        title: "Select some text in the PDF first",
+        title: t("Select some text in the PDF first"),
       });
       return null;
     }
@@ -453,7 +455,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
       clearSelection();
       return created;
     } catch (error) {
-      notices.fail("The highlight was not saved", error);
+      notices.fail(t("The highlight was not saved"), error);
       return null;
     }
   };
@@ -472,18 +474,20 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         list.map((entry) => (entry.id === updated.id ? updated : entry)),
       );
     } catch (error) {
-      notices.fail("The colour was not changed", error);
+      notices.fail(t("The colour was not changed"), error);
     }
   };
 
   const comment = (annotation: Annotation) => {
     setPrompt({
-      title: annotation.comment ? "Edit comment" : "Add a comment",
-      description: `On the highlight on page ${annotationPage(annotation)}.`,
-      label: "Comment",
-      placeholder: "I did not understand this step",
+      title: annotation.comment ? t("Edit comment") : t("Add a comment"),
+      description: t("On the highlight on page {page}.", {
+        page: annotationPage(annotation),
+      }),
+      label: t("Comment"),
+      placeholder: t("I did not understand this step"),
       ...(annotation.comment ? { initialValue: annotation.comment } : {}),
-      submitLabel: "Save",
+      submitLabel: t("Save"),
       onSubmit: async (text) => {
         try {
           const updated = await api.updateAnnotation({
@@ -495,7 +499,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             list.map((entry) => (entry.id === updated.id ? updated : entry)),
           );
         } catch (error) {
-          notices.fail("The comment was not saved", error);
+          notices.fail(t("The comment was not saved"), error);
         }
       },
     });
@@ -510,7 +514,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
       dropAnnotation(annotation.id);
       setBar(null);
     } catch (error) {
-      notices.fail("The highlight was not deleted", error);
+      notices.fail(t("The highlight was not deleted"), error);
     }
   };
 
@@ -586,7 +590,9 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         end={
           <>
             <ToolbarButton
-              label={spread ? "One page at a time" : "Two pages side by side"}
+              label={
+                spread ? t("One page at a time") : t("Two pages side by side")
+              }
               active={spread}
               disabled={status !== "ready"}
               onClick={() => {
@@ -600,7 +606,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
               <ColumnsIcon />
             </ToolbarButton>
             <ToolbarButton
-              label="Open in default app"
+              label={t("Open in default app")}
               onClick={() => void api.openResourceExternally(resource.id)}
             >
               <ExternalLinkIcon />
@@ -619,9 +625,9 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
           <SearchIcon className="size-4 text-muted-foreground" />
           <Input
             autoFocus
-            aria-label="Search in document"
+            aria-label={t("Search in document")}
             value={query}
-            placeholder="Search in this PDF"
+            placeholder={t("Search in this PDF")}
             onChange={(event) => {
               setQuery(event.target.value);
               // Search as it is typed, so the count follows along.
@@ -640,18 +646,18 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             {query.trim()
               ? foundMatches.total > 0
                 ? `${foundMatches.current}/${foundMatches.total}`
-                : "No matches"
+                : t("No matches")
               : ""}
           </span>
           <ToolbarButton
-            label="Previous match"
+            label={t("Previous match")}
             disabled={foundMatches.total === 0}
             onClick={() => find(true)}
           >
             <ChevronUpIcon />
           </ToolbarButton>
           <ToolbarButton
-            label="Next match"
+            label={t("Next match")}
             disabled={foundMatches.total === 0}
             onClick={() => find()}
           >
@@ -661,7 +667,7 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
             type="button"
             size="icon-sm"
             variant="subtle"
-            aria-label="Close search"
+            aria-label={t("Close search")}
             className="ml-auto"
             onClick={() => setSearchOpen(false)}
           >
@@ -686,15 +692,15 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
                 onValueChange={(value) => setPanel(value as PdfPanel)}
                 className="w-full"
               >
-                <TabsList aria-label="Side panel" className="w-full">
+                <TabsList aria-label={t("Side panel")} className="w-full">
                   <TabsTrigger value="thumbnails" className="flex-1 text-xs">
-                    Pages
+                    {t("Pages")}
                   </TabsTrigger>
                   <TabsTrigger value="outline" className="flex-1 text-xs">
-                    Contents
+                    {t("Contents")}
                   </TabsTrigger>
                   <TabsTrigger value="highlights" className="flex-1 text-xs">
-                    Marks
+                    {t("Marks")}
                     {annotations.length > 0 ? ` ${annotations.length}` : ""}
                   </TabsTrigger>
                 </TabsList>
@@ -720,13 +726,14 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
               <ScrollArea className="min-h-0 flex-1">
                 {annotations.length === 0 ? (
                   <p className="p-4 text-xs text-muted-foreground">
-                    Select text in the PDF to highlight it. Highlights are saved
-                    beside the file and never change the PDF itself.
+                    {t(
+                      "Select text in the PDF to highlight it. Highlights are saved beside the file and never change the PDF itself.",
+                    )}
                   </p>
                 ) : (
                   <div
                     role="listbox"
-                    aria-label="Highlights"
+                    aria-label={t("Highlights")}
                     className="flex flex-col gap-1 p-2"
                   >
                     {[...annotations]
@@ -840,14 +847,14 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
           {typeof status === "object" ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background">
               <EmptyState
-                title="This PDF could not be opened"
-                description={`${status.error} The original file is unchanged.`}
+                title={t("This PDF could not be opened")}
+                description={`${status.error} ${t("The original file is unchanged.")}`}
                 actions={
                   <Button
                     variant="secondary"
                     onClick={() => void api.openResourceExternally(resource.id)}
                   >
-                    Open in default app
+                    {t("Open in default app")}
                   </Button>
                 }
               />

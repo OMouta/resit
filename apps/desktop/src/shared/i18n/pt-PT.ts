@@ -31,25 +31,35 @@ export const messages: Record<string, string> = {
     "{count} ligações apontam para apontamentos que não foram exportados, por isso mantêm o endereço resit://.",
   "{count} minutes before": "{count} minutos antes",
   "{count} new": "{count} novos",
+  "{count} page has no text, so search cannot find what it says.":
+    "{count} página não tem texto, por isso a pesquisa não encontra o que diz.",
+  "{count} pages have no text, so search cannot find what they say.":
+    "{count} páginas não têm texto, por isso a pesquisa não encontra o que dizem.",
   "{count} updated": "{count} atualizados",
   "{count} word": "{count} palavra",
   "{count} words": "{count} palavras",
   "{description} · default": "{description} · predefinido",
   "{done} of {total}": "{done} de {total}",
+  "{file} was not downloaded": "{file} não foi transferido",
   "{provider} {version} at {path}": "{provider} {version} em {path}",
   "{provider} is installed but not signed in.":
     "O {provider} está instalado mas sem sessão iniciada.",
+  "{size} · added {time}. Search and AI cannot read this file type.":
+    "{size} · adicionado {time}. A pesquisa e a IA não conseguem ler este tipo de ficheiro.",
   "{title} is back in your workspace":
     "{title} está de volta ao seu espaço de trabalho",
   "{title} is no longer in the workspace":
     "{title} já não está no espaço de trabalho",
   "{user} at {site}": "{user} em {site}",
+  "A conversation about this project reads these subjects and files.":
+    "Uma conversa sobre este projeto lê estas disciplinas e ficheiros.",
   "A notification from your computer, while resit is open.":
     "Uma notificação do seu computador, enquanto o resit estiver aberto.",
   "A project gathers subjects and files for work that spans them. Nothing is copied.":
     "Um projeto junta disciplinas e ficheiros para trabalhos que as atravessam. Nada é copiado.",
   Account: "Conta",
   Add: "Adicionar",
+  "Add a comment": "Adicionar um comentário",
   "Add a subject or file so {provider} can read it.":
     "Adicione uma disciplina ou um ficheiro para o {provider} o poder ler.",
   "Add a subject or file to this conversation":
@@ -75,25 +85,37 @@ export const messages: Record<string, string> = {
   Answer: "Resposta",
   Apply: "Aplicar",
   "Ask about {title}…": "Pergunte sobre {title}…",
+  "Ask about this project": "Perguntar sobre este projeto",
   "Ask about your notes or PDFs": "Pergunte sobre os seus apontamentos ou PDFs",
   "Ask about your notes or PDFs…":
     "Pergunte sobre os seus apontamentos ou PDFs…",
+  Assignment: "Trabalho",
+  "Attached files": "Ficheiros anexos",
   "Before a newer copy replaced it":
     "Antes de uma cópia mais recente o substituir",
   "Before a restore": "Antes de um restauro",
   "Before the assistant's changes": "Antes das alterações do assistente",
   "Before your changes": "Antes das suas alterações",
+  Book: "Livro",
   "Card type": "Tipo de cartão",
   "Check again": "Verificar de novo",
   "Check spelling": "Verificar a ortografia",
+  "Checked {time}": "Verificado {time}",
+  "Checked just now": "Verificado agora mesmo",
   "Checking {provider}…": "A verificar o {provider}…",
+  Choice: "Escolha",
   "Choose a folder for the workspace":
     "Escolha uma pasta para o espaço de trabalho",
   "Choose a subject": "Escolha uma disciplina",
   "Choose folder…": "Escolher pasta…",
+  "Choose subjects and files": "Escolher disciplinas e ficheiros",
   "Choose the Moodle course this subject follows.":
     "Escolha a unidade curricular do Moodle que esta disciplina acompanha.",
+  "Choose the subjects and files it covers.":
+    "Escolha as disciplinas e os ficheiros que abrange.",
   "Close find": "Fechar a pesquisa",
+  "Close search": "Fechar a pesquisa",
+  Closes: "Fecha",
   "Codex home": "Pasta do Codex",
   Colour: "Cor",
   "Colour to start with": "Cor inicial",
@@ -119,6 +141,8 @@ export const messages: Record<string, string> = {
   "Cut animations short, whatever the system setting says.":
     "Encurta as animações, seja qual for a definição do sistema.",
   Dark: "Escuro",
+  Database: "Base de dados",
+  Date: "Data",
   Day: "Dia",
   "Default editor": "Editor predefinido",
   Delete: "Eliminar",
@@ -130,13 +154,19 @@ export const messages: Record<string, string> = {
   Discard: "Descartar",
   Disconnect: "Desligar",
   "Document text": "Texto dos documentos",
+  Download: "Transferir",
   "Download {count}": "Transferir {count}",
+  "Download progress": "Progresso da transferência",
   "Downloading from Moodle": "A transferir do Moodle",
+  "Downloading text recognition data":
+    "A transferir os dados do reconhecimento de texto",
   "Downloading…": "A transferir…",
+  Due: "Prazo",
   "Edit as Markdown": "Editar como Markdown",
   "Edit as rich text": "Editar como texto formatado",
   "Edit assessment": "Editar avaliação",
   "Edit card": "Editar cartão",
+  "Edit comment": "Editar comentário",
   "Edit link": "Editar ligação",
   "Edit project": "Editar projeto",
   "Edit quiz": "Editar questionário",
@@ -153,6 +183,7 @@ export const messages: Record<string, string> = {
     "Tudo o que há nesta unidade curricular já está aqui.",
   Executable: "Executável",
   Exercises: "Exercícios",
+  Expand: "Expandir",
   "Explanation (optional)": "Explicação (opcional)",
   "Export as Markdown…": "Exportar como Markdown…",
   "Export workspace": "Exportar espaço de trabalho",
@@ -162,7 +193,9 @@ export const messages: Record<string, string> = {
   "Exported {count} notes as Markdown":
     "{count} apontamentos exportados como Markdown",
   Exporting: "A exportar",
+  "External tool": "Ferramenta externa",
   "Extra (optional)": "Extra (opcional)",
+  Feedback: "Inquérito",
   "File actions": "Ações do ficheiro",
   Files: "Ficheiros",
   "Files from other subjects": "Ficheiros de outras disciplinas",
@@ -182,6 +215,7 @@ export const messages: Record<string, string> = {
     "Siga a definição do sistema, ou escolha um.",
   "Follow your Moodle courses and download their files into subjects.":
     "Acompanhe as suas unidades curriculares do Moodle e transfira os ficheiros delas para as disciplinas.",
+  Forum: "Fórum",
   "Found automatically": "Encontrado automaticamente",
   Friday: "Sexta-feira",
   From: "Início",
@@ -190,6 +224,7 @@ export const messages: Record<string, string> = {
   General: "Geral",
   "Give at least two options.": "Dê pelo menos duas opções.",
   "Give the answer to compare against.": "Dê a resposta com que comparar.",
+  Glossary: "Glossário",
   "Go to": "Ir para",
   "Hide selected text": "Ocultar o texto selecionado",
   "Highlight · p. {page}": "Realce · p. {page}",
@@ -201,6 +236,8 @@ export const messages: Record<string, string> = {
   "How early": "Com que antecedência",
   "How wide a line of text runs before it wraps.":
     "Até onde vai uma linha de texto antes de mudar de linha.",
+  "I did not understand this step": "Não percebi este passo",
+  "Image tools": "Ferramentas de imagem",
   "Import files…": "Importar ficheiros…",
   "Import stopped": "A importação parou",
   "In {place}": "Em {place}",
@@ -233,6 +270,7 @@ export const messages: Record<string, string> = {
   Language: "Língua",
   Languages: "Línguas",
   "Left out: {list}.": "Ficaram de fora: {list}.",
+  Lesson: "Lição",
   Light: "Claro",
   Limits: "Limites",
   "Limits and continuity": "Limites e continuidade",
@@ -240,10 +278,12 @@ export const messages: Record<string, string> = {
   "Line width": "Largura da linha",
   "Lists the note's headings beside it. Toggle it per note with Ctrl+Shift+O.":
     "Lista os títulos do apontamento ao lado. Ative ou desative em cada apontamento com Ctrl+Shift+O.",
+  "Looking for pages without text": "A procurar páginas sem texto",
   "Mark as planned": "Marcar como planeada",
   "Mark the right option.": "Marque a opção certa.",
   Markdown: "Markdown",
   "Markdown source": "Código-fonte Markdown",
+  Marks: "Marcas",
   "Match case": "Maiúsculas e minúsculas",
   "Mathematics resit": "Exame de recurso de Matemática",
   Missed: "Falhada",
@@ -254,6 +294,8 @@ export const messages: Record<string, string> = {
   "Moodle could not be checked": "Não foi possível verificar o Moodle",
   "Moodle course": "Unidade curricular do Moodle",
   "Moodle did not connect": "O Moodle não se ligou",
+  "Moodle did not list it the last time resit checked.":
+    "O Moodle não a mostrou da última vez que o resit verificou.",
   "Moodle lists no courses for your account.":
     "O Moodle não mostra unidades curriculares para a sua conta.",
   "Moodle was not disconnected": "O Moodle não foi desligado",
@@ -280,8 +322,10 @@ export const messages: Record<string, string> = {
   "New session": "Nova sessão",
   "New subject": "Nova disciplina",
   "Next match": "Resultado seguinte",
+  "No contents": "Sem índice",
   "No course matches that.": "Nenhuma unidade curricular corresponde.",
   "No file matches.": "Nenhum ficheiro corresponde.",
+  "No matches": "Sem resultados",
   "No subject": "Sem disciplina",
   None: "Nenhum",
   "None yet": "Nenhuma ainda",
@@ -295,11 +339,16 @@ export const messages: Record<string, string> = {
   "Notes, PDF quotations, and AI replies.":
     "Apontamentos, citações de PDF e respostas da IA.",
   Nothing: "Nada",
+  "Nothing in this project yet": "Ainda não há nada neste projeto",
   "Nothing left to add.": "Não há mais nada para adicionar.",
   "Nothing matches.": "Nada corresponde.",
   "Nothing to compare yet": "Ainda não há nada para comparar",
   "Nothing was downloaded": "Nada foi transferido",
   "Numerical simulation": "Simulação numérica",
+  "On the highlight on page {page}.": "No realce da página {page}.",
+  "Once, for each language. The PDF stays on this computer.":
+    "Uma vez, para cada língua. O PDF fica neste computador.",
+  "One page at a time": "Uma página de cada vez",
   "Open “{workspace}”": "Abrir “{workspace}”",
   "Open a note to add this reply":
     "Abra um apontamento para adicionar esta resposta",
@@ -307,6 +356,8 @@ export const messages: Record<string, string> = {
     "Abra um apontamento para citar este realce",
   "Open a workspace folder": "Abrir a pasta de um espaço de trabalho",
   "Open anyway": "Abrir mesmo assim",
+  "Open in default app": "Abrir na aplicação predefinida",
+  "Open in Moodle": "Abrir no Moodle",
   "Open practice": "Abrir a prática",
   "Open settings": "Abrir as definições",
   "Open the graph": "Abrir o grafo",
@@ -319,9 +370,11 @@ export const messages: Record<string, string> = {
   "Options. Pick the right one.": "Opções. Escolha a certa.",
   "Otherwise resit starts on the workspace screen.":
     "Caso contrário, o resit abre no ecrã dos espaços de trabalho.",
+  "Page {page} of {total}": "Página {page} de {total}",
   "Page thumbnails, the document's contents, or your highlights.":
     "Miniaturas das páginas, o índice do documento ou os seus realces.",
   Pages: "Páginas",
+  "Pages recognized": "Páginas reconhecidas",
   Password: "Palavra-passe",
   "Pick a note or document from the sidebar, or press Ctrl+K to find one.":
     "Escolha um apontamento ou documento na barra lateral, ou prima Ctrl+K para procurar.",
@@ -337,6 +390,11 @@ export const messages: Record<string, string> = {
   Reading: "Leitura",
   "Reads the text on scanned pages so search and the assistant can find it. It runs on this computer and downloads each language once.":
     "Lê o texto das páginas digitalizadas para que a pesquisa e o assistente o encontrem. Funciona neste computador e transfere cada língua uma vez.",
+  "Recognize text": "Reconhecer texto",
+  "Recognized the text on {count} page": "Texto reconhecido em {count} página",
+  "Recognized the text on {count} pages":
+    "Texto reconhecido em {count} páginas",
+  "Recognizing text": "A reconhecer o texto",
   "Reduce motion": "Reduzir o movimento",
   "Remind me before a session": "Lembrar-me antes de uma sessão",
   "Remove option {number}": "Remover a opção {number}",
@@ -369,9 +427,14 @@ export const messages: Record<string, string> = {
   Saturday: "Sábado",
   "Saves the workspace as one .resit file. Open it in resit on another computer to carry on there.":
     "Guarda o espaço de trabalho num único ficheiro .resit. Abra-o no resit noutro computador para continuar lá.",
+  "SCORM package": "Pacote SCORM",
+  "Search in this PDF": "Procurar neste PDF",
   "Search your courses": "Procurar nas suas unidades curriculares",
   "Select all": "Selecionar todos",
   "Select none": "Não selecionar nenhum",
+  "Select some text in the PDF first": "Selecione primeiro algum texto no PDF",
+  "Select text in the PDF to highlight it. Highlights are saved beside the file and never change the PDF itself.":
+    "Selecione texto no PDF para o realçar. Os realces são guardados ao lado do ficheiro e nunca alteram o PDF em si.",
   Selection: "Seleção",
   "Sent with your message": "Enviado com a sua mensagem",
   Serif: "Com serifa",
@@ -399,12 +462,15 @@ export const messages: Record<string, string> = {
     "Tira o brilho de uma página branca à noite.",
   Text: "Texto",
   "Text recognition": "Reconhecimento de texto",
+  "Text recognition did not start": "O reconhecimento de texto não começou",
   "Text recognition languages": "Línguas do reconhecimento de texto",
   "Text size": "Tamanho do texto",
   "Text you had not saved was kept":
     "O texto que não tinha guardado foi mantido",
   "That archive cannot be opened": "Não é possível abrir esse arquivo",
   "That copy was not restored": "Essa cópia não foi restaurada",
+  "That highlight is no longer in this PDF":
+    "Esse realce já não está neste PDF",
   "That link points to a file that is no longer here":
     "Essa ligação aponta para um ficheiro que já não está aqui",
   "That version could not be read": "Não foi possível ler essa versão",
@@ -418,6 +484,8 @@ export const messages: Record<string, string> = {
   "The assessment was not saved": "A avaliação não foi guardada",
   "The card was not added": "O cartão não foi adicionado",
   "The card was not saved": "O cartão não foi guardado",
+  "The colour was not changed": "A cor não foi alterada",
+  "The comment was not saved": "O comentário não foi guardado",
   "The conversation could not be opened": "Não foi possível abrir a conversa",
   "The conversation was not created": "A conversa não foi criada",
   "The conversation was not deleted": "A conversa não foi eliminada",
@@ -442,17 +510,22 @@ export const messages: Record<string, string> = {
   "The folder was not moved": "A pasta não foi movida",
   "The folder was not moved to the trash": "A pasta não foi movida para o lixo",
   "The folder was not renamed": "O nome da pasta não foi mudado",
+  "The highlight was not deleted": "O realce não foi eliminado",
+  "The highlight was not saved": "O realce não foi guardado",
   "The item": "O item",
   "The item in the trash is removed from disk.":
     "O item no lixo é removido do disco.",
   "The last reply failed": "A última resposta falhou",
   "The last workspace could not be reopened":
     "Não foi possível reabrir o último espaço de trabalho",
+  "The link opened the page it was on.":
+    "A ligação abriu a página onde estava.",
   "The message was not sent": "A mensagem não foi enviada",
   "The note was not created": "O apontamento não foi criado",
   "The note's history could not be read":
     "Não foi possível ler o histórico do apontamento",
   "The notes were not exported": "Os apontamentos não foram exportados",
+  "The original file is unchanged.": "O ficheiro original não foi alterado.",
   "The project goes to the trash. Its subjects and files stay where they are.":
     "O projeto vai para o lixo. As disciplinas e os ficheiros ficam onde estão.",
   "The project was not changed": "O projeto não foi alterado",
@@ -480,6 +553,7 @@ export const messages: Record<string, string> = {
   "The text it replaced was kept, so you can undo this too.":
     "O texto que substituiu foi guardado, por isso também pode desfazer isto.",
   "The text was not put back": "O texto não foi reposto",
+  "The text was not recognized": "O texto não foi reconhecido",
   "The trash could not be read": "Não foi possível ler o lixo",
   "The trash was not emptied": "O lixo não foi esvaziado",
   "The workspace was exported": "O espaço de trabalho foi exportado",
@@ -487,6 +561,8 @@ export const messages: Record<string, string> = {
   "The workspace was not exported": "O espaço de trabalho não foi exportado",
   Theme: "Tema",
   "These apply to this computer only.": "Aplicam-se apenas a este computador.",
+  "This activity is no longer in the course":
+    "Esta atividade já não está na unidade curricular",
   "This cannot be undone.": "Não é possível anular esta ação.",
   "This course has no files resit can download.":
     "Esta unidade curricular não tem ficheiros que o resit possa transferir.",
@@ -495,6 +571,7 @@ export const messages: Record<string, string> = {
     "Esta pasta tem {count} ficheiro transferido da unidade curricular do Moodle. Vai para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-o de novo.",
   "This folder holds {count} files downloaded from the Moodle course. They move to the workspace's .resit/trash folder, and following the course again downloads them.":
     "Esta pasta tem {count} ficheiros transferidos da unidade curricular do Moodle. Vão para a pasta .resit/trash do espaço de trabalho, e voltar a acompanhar a unidade curricular transfere-os de novo.",
+  "This image could not be opened": "Não foi possível abrir esta imagem",
   "This is outside your study times.":
     "Isto está fora dos seus horários de estudo.",
   "This note changed on disk while you were editing":
@@ -502,6 +579,12 @@ export const messages: Record<string, string> = {
   "This note could not be opened": "Não foi possível abrir este apontamento",
   "This note uses Markdown the rich editor would change, so it opens as source.":
     "Este apontamento usa Markdown que o editor visual alteraria, por isso abre como código-fonte.",
+  "This PDF could not be opened": "Não foi possível abrir este PDF",
+  "This PDF does not carry a table of contents.": "Este PDF não tem índice.",
+  "This PDF is scanned, so search cannot find what it says.":
+    "Este PDF é digitalizado, por isso a pesquisa não encontra o que diz.",
+  "This project is no longer in the workspace":
+    "Este projeto já não está no espaço de trabalho",
   "This workspace is already open": "Este espaço de trabalho já está aberto",
   Thursday: "Quinta-feira",
   "Time (optional)": "Hora (opcional)",
@@ -509,6 +592,7 @@ export const messages: Record<string, string> = {
   Title: "Título",
   Topic: "Tema",
   Tuesday: "Terça-feira",
+  "Two pages side by side": "Duas páginas lado a lado",
   Typeface: "Tipo de letra",
   "Untitled heading": "Título vazio",
   Update: "Atualizar",
@@ -525,6 +609,7 @@ export const messages: Record<string, string> = {
   "Version history…": "Histórico de versões…",
   "Versions appear here as you and the assistant change this note.":
     "As versões aparecem aqui quando este apontamento é alterado por si ou pelo assistente.",
+  "Video meeting": "Videoconferência",
   Wednesday: "Quarta-feira",
   "What is $\\lim_{x \\to 0} \\frac{\\sin x}{x}$?":
     "Quanto é $\\lim_{x \\to 0} \\frac{\\sin x}{x}$?",
@@ -533,10 +618,12 @@ export const messages: Record<string, string> = {
   "When you can study each week. The assistant only suggests sessions inside these times.":
     "Quando pode estudar em cada semana. O assistente só sugere sessões dentro destes horários.",
   Wide: "Larga",
+  Wiki: "Wiki",
   "Worked answer": "Resolução",
   "Worked solution": "Resolução",
   "Worksheet 2, questions 1–5": "Ficha 2, perguntas 1–5",
   Worksheets: "Fichas de exercícios",
+  Workshop: "Workshop",
   workspace: "espaço de trabalho",
   "Write here. Type $x^2$ for math, or $$ and Enter for a block.":
     "Escreva aqui. Escreva $x^2$ para matemática, ou $$ e Enter para um bloco.",

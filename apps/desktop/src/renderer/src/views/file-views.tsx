@@ -21,6 +21,7 @@ const IMAGE_TYPES: Record<string, string> = {
 
 /** An image resource with zoom. Bytes come from the main process, never a path. */
 export function ImageView({ resource }: { resource: ResourceInfo }) {
+  const { t } = useLocale();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
@@ -53,7 +54,7 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
     return (
       <EmptyState
         className="h-full"
-        title="This image could not be opened"
+        title={t("This image could not be opened")}
         description={error}
       />
     );
@@ -62,11 +63,11 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
     <div className="flex h-full min-h-0 flex-col">
       <div
         role="toolbar"
-        aria-label="Image tools"
+        aria-label={t("Image tools")}
         className="flex h-toolbar shrink-0 items-center gap-1 border-b bg-background px-2"
       >
         <ToolbarButton
-          label="Zoom out"
+          label={t("Zoom out")}
           disabled={scale <= 0.25}
           onClick={() => setScale((value) => Math.max(0.25, value - 0.25))}
         >
@@ -76,7 +77,7 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
           {Math.round(scale * 100)}%
         </span>
         <ToolbarButton
-          label="Zoom in"
+          label={t("Zoom in")}
           disabled={scale >= 4}
           onClick={() => setScale((value) => Math.min(4, value + 0.25))}
         >
@@ -88,7 +89,7 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
           className="ml-auto"
           onClick={() => void api.openResourceExternally(resource.id)}
         >
-          <ExternalLinkIcon /> Open in default app
+          <ExternalLinkIcon /> {t("Open in default app")}
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto bg-canvas p-6">
@@ -107,18 +108,24 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
 
 /** Any other file: its details and a deliberate open action. */
 export function AttachmentView({ resource }: { resource: ResourceInfo }) {
-  const { relative, number } = useLocale();
+  const { t, relative, number } = useLocale();
   return (
     <div className="flex h-full items-center justify-center bg-canvas">
       <EmptyState
         title={resource.title}
-        description={`${formatBytes(resource.size, number)} · added ${relative(resource.updatedAt)}. Search and AI cannot read this file type.`}
+        description={t(
+          "{size} · added {time}. Search and AI cannot read this file type.",
+          {
+            size: formatBytes(resource.size, number),
+            time: relative(resource.updatedAt),
+          },
+        )}
         actions={
           <Button
             variant="secondary"
             onClick={() => void api.openResourceExternally(resource.id)}
           >
-            <ExternalLinkIcon /> Open in default app
+            <ExternalLinkIcon /> {t("Open in default app")}
           </Button>
         }
       />

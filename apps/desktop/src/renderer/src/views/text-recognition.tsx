@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@resit/ui/components/button";
 import { InlineMessage } from "@resit/ui/components/inline-message";
 import { Progress } from "@resit/ui/components/progress";
+import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { TextRecognition } from "../../../shared/ipc";
 import type { ResourceInfo } from "../../../shared/workspace";
@@ -18,6 +19,7 @@ export function TextRecognitionBanner({
 }: {
   resource: ResourceInfo;
 }) {
+  const { t } = useLocale();
   const notices = useNotices();
   const [state, setState] = useState<TextRecognition | null>(null);
   const { id, revision } = resource;
@@ -44,16 +46,21 @@ export function TextRecognitionBanner({
         if (event.status === "failed")
           notices.notify({
             tone: "error",
-            title: "The text was not recognized",
+            title: t("The text was not recognized"),
             ...(event.message ? { detail: event.message } : {}),
           });
         else if (event.status === "done" && event.recognized > 0)
           notices.notify({
             tone: "success",
-            title: `Recognized the text on ${event.recognized} ${event.recognized === 1 ? "page" : "pages"}`,
+            title:
+              event.recognized === 1
+                ? t("Recognized the text on {count} page", { count: 1 })
+                : t("Recognized the text on {count} pages", {
+                    count: event.recognized,
+                  }),
           });
       }),
-    [id, load, notices],
+    [t, id, load, notices],
   );
 
   if (!state) return null;
@@ -66,7 +73,9 @@ export function TextRecognitionBanner({
         tone="info"
         className="mx-3 mt-3"
         title={
-          downloading ? "Downloading text recognition data" : "Recognizing text"
+          downloading
+            ? t("Downloading text recognition data")
+            : t("Recognizing text")
         }
         actions={
           <Button
@@ -74,22 +83,27 @@ export function TextRecognitionBanner({
             variant="secondary"
             onClick={() => void api.stopTextRecognition()}
           >
-            Stop
+            {t("Stop")}
           </Button>
         }
       >
         <div className="flex flex-col gap-2">
           <p className="text-muted-foreground">
             {downloading
-              ? "Once, for each language. The PDF stays on this computer."
+              ? t("Once, for each language. The PDF stays on this computer.")
               : running.total > 0
-                ? `Page ${Math.min(running.done + 1, running.total)} of ${running.total}`
-                : "Looking for pages without text"}
+                ? t("Page {page} of {total}", {
+                    page: Math.min(running.done + 1, running.total),
+                    total: running.total,
+                  })
+                : t("Looking for pages without text")}
           </p>
           <Progress
             value={fraction * 100}
             indeterminate={running.total === 0}
-            aria-label={downloading ? "Download progress" : "Pages recognized"}
+            aria-label={
+              downloading ? t("Download progress") : t("Pages recognized")
+            }
           />
         </div>
       </InlineMessage>
@@ -121,18 +135,26 @@ export function TextRecognitionBanner({
                     : current,
                 ),
               (error: unknown) =>
-                notices.fail("Text recognition did not start", error),
+                notices.fail(t("Text recognition did not start"), error),
             )
           }
         >
-          Recognize text
+          {t("Recognize text")}
         </Button>
       }
     >
       <p>
         {state.waiting === state.pageCount
-          ? "This PDF is scanned, so search cannot find what it says."
-          : `${state.waiting} ${state.waiting === 1 ? "page has" : "pages have"} no text, so search cannot find what ${state.waiting === 1 ? "it says" : "they say"}.`}
+          ? t("This PDF is scanned, so search cannot find what it says.")
+          : state.waiting === 1
+            ? t(
+                "{count} page has no text, so search cannot find what it says.",
+                { count: 1 },
+              )
+            : t(
+                "{count} pages have no text, so search cannot find what they say.",
+                { count: state.waiting },
+              )}
       </p>
     </InlineMessage>
   );

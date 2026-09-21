@@ -38,7 +38,7 @@ export function ActivityView({
   moduleId: number;
   onOpenResource: (resourceId: string) => void;
 }) {
-  const { dateTime, relative } = useLocale();
+  const { t, dateTime, relative } = useLocale();
   const notices = useNotices();
   const records = useMoodleActivities();
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -60,8 +60,8 @@ export function ActivityView({
       <EmptyState
         className="h-full"
         icon={<ClipboardListIcon />}
-        title="This activity is no longer in the course"
-        description="Moodle did not list it the last time resit checked."
+        title={t("This activity is no longer in the course")}
+        description={t("Moodle did not list it the last time resit checked.")}
       />
     );
 
@@ -76,11 +76,11 @@ export function ActivityView({
       if (failure)
         notices.notify({
           tone: "error",
-          title: `${failure.filename} was not downloaded`,
+          title: t("{file} was not downloaded", { file: failure.filename }),
           detail: failure.message,
         });
     } catch (error) {
-      notices.fail("The download stopped", error);
+      notices.fail(t("The download stopped"), error);
     } finally {
       setDownloading(null);
     }
@@ -94,7 +94,7 @@ export function ActivityView({
           title={activity.name}
           subject={{ name: subject.name, color: subject.color }}
           // Shown as the breadcrumb above the title.
-          path={`${[activityType(activity.modname), activity.sectionName].filter(Boolean).join("/")}/`}
+          path={`${[t(activityType(activity.modname)), activity.sectionName].filter(Boolean).join("/")}/`}
         />
         <div className="flex flex-col gap-8 px-8">
           <div className="flex flex-col gap-4">
@@ -105,7 +105,7 @@ export function ActivityView({
                   return (
                     <div key={`${entry.type}:${entry.at}`} className="contents">
                       <dt className="text-muted-foreground">
-                        {dateLabel(entry)}
+                        {t(dateLabel(entry))}
                       </dt>
                       <dd
                         className={cn(
@@ -130,17 +130,17 @@ export function ActivityView({
                   void api.openExternal(activity.url).catch(() => undefined)
                 }
               >
-                <ExternalLinkIcon /> Open in Moodle
+                <ExternalLinkIcon /> {t("Open in Moodle")}
               </Button>
               <p className="text-xs text-subtle-foreground">
-                {checkedLabel(record.checkedAt, relative)}
+                {checkedLabel(record.checkedAt, { t, relative })}
               </p>
             </div>
           </div>
 
           {activity.attachments?.length ? (
             <section
-              aria-label="Attached files"
+              aria-label={t("Attached files")}
               className="flex flex-col gap-1"
             >
               {activity.attachments.map((attachment) => (
@@ -166,7 +166,7 @@ export function ActivityView({
                           onOpenResource(attachment.resourceId);
                       }}
                     >
-                      Open
+                      {t("Open")}
                     </Button>
                   ) : (
                     <Button
@@ -175,7 +175,7 @@ export function ActivityView({
                       disabled={downloading !== null}
                       onClick={() => void download(attachment.key)}
                     >
-                      Download
+                      {t("Download")}
                     </Button>
                   )}
                 </div>
