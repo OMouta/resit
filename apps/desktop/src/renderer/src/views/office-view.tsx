@@ -21,6 +21,25 @@ export function OfficeView({ resource }: { resource: ResourceInfo }) {
   const [content, setContent] = useState<OfficeContent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState(0);
+  /** A Word document laid out, when resit could lay it out. */
+  const [html, setHtml] = useState<string | null>(null);
+  const word = resource.path.toLowerCase().endsWith(".docx");
+
+  useEffect(() => {
+    if (!word) return;
+    let cancelled = false;
+    setHtml(null);
+    // Without a layout, the paragraphs below still show.
+    api.renderWordDocument(resource.id).then(
+      (next) => {
+        if (!cancelled) setHtml(next);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [resource.id, resource.revision, word]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,8 +64,10 @@ export function OfficeView({ resource }: { resource: ResourceInfo }) {
     <div className="flex h-toolbar shrink-0 items-center gap-3 border-b bg-background px-3">
       <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
         {resource.path.slice(resource.path.lastIndexOf("/") + 1)} ·{" "}
-        {formatBytes(resource.size, number)} ·{" "}
-        {t("Text only. The default app shows its layout.")}
+        {formatBytes(resource.size, number)}
+        {html === null
+          ? ` · ${t("Text only. The default app shows its layout.")}`
+          : null}
       </span>
       <Button
         size="sm"
@@ -158,6 +179,21 @@ export function OfficeView({ resource }: { resource: ResourceInfo }) {
                   )}
                 </section>
               ))
+            ) : html !== null ? (
+              <article
+                className="document word-document rounded-lg border bg-background px-8 py-6 shadow-sm"
+                onClick={(event) => {
+                  const link = (event.target as Element).closest("a");
+                  if (!link) return;
+                  event.preventDefault();
+                  const href = link.getAttribute("href");
+                  if (href && !href.startsWith("#"))
+                    void api.openExternal(href).catch(() => undefined);
+                }}
+                // mammoth writes this HTML from the document's structure,
+                // escaping its text; links are checked in the main process.
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
             ) : (
               <article className="document rounded-lg border bg-background px-8 py-6 shadow-sm">
                 {content.paragraphs.map((paragraph, index) => (

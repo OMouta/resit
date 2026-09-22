@@ -504,6 +504,8 @@ export interface DesktopApi {
   listApprovals(conversationId: string): Promise<ApprovalRequest[]>;
   /** A Word, PowerPoint, or Excel file's words, to show them. */
   readOfficeContent(resourceId: string): Promise<OfficeContent | null>;
+  /** A Word document laid out as HTML, or null when it is too large to. */
+  renderWordDocument(resourceId: string): Promise<string | null>;
   /** An image from course text, saved in the workspace by name. */
   readMoodleMedia(name: string): Promise<Uint8Array>;
   /** Activities as resit last saw them, without contacting Moodle. */
@@ -643,6 +645,7 @@ export const CHANNELS = {
   listMoodleActivities: "resit:moodle-activities",
   readMoodleMedia: "resit:moodle-media",
   readOfficeContent: "resit:office-content",
+  renderWordDocument: "resit:word-document",
   answerApproval: "resit:approval-answer",
   listApprovals: "resit:approvals",
   refreshMoodleActivities: "resit:moodle-activities-refresh",

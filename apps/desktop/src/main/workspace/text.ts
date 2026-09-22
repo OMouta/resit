@@ -8,7 +8,7 @@ import {
   type ResourceInfo,
 } from "../../shared/workspace";
 import { assertInsideWorkspace } from "./files";
-import { officePages, readOffice } from "./office";
+import { docxHtml, officePages, readOffice } from "./office";
 import { resourcePath, type OpenWorkspace } from "./workspace";
 
 /** Imported files whose words resit can read, for search and the assistant. */
@@ -30,6 +30,27 @@ export async function officeContent(
   const path = resourcePath(workspace, resourceId);
   await assertInsideWorkspace(workspace.root, path);
   return readOffice(path, extensionOf(path));
+}
+
+/** Larger documents show as text: their images would make the page huge. */
+const MAX_DOCX_BYTES = 30 * 1024 * 1024;
+
+/** A Word document laid out as HTML, or null when it is too large to. */
+export async function wordHtml(
+  workspace: OpenWorkspace,
+  resourceId: string,
+): Promise<string | null> {
+  const info = workspace.resources.get(resourceId)?.info;
+  if (
+    !info ||
+    info.kind !== "attachment" ||
+    extensionOf(info.path) !== ".docx" ||
+    info.size > MAX_DOCX_BYTES
+  )
+    return null;
+  const path = resourcePath(workspace, resourceId);
+  await assertInsideWorkspace(workspace.root, path);
+  return docxHtml(path);
 }
 
 /**

@@ -1,3 +1,4 @@
+import mammoth from "mammoth";
 import yauzl from "yauzl";
 
 import type { OfficeContent } from "../../shared/workspace";
@@ -225,6 +226,17 @@ export async function readOffice(
 ): Promise<OfficeContent | null> {
   const reader = READERS[extension];
   return reader ? reader(path) : null;
+}
+
+/**
+ * A Word document as HTML with its headings, lists, tables, and images.
+ * Links keep only web and mail addresses; the window opens those outside.
+ */
+export async function docxHtml(path: string): Promise<string> {
+  const { value } = await mammoth.convertToHtml({ path });
+  return value.replace(/\shref="([^"]*)"/g, (whole, href: string) =>
+    /^(https?:|mailto:)/i.test(decode(href)) ? whole : "",
+  );
 }
 
 /** The content as plain text: one page per slide or sheet. */

@@ -219,3 +219,26 @@
 .hljs-deletion {
   color: var(--destructive);
 }
+
+/* Word documents, laid out from their structure. */
+.word-document table {
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.word-document td,
+.word-document th {
+  border: 1px solid var(--border);
+  padding: 0.25em 0.5em;
+  vertical-align: top;
+}
+
+.word-document td > p,
+.word-document th > p {
+  margin: 0;
+}
+
+.word-document img {
+  max-width: 100%;
+  height: auto;
+}

@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import yazl from "yazl";
 
-import { readOffice } from "../../apps/desktop/src/main/workspace/office";
+import {
+  docxHtml,
+  readOffice,
+} from "../../apps/desktop/src/main/workspace/office";
 import {
   closeSearchIndex,
   searchWorkspace,
@@ -70,6 +73,23 @@ describe("Office files", () => {
       format: "docx",
       paragraphs: ["Introduction", "Limits and continuity"],
     });
+  });
+
+  it("lays out a Word document, keeping only web and mail links", async () => {
+    const rel = (id: string, target: string) =>
+      `<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${target}" TargetMode="External"/>`;
+    const link = (id: string, text: string) =>
+      `<w:hyperlink r:id="${id}"><w:r><w:t>${text}</w:t></w:r></w:hyperlink>`;
+    const path = await zip("Links.docx", {
+      "word/document.xml": `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p>${link("rId1", "Course site")}</w:p><w:p>${link("rId2", "Trap")}</w:p></w:body></w:document>`,
+      "word/_rels/document.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rel("rId1", "https://example.edu/course")}${rel("rId2", "javascript:alert(1)")}</Relationships>`,
+    });
+    const html = await docxHtml(path);
+    expect(html).toContain(
+      '<a href="https://example.edu/course">Course site</a>',
+    );
+    expect(html).toContain("Trap");
+    expect(html).not.toContain("javascript:");
   });
 
   it("reads slides in the order the presentation shows them", async () => {

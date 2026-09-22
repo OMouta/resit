@@ -79,7 +79,7 @@ import {
   moodleUserId,
 } from "./moodle/credentials";
 import { readMedia } from "./moodle/media";
-import { officeContent } from "./workspace/text";
+import { officeContent, wordHtml } from "./workspace/text";
 import { answerApproval, openApprovals } from "./agent/approvals";
 import {
   downloadItems,
@@ -1316,6 +1316,10 @@ export function registerHandlers(
 
   handle(CHANNELS.readOfficeContent, z.tuple([id]), (resourceId) =>
     officeContent(currentWorkspace(), resourceId),
+  );
+
+  handle(CHANNELS.renderWordDocument, z.tuple([id]), (resourceId) =>
+    wordHtml(currentWorkspace(), resourceId),
   );
 
   handle(
