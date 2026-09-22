@@ -6,6 +6,7 @@ import {
   type MoodleActivity,
   type MoodleAnnouncement,
   type MoodleCourseContents,
+  type MoodleGrade,
   type MoodleCourseSection,
   type MoodleDownloadResult,
   type MoodleFileRef,
@@ -34,6 +35,9 @@ import {
   courseContents,
   courseForums,
   forumDiscussions,
+  gradeItems,
+  submissionStatus,
+  type MoodleGradeItem,
   downloadFile,
   MoodleError,
   type MoodleAssignment,
@@ -74,6 +78,9 @@ interface CourseRead {
   assignments: ReadonlyMap<number, MoodleAssignment>;
   pages: ReadonlyMap<number, PageText>;
   announcements: MoodleAnnouncement[] | undefined;
+  /** By assignment module, what Moodle says the student handed in. */
+  submissions: ReadonlyMap<number, string>;
+  grades: MoodleGradeItem[];
 }
 
 /** What resit saved the last time it read the subject's course, if anything. */
@@ -187,6 +194,63 @@ async function readAnnouncements(
   }
 }
 
+/**
+ * Each assignment's submission state. A site that does not offer the
+ * function to the app's token answers the first request with an error, and
+ * then none are asked for.
+ */
+async function readSubmissions(
+  session: MoodleSession,
+  sections: MoodleSection[],
+  assignments: ReadonlyMap<number, MoodleAssignment>,
+): Promise<Map<number, string>> {
+  const found = new Map<number, string>();
+  for (const module of sections.flatMap((section) => section.modules)) {
+    const assignment = assignments.get(module.id);
+    if (module.uservisible === false || !assignment) continue;
+    try {
+      const status = await submissionStatus(session, assignment.id);
+      if (status) found.set(module.id, status);
+    } catch (error) {
+      if (!(error instanceof MoodleError)) throw error;
+      break;
+    }
+  }
+  return found;
+}
+
+/** The student's gradebook, when the site lets the app read it. */
+async function readGrades(
+  session: MoodleSession,
+  link: MoodleLink,
+): Promise<MoodleGradeItem[]> {
+  if (session.userId === undefined) return [];
+  try {
+    return await gradeItems(session, link.courseId, session.userId);
+  } catch (error) {
+    if (!(error instanceof MoodleError)) throw error;
+    return [];
+  }
+}
+
+const SUBMISSION_STATES = new Set(["new", "draft", "submitted", "reopened"]);
+
+/** The states resit knows how to show; anything else is left out. */
+function submissionOf(
+  status: string | undefined,
+): Pick<MoodleActivity, "submission"> {
+  return status && SUBMISSION_STATES.has(status)
+    ? { submission: status as NonNullable<MoodleActivity["submission"]> }
+    : {};
+}
+
+/** A grade that is set and shown to the student. */
+function gradeOf(item: MoodleGradeItem | undefined): MoodleGrade | undefined {
+  if (!item || item.gradeishidden || item.graderaw === null) return;
+  if (item.graderaw === undefined || !item.gradeformatted) return;
+  return { formatted: item.gradeformatted, max: item.grademax };
+}
+
 async function readCourse(
   workspace: OpenWorkspace,
   session: MoodleSession,
@@ -201,9 +265,12 @@ async function readCourse(
     ? await courseAssignments(session, link.courseId)
     : [];
   const saved = await readSaved(workspace, subjectId, link);
+  const byModule = new Map(assignments.map((entry) => [entry.cmid, entry]));
   return {
     sections,
-    assignments: new Map(assignments.map((entry) => [entry.cmid, entry])),
+    assignments: byModule,
+    submissions: await readSubmissions(session, sections, byModule),
+    grades: await readGrades(session, link),
     pages: await readPages(session, sections, saved),
     announcements: await readAnnouncements(session, link, saved),
   };
@@ -304,11 +371,18 @@ export function planCourse(
  * of their own, so they point at their section.
  */
 function planActivities(
-  { sections, assignments, pages }: CourseRead,
+  { sections, assignments, pages, submissions, grades }: CourseRead,
   link: MoodleLink,
 ): { activities: MoodleActivity[]; sections: MoodleCourseSection[] } {
   const activities: MoodleActivity[] = [];
   const page: MoodleCourseSection[] = [];
+  const gradeByModule = new Map(
+    grades.flatMap((item) =>
+      item.itemtype === "mod" && item.cmid !== undefined
+        ? [[item.cmid, item] as const]
+        : [],
+    ),
+  );
   for (const section of sections) {
     if (section.uservisible === false) continue;
     const summary = section.summary ? briefMarkdown(section.summary) : "";
@@ -359,6 +433,7 @@ function planActivities(
           key: itemKey(module.id, `${file.filepath}${file.filename}`),
           filename: file.filename,
         }));
+      const grade = gradeOf(gradeByModule.get(module.id));
       // A link activity's address is its one "url" content.
       const target = module.contents?.find(
         (content) => content.type === "url" && content.fileurl,
@@ -379,6 +454,8 @@ function planActivities(
           })),
         ...(brief ? { brief } : {}),
         ...(text ? { contentModified: text.modified } : {}),
+        ...submissionOf(submissions.get(module.id)),
+        ...(grade ? { grade } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       });
     }
@@ -392,6 +469,9 @@ async function saveActivities(
   link: MoodleLink,
   course: CourseRead,
 ): Promise<void> {
+  const total = gradeOf(
+    course.grades.find((item) => item.itemtype === "course"),
+  );
   const file: ActivitiesFile = {
     format: "resit-moodle-activities",
     formatVersion: 1,
@@ -400,6 +480,7 @@ async function saveActivities(
     checkedAt: new Date().toISOString(),
     ...planActivities(course, link),
     ...(course.announcements ? { announcements: course.announcements } : {}),
+    ...(total ? { grade: total } : {}),
   };
   await writeJson(activitiesPath(workspace, subjectId), file);
 }
@@ -494,6 +575,7 @@ export async function listActivities(
       checkedAt: file.checkedAt,
       ...(file.sections ? { sections: file.sections } : {}),
       ...(file.announcements ? { announcements: file.announcements } : {}),
+      ...(file.grade ? { grade: file.grade } : {}),
       activities: file.activities.map(({ attachments, ...activity }) => ({
         ...activity,
         ...(attachments

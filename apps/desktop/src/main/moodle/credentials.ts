@@ -73,6 +73,7 @@ export async function moodleSession(): Promise<MoodleSession> {
   return {
     siteUrl: account.siteUrl,
     token: safeStorage.decryptString(Buffer.from(account.token, "base64")),
+    userId: account.userId,
   };
 }
 

@@ -1,4 +1,5 @@
 import {
+  CheckIcon,
   ClipboardListIcon,
   ExternalLinkIcon,
   PaperclipIcon,
@@ -20,8 +21,11 @@ import {
   activityType,
   checkedLabel,
   dateLabel,
+  gradeLabel,
   isDeadline,
+  isSubmitted,
   openInBrowser,
+  submissionLabel,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -99,6 +103,28 @@ export function ActivityView({
         />
         <div className="flex flex-col gap-8 px-8">
           <div className="flex flex-col gap-4">
+            {activity.submission || activity.grade ? (
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                {activity.submission ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 font-medium",
+                      isSubmitted(activity) ? "text-success" : "text-warning",
+                    )}
+                  >
+                    {isSubmitted(activity) ? (
+                      <CheckIcon aria-hidden className="size-4" />
+                    ) : null}
+                    {t(submissionLabel(activity) ?? "")}
+                  </span>
+                ) : null}
+                {activity.grade ? (
+                  <span className="tabular-nums">
+                    {t("Grade {grade}", { grade: gradeLabel(activity.grade) })}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
             {activity.dates.length > 0 ? (
               <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
                 {activity.dates.map((entry) => {

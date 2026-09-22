@@ -796,6 +796,7 @@ export function studyTools(
             subjectId: entry.subjectId,
             subject: subjectNames.get(entry.subjectId) ?? null,
             checkedAt: entry.checkedAt,
+            ...(entry.grade ? { courseGrade: entry.grade } : {}),
             sectionSummaries: (entry.sections ?? []).flatMap((section) =>
               section.summary
                 ? [{ section: section.name, summary: section.summary }]
@@ -807,6 +808,10 @@ export function studyTools(
               type: activity.modname,
               section: activity.sectionName,
               dates: activity.dates,
+              ...(activity.submission
+                ? { submission: activity.submission }
+                : {}),
+              ...(activity.grade ? { grade: activity.grade } : {}),
               hasBrief: Boolean(activity.brief),
             })),
           })),

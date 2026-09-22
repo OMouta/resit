@@ -11,6 +11,8 @@ const DOWNLOAD_TIMEOUT = 5 * 60_000;
 export interface MoodleSession {
   siteUrl: string;
   token: string;
+  /** The account the token belongs to, for requests about the student. */
+  userId?: number;
 }
 
 export class MoodleError extends Error {}
@@ -339,6 +341,8 @@ const assignmentsSchema = z.looseObject({
         assignments: z
           .array(
             z.looseObject({
+              /** The assignment itself, as opposed to its course module. */
+              id: z.number().int(),
               cmid: z.number().int(),
               /** HTML. Left out until Moodle shows the brief to students. */
               intro: z.string().optional(),
@@ -372,6 +376,76 @@ export async function courseAssignments(
     { "courseids[0]": courseId },
   );
   return result.courses.flatMap((course) => course.assignments);
+}
+
+const submissionStatusSchema = z.looseObject({
+  lastattempt: z
+    .looseObject({
+      submission: z.looseObject({ status: z.string() }).optional(),
+      /** Set instead of `submission` when the class submits in groups. */
+      teamsubmission: z.looseObject({ status: z.string() }).optional(),
+      submissionsenabled: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Whether the student has handed in an assignment: `new`, `draft`,
+ * `submitted`, or `reopened`. Undefined when it takes no submissions.
+ */
+export async function submissionStatus(
+  session: MoodleSession,
+  assignmentId: number,
+): Promise<string | undefined> {
+  const { lastattempt } = await call(
+    session,
+    "mod_assign_get_submission_status",
+    submissionStatusSchema,
+    { assignid: assignmentId },
+  );
+  if (!lastattempt || lastattempt.submissionsenabled === false) return;
+  return (lastattempt.submission ?? lastattempt.teamsubmission)?.status;
+}
+
+const gradeItemsSchema = z.looseObject({
+  usergrades: z
+    .array(
+      z.looseObject({
+        gradeitems: z
+          .array(
+            z.looseObject({
+              /** `mod` for an activity, `course` for the course total. */
+              itemtype: z.string().catch(""),
+              cmid: z.number().int().optional().catch(undefined),
+              graderaw: z.number().nullable().optional().catch(null),
+              gradeformatted: z.string().catch(""),
+              grademax: z.number().catch(0),
+              gradeishidden: z.boolean().optional(),
+            }),
+          )
+          .catch([]),
+      }),
+    )
+    .catch([]),
+});
+
+export type MoodleGradeItem = z.infer<
+  typeof gradeItemsSchema
+>["usergrades"][number]["gradeitems"][number];
+
+/** The student's gradebook for one course. */
+export async function gradeItems(
+  session: MoodleSession,
+  courseId: number,
+  userId: number,
+): Promise<MoodleGradeItem[]> {
+  const result = await call(
+    session,
+    "gradereport_user_get_grade_items",
+    gradeItemsSchema,
+    { courseid: courseId, userid: userId },
+  );
+  return result.usergrades.flatMap((entry) => entry.gradeitems);
 }
 
 const forumsSchema = z.array(

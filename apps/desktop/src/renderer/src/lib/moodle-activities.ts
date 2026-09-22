@@ -5,6 +5,7 @@ import { msg } from "@resit/ui/lib/i18n";
 
 import type {
   MoodleActivityDate,
+  MoodleGrade,
   SubjectActivities,
 } from "../../../shared/moodle";
 import { api } from "./api";
@@ -104,6 +105,28 @@ export function isLabel(activity: Activity): boolean {
 /** Opens a link activity's own address, or anything else in Moodle. */
 export function openInBrowser(activity: Activity): void {
   void api.openExternal(activity.link ?? activity.url).catch(() => undefined);
+}
+
+const SUBMISSION_LABELS: Record<NonNullable<Activity["submission"]>, string> = {
+  new: msg("Not submitted"),
+  draft: msg("Draft, not submitted"),
+  submitted: msg("Submitted"),
+  reopened: msg("Reopened"),
+};
+
+/** English for `t`, when Moodle said whether the student handed it in. */
+export function submissionLabel(activity: Activity): string | null {
+  return activity.submission ? SUBMISSION_LABELS[activity.submission] : null;
+}
+
+/** Nothing is left to do for it. */
+export function isSubmitted(activity: Activity): boolean {
+  return activity.submission === "submitted";
+}
+
+/** "15,50 / 20", the way the gradebook shows it. */
+export function gradeLabel(grade: MoodleGrade): string {
+  return `${grade.formatted} / ${grade.max}`;
 }
 
 /** resit has something to show for it beyond a link to Moodle. */

@@ -27,9 +27,11 @@ import {
   activityType,
   checkedLabel,
   dateLabel,
+  gradeLabel,
   hasPage,
   isLabel,
   openInBrowser,
+  submissionLabel,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -138,6 +140,13 @@ export function CourseView({
             <Button variant="subtle" onClick={() => onOpenMoodle(subject.id)}>
               {t("Course files…")}
             </Button>
+            {record.grade ? (
+              <p className="text-sm tabular-nums">
+                {t("Course grade {grade}", {
+                  grade: gradeLabel(record.grade),
+                })}
+              </p>
+            ) : null}
             <p className="text-xs text-subtle-foreground" aria-live="polite">
               {checking
                 ? t("Checking Moodle…")
@@ -300,6 +309,12 @@ function ActivityRow({
             t(activityType(activity.modname)),
             activity.link ? hostOf(activity.link) : null,
             next ? `${t(dateLabel(next))} ${dateTime(next.at)}` : null,
+            submissionLabel(activity)
+              ? t(submissionLabel(activity) ?? "")
+              : null,
+            activity.grade
+              ? t("Grade {grade}", { grade: gradeLabel(activity.grade) })
+              : null,
           ]
             .filter(Boolean)
             .join(" · ")}

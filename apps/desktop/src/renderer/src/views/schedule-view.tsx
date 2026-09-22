@@ -64,7 +64,9 @@ import {
   hasPage,
   isDeadline,
   isLabel,
+  isSubmitted,
   openInBrowser,
+  submissionLabel,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -685,10 +687,17 @@ function Week({
               className={cn(
                 "flex w-full flex-col gap-0.5 rounded-md border-l-[3px] px-2 py-1 text-left text-2xs hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none",
                 subject ? subjectColorClasses[subject.color].border : "",
+                isSubmitted(activity) && "opacity-60",
               )}
             >
-              <span className="tabular-nums text-muted-foreground">
+              <span className="flex items-center gap-1 tabular-nums text-muted-foreground">
                 {t(dateLabel(date))} {time(date.at)}
+                {isSubmitted(activity) ? (
+                  <CheckIcon
+                    aria-label={t("Submitted")}
+                    className="size-3 text-success"
+                  />
+                ) : null}
               </span>
               <span className="line-clamp-2 font-medium">{activity.name}</span>
             </button>
@@ -1103,8 +1112,14 @@ function UpcomingRow({
   const { subject, activity, date } = entry;
   const passed = Date.parse(date.at) < Date.now();
   const deadline = isDeadline(date);
+  const status = deadline ? submissionLabel(activity) : null;
   return (
-    <li className={cn("flex items-center gap-1", passed && "opacity-60")}>
+    <li
+      className={cn(
+        "flex items-center gap-1",
+        (passed || isSubmitted(activity)) && "opacity-60",
+      )}
+    >
       <RowBody onOpen={onOpen}>
         <span className="w-12 shrink-0 text-sm tabular-nums text-muted-foreground">
           {time}
@@ -1118,10 +1133,23 @@ function UpcomingRow({
             {subject.name} · {t(activityType(activity.modname))}
           </span>
         </span>
+        {status ? (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 text-xs",
+              isSubmitted(activity) ? "text-success" : "text-warning",
+            )}
+          >
+            {isSubmitted(activity) ? (
+              <CheckIcon aria-hidden className="size-3.5" />
+            ) : null}
+            {t(status)}
+          </span>
+        ) : null}
         <span
           className={cn(
             "shrink-0 text-xs",
-            deadline && !passed
+            deadline && !passed && !isSubmitted(activity)
               ? "font-medium text-foreground"
               : "text-muted-foreground",
           )}

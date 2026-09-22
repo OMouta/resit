@@ -823,6 +823,96 @@ describe("announcements", () => {
   });
 });
 
+describe("submissions and grades", () => {
+  const student = { ...session, userId: 5 };
+  const calls: string[] = [];
+
+  function serveGrades(offered: boolean): void {
+    calls.length = 0;
+    const json = (body: unknown) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), {
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    useNetworkFetch((url) => {
+      const params = new URL(url).searchParams;
+      const name = params.get("wsfunction") ?? "";
+      calls.push(name);
+      if (
+        !offered &&
+        (name === "mod_assign_get_submission_status" ||
+          name === "gradereport_user_get_grade_items")
+      )
+        return json({ exception: "x", errorcode: "accessexception" });
+      if (name === "mod_assign_get_submission_status")
+        return json({
+          lastattempt: {
+            submission: { status: "submitted" },
+            submissionsenabled: true,
+          },
+        });
+      if (name === "gradereport_user_get_grade_items")
+        return json({
+          usergrades: [
+            {
+              userid: Number(params.get("userid")),
+              gradeitems: [
+                {
+                  itemtype: "mod",
+                  cmid: 203,
+                  graderaw: 15.5,
+                  gradeformatted: "15,50",
+                  grademax: 20,
+                },
+                {
+                  itemtype: "mod",
+                  cmid: 204,
+                  graderaw: null,
+                  gradeformatted: "-",
+                  grademax: 20,
+                },
+                {
+                  itemtype: "course",
+                  graderaw: 15.5,
+                  gradeformatted: "15,50",
+                  grademax: 20,
+                },
+              ],
+            },
+          ],
+        });
+      if (name === "mod_assign_get_assignments") return json(assignments);
+      if (name === "mod_forum_get_forums_by_courses") return json([]);
+      return json(activityCourse());
+    });
+  }
+
+  it("says whether an assignment was handed in, and its grade", async () => {
+    serveGrades(true);
+    await listItems(workspace, student, subjectId);
+    const [record] = await listActivities(workspace);
+    const project = record?.activities.find((entry) => entry.moduleId === 203);
+    expect(project?.submission).toBe("submitted");
+    expect(project?.grade).toEqual({ formatted: "15,50", max: 20 });
+    // A quiz without a released grade has none.
+    const quiz = record?.activities.find((entry) => entry.moduleId === 204);
+    expect(quiz?.grade).toBeUndefined();
+    expect(record?.grade).toEqual({ formatted: "15,50", max: 20 });
+  });
+
+  it("reads the course without them when the site does not offer them", async () => {
+    serveGrades(false);
+    await listItems(workspace, student, subjectId);
+    const [record] = await listActivities(workspace);
+    expect(record?.activities.length).toBeGreaterThan(0);
+    expect(record?.activities.some((entry) => entry.submission)).toBe(false);
+    expect(
+      calls.filter((name) => name === "mod_assign_get_submission_status"),
+    ).toHaveLength(1);
+  });
+});
+
 describe("assignment briefs", () => {
   it("keeps structure and drops markup", () => {
     const html = [

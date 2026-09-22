@@ -116,6 +116,13 @@ const moodleActivityDateSchema = z.object({
 });
 export type MoodleActivityDate = z.infer<typeof moodleActivityDateSchema>;
 
+/** A grade as the gradebook shows it: "15,50" out of 20. */
+const moodleGradeSchema = z.object({
+  formatted: z.string(),
+  max: z.number(),
+});
+export type MoodleGrade = z.infer<typeof moodleGradeSchema>;
+
 /** Something in a course resit does not download: an assignment, a quiz, a forum. */
 const moodleActivitySchema = z.object({
   moduleId: z.number().int().nonnegative(),
@@ -135,6 +142,13 @@ const moodleActivitySchema = z.object({
   brief: z.string().optional(),
   /** When a page or book last changed, so its text is read again only then. */
   contentModified: z.number().int().nonnegative().optional(),
+  /** Whether the student has handed in an assignment, as Moodle says. */
+  submission: z
+    .enum(["new", "draft", "submitted", "reopened"])
+    .optional()
+    .catch(undefined),
+  /** The student's grade, once it is released. */
+  grade: moodleGradeSchema.optional(),
   /** Files attached to an assignment brief, keyed like download items. */
   attachments: z
     .array(z.object({ key: z.string(), filename: z.string() }))
@@ -177,6 +191,8 @@ export const activitiesFileSchema = z.object({
   /** Labels are here as activities of type `label`, with their text as the brief. */
   activities: z.array(moodleActivitySchema),
   sections: z.array(moodleCourseSectionSchema).optional(),
+  /** The course total in the student's gradebook. */
+  grade: moodleGradeSchema.optional(),
   /** Newest first. Absent when the site does not let resit read forums. */
   announcements: z.array(moodleAnnouncementSchema).optional(),
 });
@@ -193,6 +209,7 @@ export interface SubjectActivities {
   checkedAt: string;
   sections?: MoodleCourseSection[];
   announcements?: MoodleAnnouncement[];
+  grade?: MoodleGrade;
   activities: (Omit<MoodleActivity, "attachments"> & {
     attachments?: {
       key: string;
