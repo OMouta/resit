@@ -484,6 +484,8 @@ export const messages: Record<string, string> = {
     "Os seus {count} apontamentos e ficheiros vão com ela: {list}. Ficam na pasta .resit/trash do espaço de trabalho.",
   "Its {count} notes and files move with it. They stay in the workspace's .resit/trash folder.":
     "Os seus {count} apontamentos e ficheiros vão com ela. Ficam na pasta .resit/trash do espaço de trabalho.",
+  "Its format is not one the app plays. Open it in your default app instead.":
+    "O formato não é um que a aplicação reproduza. Abra-o na aplicação predefinida.",
   Keep: "Manter",
   "Keep all": "Manter todos",
   Kind: "Tipo",
@@ -702,6 +704,8 @@ export const messages: Record<string, string> = {
   Replace: "Substituir",
   "Replace all": "Substituir tudo",
   "Replace with": "Substituir por",
+  "resit cannot play this file":
+    "O resit não consegue reproduzir este ficheiro",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
   "resit could not find the Codex executable.":

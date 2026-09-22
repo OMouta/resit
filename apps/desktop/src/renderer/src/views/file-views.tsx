@@ -7,7 +7,11 @@ import { useLocale } from "@resit/ui/hooks/use-locale";
 import { formatBytes } from "@resit/ui/lib/format-bytes";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
 
-import type { ResourceInfo } from "../../../shared/workspace";
+import {
+  extensionOf,
+  MEDIA_TYPES,
+  type ResourceInfo,
+} from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 
 const IMAGE_TYPES: Record<string, string> = {
@@ -101,6 +105,60 @@ export function ImageView({ resource }: { resource: ResourceInfo }) {
             className="mx-auto max-w-none rounded-md shadow-sm"
           />
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Audio or video, streamed from the workspace by the main process so a
+ * long recording is never read into memory at once.
+ */
+export function MediaView({ resource }: { resource: ResourceInfo }) {
+  const { t, number } = useLocale();
+  const [failed, setFailed] = useState(false);
+  const source = `resit-file://${resource.id}`;
+  const video = MEDIA_TYPES[extensionOf(resource.path)]?.startsWith("video/");
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-toolbar shrink-0 items-center gap-3 border-b bg-background px-3">
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+          {resource.path.slice(resource.path.lastIndexOf("/") + 1)} ·{" "}
+          {formatBytes(resource.size, number)}
+        </span>
+        <Button
+          size="sm"
+          variant="subtle"
+          onClick={() => void api.openResourceExternally(resource.id)}
+        >
+          <ExternalLinkIcon /> {t("Open in default app")}
+        </Button>
+      </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-canvas p-6">
+        {failed ? (
+          <EmptyState
+            title={t("resit cannot play this file")}
+            description={t(
+              "Its format is not one the app plays. Open it in your default app instead.",
+            )}
+          />
+        ) : video ? (
+          <video
+            key={resource.revision}
+            src={source}
+            controls
+            className="max-h-full max-w-full rounded-md bg-black shadow-sm"
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <audio
+            key={resource.revision}
+            src={source}
+            controls
+            className="w-full max-w-xl"
+            onError={() => setFailed(true)}
+          />
+        )}
       </div>
     </div>
   );

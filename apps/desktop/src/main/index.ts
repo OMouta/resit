@@ -7,6 +7,7 @@ import { abortAllTurns } from "./agent/turns";
 import { registerHandlers } from "./handlers";
 import { setLocale } from "./i18n";
 import { setIpcContext } from "./ipc";
+import { handleFileScheme, registerFileScheme } from "./media-protocol";
 import { useNetworkFetch } from "./moodle/client";
 import { startReminders } from "./planning/reminders";
 import {
@@ -119,6 +120,8 @@ async function createWindow(): Promise<void> {
   await window.loadURL(rendererUrl);
 }
 
+registerFileScheme();
+
 void app
   .whenReady()
   .then(async () => {
@@ -136,6 +139,7 @@ void app
     // Moodle is reached through Chromium, so system proxies and certificates
     // that a university network relies on apply.
     useNetworkFetch(net.fetch);
+    handleFileScheme(() => (hasWorkspace() ? currentWorkspace() : null));
 
     setIpcContext({ window: () => mainWindow, rendererUrl });
     setEventSink((event) => {

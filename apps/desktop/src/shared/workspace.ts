@@ -115,6 +115,27 @@ export function isTextFile(path: string): boolean {
   return TEXT_EXTENSIONS.has(extensionOf(path));
 }
 
+/** Audio and video the window plays, by extension. */
+export const MEDIA_TYPES: Record<string, string> = {
+  ".mp4": "video/mp4",
+  ".m4v": "video/mp4",
+  ".webm": "video/webm",
+  ".ogv": "video/ogg",
+  ".mov": "video/quicktime",
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".oga": "audio/ogg",
+  ".opus": "audio/ogg",
+  ".flac": "audio/flac",
+};
+
+export function isMediaFile(path: string): boolean {
+  return extensionOf(path) in MEDIA_TYPES;
+}
+
 /** When a project is due, on the student's clock. */
 export const projectDueSchema = z.object({
   date: dateSchema,

@@ -15,6 +15,7 @@ import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection } from "../../../shared/moodle";
 import {
+  isMediaFile,
   isTextFile,
   type ResourceInfo,
   type SubjectInfo,
@@ -25,7 +26,7 @@ import type { CardRequest } from "../practice/card-dialog";
 import type { QuizEditorRequest } from "../practice/quiz-editor";
 import { ActivityView } from "../views/activity-view";
 import { CourseView } from "../views/course-view";
-import { AttachmentView, ImageView } from "../views/file-views";
+import { AttachmentView, ImageView, MediaView } from "../views/file-views";
 import { TextView } from "../views/text-view";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
@@ -117,6 +118,8 @@ function ResourceView({
     case "attachment":
       return isTextFile(resource.path) ? (
         <TextView resource={resource} />
+      ) : isMediaFile(resource.path) ? (
+        <MediaView resource={resource} />
       ) : (
         <AttachmentView resource={resource} />
       );
