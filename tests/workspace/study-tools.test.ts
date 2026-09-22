@@ -165,6 +165,61 @@ describe("study write tools", () => {
     ]);
   });
 
+  it("files a note into a new folder and renames it", async () => {
+    const folder = await run("study_create_folder", {
+      subjectId: mathematicsId,
+      name: "Revision",
+    });
+    expect(folder.data).toMatchObject({ folder: "Revision" });
+
+    const moved = await run("study_move_file", {
+      resourceId: noteId,
+      folder: "Revision",
+      title: "Limits, revised",
+    });
+    expect(moved.failed).toBe(false);
+    const info = workspace.resources.get(noteId)?.info;
+    expect(info).toMatchObject({
+      folder: "Revision",
+      title: "Limits, revised",
+    });
+
+    const refused = await run("study_move_file", {
+      resourceId: noteId,
+      subjectId: physicsId,
+    });
+    expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+  });
+
+  it("offers adding files to a project only in the project's conversation", async () => {
+    const tools = studyTools(workspace, {
+      scope: { subjectIds: [mathematicsId], resourceIds: [] },
+    });
+    expect(tools.some((tool) => tool.name === "study_add_to_project")).toBe(
+      false,
+    );
+    const project = await createProject(workspace, {
+      title: "Exam prep",
+      subjectIds: [],
+      resourceIds: [],
+    });
+    const added = await run(
+      "study_add_to_project",
+      { resourceIds: [noteId] },
+      {
+        scope: {
+          subjectIds: [mathematicsId],
+          resourceIds: [],
+          projectId: project.id,
+        },
+      },
+    );
+    expect(added.failed).toBe(false);
+    expect(workspace.projects.get(project.id)?.info.resourceIds).toEqual([
+      noteId,
+    ]);
+  });
+
   it("replaces text in a note and keeps what it replaced", async () => {
     const edited = await run("study_edit_note", {
       noteId,

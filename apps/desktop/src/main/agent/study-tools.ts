@@ -55,8 +55,11 @@ import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
 import { readablePages, recognizedPages } from "../workspace/ocr";
 import { foldText, searchWorkspace } from "../workspace/search";
 import {
+  createFolder,
   createNote,
+  moveResource,
   readNote,
+  renameResource,
   readResourceBytes,
   resourcePath,
   type OpenWorkspace,
@@ -142,6 +145,7 @@ export interface StudyTool {
 /** Something a write tool changed, so the window can show it. */
 export type StudyChange =
   | { kind: "note"; resourceId: string }
+  | { kind: "files" }
   | { kind: "annotations"; documentId: string }
   | { kind: "practice"; subjectId: string }
   | { kind: "plan" }
@@ -220,6 +224,14 @@ export function describeToolCall(
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
       return `Edited ${title("noteId")}`;
+    case "study_create_folder":
+      return `Created the folder “${String(input.name ?? "")}”`;
+    case "study_move_file":
+      return input.title && !input.subjectId && input.folder === undefined
+        ? `Renamed ${title("resourceId")}`
+        : `Moved ${title("resourceId")}`;
+    case "study_add_to_project":
+      return "Added files to the project";
     case "study_highlight_pdf":
       return `Highlighted a passage in ${title("documentId")}`;
     case "study_update_highlight":
@@ -469,6 +481,39 @@ export function studyTools(
       return run(parsed.data);
     },
   });
+
+  const addToProject = define(
+    "study_add_to_project",
+    "Add notes or files in this conversation to the project it is about, so the project keeps them.",
+    {
+      resourceIds: z
+        .array(z.string())
+        .min(1)
+        .max(50)
+        .describe("The notes' or files' IDs"),
+    },
+    async ({ resourceIds }) => {
+      if (!scope.projectId)
+        return failure(
+          "NO_PROJECT",
+          "This conversation is not about a project.",
+        );
+      for (const id of resourceIds) {
+        const info = resource(id);
+        if ("content" in info) return info;
+      }
+      try {
+        await joinProject(workspace, scope.projectId, resourceIds);
+      } catch (error) {
+        return failure(
+          "WRITE_FAILED",
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      changed({ kind: "files" });
+      return ok({ added: resourceIds.length });
+    },
+  );
 
   const readImage = define(
     "study_read_image",
@@ -1603,6 +1648,95 @@ export function studyTools(
       },
     ),
     define(
+      "study_create_folder",
+      "Create a folder in a subject, or inside one of its folders, to organise notes and files.",
+      {
+        subjectId: z.string().describe("The subject it goes in"),
+        name: z.string().min(1).max(100).describe("The folder's name"),
+        parent: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("An existing folder to put it in"),
+      },
+      async ({ subjectId, name, parent }) => {
+        if (!workspace.subjects.has(subjectId))
+          return failure("NOT_FOUND", `No subject has the ID ${subjectId}.`);
+        if (!homes.has(subjectId))
+          return failure(
+            "OUT_OF_SCOPE",
+            "That subject is not in this conversation. Ask the student to add it before writing to it.",
+          );
+        try {
+          const folder = await createFolder(workspace, {
+            subjectId,
+            name,
+            ...(parent ? { parent } : {}),
+          });
+          changed({ kind: "files" });
+          return ok({ subjectId, folder: folder.path, created: true });
+        } catch (error) {
+          return failure(
+            "WRITE_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
+      "study_move_file",
+      "Move a note or file into another folder or subject in this conversation, or rename it, or both. Moving without a folder puts it at the top of the subject.",
+      {
+        resourceId: z.string().describe("The note's or file's ID"),
+        subjectId: z
+          .string()
+          .optional()
+          .describe("The subject it goes to; its own if left out"),
+        folder: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("An existing folder in that subject"),
+        title: z.string().min(1).max(200).optional().describe("A new title"),
+      },
+      async ({ resourceId, subjectId, folder, title }) => {
+        const info = resource(resourceId);
+        if ("content" in info) return info;
+        const target = subjectId ?? info.subjectId;
+        if (!workspace.subjects.has(target))
+          return failure("NOT_FOUND", `No subject has the ID ${target}.`);
+        if (!homes.has(target))
+          return failure(
+            "OUT_OF_SCOPE",
+            "That subject is not in this conversation. Ask the student to add it before moving files there.",
+          );
+        if (subjectId === undefined && folder === undefined && !title)
+          return failure(
+            "INVALID_INPUT",
+            "Give a subject, a folder, or a title to change.",
+          );
+        try {
+          let moved = info;
+          if (subjectId !== undefined || folder !== undefined)
+            moved = await moveResource(workspace, {
+              id: resourceId,
+              subjectId: target,
+              ...(folder ? { folder } : {}),
+            });
+          if (title)
+            moved = await renameResource(workspace, { id: resourceId, title });
+          changed({ kind: "files" });
+          return ok({ ...describe(moved), path: moved.path });
+        } catch (error) {
+          return failure(
+            "WRITE_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    ...(scope.projectId ? [addToProject] : []),
+    define(
       "study_edit_note",
       "Change a note. Prefer small replacements over rewriting it. resit keeps the previous text, so the student can restore it from the note's history.",
       {
@@ -1836,6 +1970,9 @@ export const STUDY_TOOLS = [
   "study_read_activity",
   "study_read_announcements",
   "study_create_note",
+  "study_create_folder",
+  "study_move_file",
+  "study_add_to_project",
   "study_edit_note",
   "study_highlight_pdf",
   "study_update_highlight",
