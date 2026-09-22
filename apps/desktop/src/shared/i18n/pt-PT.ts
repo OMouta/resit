@@ -653,6 +653,7 @@ export const messages: Record<string, string> = {
   "Options. Pick the right one.": "Opções. Escolha a certa.",
   "Otherwise resit starts on the workspace screen.":
     "Caso contrário, o resit abre no ecrã dos espaços de trabalho.",
+  "Output of cell {number}": "Resultado da célula {number}",
   "Page {page} of {total}": "Página {page} de {total}",
   "Page thumbnails, the document's contents, or your highlights.":
     "Miniaturas das páginas, o índice do documento ou os seus realces.",
@@ -1054,6 +1055,8 @@ export const messages: Record<string, string> = {
   "This folder is not a resit workspace. Choose a folder with a workspace.json file, or create a new workspace.":
     "Esta pasta não é um espaço de trabalho do resit. Escolha uma pasta com um ficheiro workspace.json, ou crie um espaço de trabalho novo.",
   "This image could not be opened": "Não foi possível abrir esta imagem",
+  "This is not a notebook resit can read.":
+    "Este não é um notebook que o resit consiga ler.",
   "This is not a resit file, or it is damaged.":
     "Isto não é um ficheiro do resit, ou está danificado.",
   "This is not a resit workspace file.":

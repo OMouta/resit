@@ -7,6 +7,7 @@ import {
   type OfficeContent,
   type ResourceInfo,
 } from "../../shared/workspace";
+import { notebookText, parseNotebook } from "../../shared/notebook";
 import { assertInsideWorkspace } from "./files";
 import { docxHtml, officePages, readOffice } from "./office";
 import { resourcePath, type OpenWorkspace } from "./workspace";
@@ -15,7 +16,9 @@ import { resourcePath, type OpenWorkspace } from "./workspace";
 export function hasReadableText(info: ResourceInfo): boolean {
   return (
     info.kind === "attachment" &&
-    (isTextFile(info.path) || isOfficeFile(info.path))
+    (isTextFile(info.path) ||
+      isOfficeFile(info.path) ||
+      extensionOf(info.path) === ".ipynb")
   );
 }
 
@@ -68,7 +71,12 @@ export async function readablePagesOf(
     return { pages: officePages(office), paged: office.format === "pptx" };
   const path = resourcePath(workspace, resourceId);
   await assertInsideWorkspace(workspace.root, path);
-  return { pages: [await readFile(path, "utf8")], paged: false };
+  const text = await readFile(path, "utf8");
+  if (extensionOf(path) === ".ipynb") {
+    const notebook = parseNotebook(text);
+    return { pages: [notebook ? notebookText(notebook) : ""], paged: false };
+  }
+  return { pages: [text], paged: false };
 }
 
 /** The same words as one text, with each slide or sheet marked. */

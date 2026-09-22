@@ -15,6 +15,7 @@ import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection } from "../../../shared/moodle";
 import {
+  extensionOf,
   isMediaFile,
   isOfficeFile,
   isTextFile,
@@ -28,6 +29,7 @@ import type { QuizEditorRequest } from "../practice/quiz-editor";
 import { ActivityView } from "../views/activity-view";
 import { CourseView } from "../views/course-view";
 import { AttachmentView, ImageView, MediaView } from "../views/file-views";
+import { NotebookView } from "../views/notebook-view";
 import { OfficeView } from "../views/office-view";
 import { TextView } from "../views/text-view";
 import { GraphView } from "../views/graph-view";
@@ -124,6 +126,8 @@ function ResourceView({
         <MediaView resource={resource} />
       ) : isOfficeFile(resource.path) ? (
         <OfficeView resource={resource} />
+      ) : extensionOf(resource.path) === ".ipynb" ? (
+        <NotebookView resource={resource} />
       ) : (
         <AttachmentView resource={resource} />
       );

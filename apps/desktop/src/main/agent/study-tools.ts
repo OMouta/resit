@@ -787,7 +787,7 @@ export function studyTools(
     ...(canSeeImages ? [readImage] : []),
     define(
       "study_read_file",
-      "Read the text of a file the student imported: a Markdown or text file, a transcript, a data file, code, or a Word, PowerPoint, or Excel file.",
+      "Read the text of a file the student imported: a Markdown or text file, a transcript, a data file, code, a Jupyter notebook, or a Word, PowerPoint, or Excel file.",
       { resourceId: z.string().describe("The file's ID") },
       async ({ resourceId }) => {
         const info = resource(resourceId);
