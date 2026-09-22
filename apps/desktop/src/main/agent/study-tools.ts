@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
 import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
@@ -28,7 +27,6 @@ import {
 import {
   ANNOTATION_COLOR_VALUES,
   ANNOTATION_TYPE_VALUES,
-  TEXT_EXTENSIONS,
   type Annotation,
   type ResourceInfo,
 } from "../../shared/workspace";
@@ -50,7 +48,7 @@ import {
   listAnnotations,
   updateAnnotation,
 } from "../workspace/annotations";
-import { assertInsideWorkspace } from "../workspace/files";
+import { readableText } from "../workspace/text";
 import { t } from "../i18n";
 import { joinProject } from "../workspace/projects";
 import { saveNoteWithHistory } from "../workspace/history";
@@ -87,7 +85,6 @@ const MAX_FILE_CHARS = 40_000;
 const MAX_ANNOTATION_CHARS = 2000;
 const MAX_NOTE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
 
 /** Text formats the assistant may save as files. Notes are Markdown already. */
 const SAVE_EXTENSIONS = new Set([
@@ -799,15 +796,14 @@ export function studyTools(
           return failure("UNSUPPORTED", "Use study_read_note for notes.");
         if (info.kind === "pdf")
           return failure("UNSUPPORTED", "Use study_read_pdf_page for PDFs.");
-        const path = resourcePath(workspace, resourceId);
-        const extension = extname(path).toLowerCase();
-        if (!TEXT_EXTENSIONS.has(extension))
+        const text = await readableText(workspace, resourceId);
+        if (text === null) {
+          const extension = extname(info.path).toLowerCase();
           return failure(
             "UNSUPPORTED",
             `resit cannot read ${extension || "that kind of file"} as text.`,
           );
-        await assertInsideWorkspace(workspace.root, path);
-        const text = await readFile(path, "utf8");
+        }
         const truncated = text.length > MAX_FILE_CHARS;
         return ok({
           ...describe(info),
@@ -819,7 +815,7 @@ export function studyTools(
     ),
     define(
       "study_search",
-      "Search the text of notes and PDFs in scope. Matching ignores case and accents.",
+      "Search the text of notes, PDFs, and text files in scope. Matching ignores case and accents.",
       {
         query: z.string().min(1).max(200),
         limit: z.number().int().min(1).max(30).optional(),

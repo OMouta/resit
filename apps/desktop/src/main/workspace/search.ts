@@ -5,6 +5,7 @@ import { setImmediate as yieldToEvents } from "node:timers/promises";
 
 import type { ResourceInfo } from "../../shared/workspace";
 import { readablePages } from "./ocr";
+import { hasReadableText, readableText } from "./text";
 import { readNote, type OpenWorkspace } from "./workspace";
 
 export interface SearchHit {
@@ -240,7 +241,9 @@ async function sync(
     .map((entry) => entry.info)
     .filter(
       (info) =>
-        (info.kind === "note" || info.kind === "pdf") &&
+        (info.kind === "note" ||
+          info.kind === "pdf" ||
+          hasReadableText(info)) &&
         indexed.get(info.id) !== info.revision,
     )
     .sort((a, b) => Number(a.kind === "pdf") - Number(b.kind === "pdf"));
@@ -255,8 +258,10 @@ async function sync(
         const note = await readNote(workspace, info.id);
         pages = [note.body];
         revision = note.revision;
-      } else {
+      } else if (info.kind === "pdf") {
         pages = await readablePages(workspace, info.id);
+      } else {
+        pages = [(await readableText(workspace, info.id)) ?? ""];
       }
     } catch {
       // Recorded with no text, so an unreadable file is not read again

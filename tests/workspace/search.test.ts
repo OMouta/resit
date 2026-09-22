@@ -86,6 +86,16 @@ describe("search index", () => {
     );
   });
 
+  it("finds words in imported text and code files", async () => {
+    const source = join(directory, "newton.py");
+    await writeFile(source, "def newton(f, df, x0):\n    # Método de Newton\n");
+    await importFile(workspace, { subjectId: subjectId(), sourcePath: source });
+    const hits = await searchWorkspace(workspace, "metodo newton", everything);
+    expect(hits.map((hit) => [hit.title, hit.kind])).toEqual([
+      ["newton", "attachment"],
+    ]);
+  });
+
   it("follows changed and deleted notes", async () => {
     const note = await writeNote("Series", "Geometric series converge.\n");
     expect(
