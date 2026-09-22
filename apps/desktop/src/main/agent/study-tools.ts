@@ -54,6 +54,7 @@ import { joinProject } from "../workspace/projects";
 import { saveNoteWithHistory } from "../workspace/history";
 import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
 import { readablePages, recognizedPages } from "../workspace/ocr";
+import { pdfOutline } from "../workspace/pdf-text";
 import { foldText, searchWorkspace } from "../workspace/search";
 import {
   addFile,
@@ -235,6 +236,8 @@ export function describeToolCall(
         : `${input.as === "image" ? "Looked at" : "Read"} ${title("documentId")}, page ${page}`;
     case "study_search_pdf":
       return `Searched ${title("documentId")} for “${String(input.query ?? "")}”`;
+    case "study_get_pdf_outline":
+      return `Read the contents of ${title("documentId")}`;
     case "study_get_pdf_annotations":
       return `Read the highlights in ${title("documentId")}`;
     case "study_read_image":
@@ -754,6 +757,31 @@ export function studyTools(
           extraction: recognized ? "ocr" : "text",
           text: text ? text.slice(0, MAX_PAGE_CHARS) : empty,
         });
+      },
+    ),
+    define(
+      "study_get_pdf_outline",
+      "List a PDF's bookmarks, its table of contents, with the page each chapter or section starts on. Use it to find a chapter before reading its pages.",
+      { documentId: z.string().describe("The PDF's ID") },
+      async ({ documentId }) => {
+        const info = pdf(documentId);
+        if ("content" in info) return info;
+        let outline;
+        try {
+          outline = await pdfOutline(workspace, documentId);
+        } catch (error) {
+          return failure(
+            "READ_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+        if (outline.length === 0)
+          return ok({
+            ...describe(info),
+            outline: [],
+            note: "This PDF has no bookmarks. Search it with study_search_pdf instead.",
+          });
+        return ok({ ...describe(info), outline });
       },
     ),
     define(
@@ -2310,6 +2338,7 @@ export const STUDY_TOOLS = [
   "study_list_resources",
   "study_read_note",
   "study_read_pdf_page",
+  "study_get_pdf_outline",
   "study_search_pdf",
   "study_get_pdf_annotations",
   "study_read_image",

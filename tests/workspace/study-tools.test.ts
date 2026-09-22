@@ -433,6 +433,32 @@ describe("study read tools", () => {
     expect(read.data.nextPage).toBeUndefined();
   });
 
+  it("lists a PDF's bookmarks with their pages, or says it has none", async () => {
+    const none = await run("study_get_pdf_outline", { documentId: pdfId });
+    expect(none.data.outline).toEqual([]);
+
+    const source = join(directory, "Textbook.pdf");
+    await writeFile(
+      source,
+      samplePdf(
+        [
+          { title: "Chapter 1: Limits", lines: ["Epsilon and delta."] },
+          { title: "Chapter 2: Derivatives", lines: ["Slopes."] },
+        ],
+        { outline: true },
+      ),
+    );
+    const book = await importFile(workspace, {
+      subjectId: mathematicsId,
+      sourcePath: source,
+    });
+    const listed = await run("study_get_pdf_outline", { documentId: book.id });
+    expect(listed.data.outline).toEqual([
+      { title: "Chapter 1: Limits", level: 1, page: 1 },
+      { title: "Chapter 2: Derivatives", level: 1, page: 2 },
+    ]);
+  });
+
   it("finds which pages hold a phrase", async () => {
     const found = await run("study_search_pdf", {
       documentId: pdfId,

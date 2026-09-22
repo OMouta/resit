@@ -7,7 +7,8 @@
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export function samplePdf(pages) {
+/** With `outline`, each page also gets a bookmark with its title. */
+export function samplePdf(pages, { outline = false } = {}) {
   const objects = [];
   const add = (body) => {
     objects.push(body);
@@ -36,7 +37,23 @@ export function samplePdf(pages) {
       ),
     );
   }
-  objects[catalog - 1] = `<< /Type /Catalog /Pages ${pageTree} 0 R >>`;
+  let outlines = null;
+  if (outline) {
+    outlines = add("");
+    const items = pages.map(() => add(""));
+    pages.forEach((page, index) => {
+      const links = [
+        index > 0 ? `/Prev ${items[index - 1]} 0 R` : "",
+        index < items.length - 1 ? `/Next ${items[index + 1]} 0 R` : "",
+      ].join(" ");
+      objects[items[index] - 1] =
+        `<< /Title (${escape(page.title)}) /Parent ${outlines} 0 R ${links} /Dest [${kids[index]} 0 R /Fit] >>`;
+    });
+    objects[outlines - 1] =
+      `<< /Type /Outlines /First ${items[0]} 0 R /Last ${items.at(-1)} 0 R /Count ${items.length} >>`;
+  }
+  objects[catalog - 1] =
+    `<< /Type /Catalog /Pages ${pageTree} 0 R${outlines ? ` /Outlines ${outlines} 0 R` : ""} >>`;
   objects[pageTree - 1] =
     `<< /Type /Pages /Kids [${kids.map((kid) => `${kid} 0 R`).join(" ")}] /Count ${kids.length} >>`;
 

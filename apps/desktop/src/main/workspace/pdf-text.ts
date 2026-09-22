@@ -1,7 +1,12 @@
 import { Worker } from "node:worker_threads";
 
 import workerPath from "../../workers/pdf-text?modulePath";
-import type { ExtractResponse, PageText } from "../../workers/pdf-text";
+import type {
+  ExtractRequest,
+  ExtractResponse,
+  OutlineEntry,
+  PageText,
+} from "../../workers/pdf-text";
 import { assertInsideWorkspace } from "./files";
 import { type OpenWorkspace } from "./workspace";
 
@@ -14,6 +19,7 @@ interface Cached<T> {
 const cache = new Map<string, Cached<string[]>>();
 /** Text positions by resource ID and page, for placing highlights. */
 const pageCache = new Map<string, Cached<PageText>>();
+const outlineCache = new Map<string, Cached<OutlineEntry[]>>();
 const MAX_CACHED = 50;
 
 interface Pending {
@@ -53,15 +59,14 @@ function extractionWorker(): Worker {
   return started;
 }
 
-function ask(path: string, page?: number): Promise<ExtractResponse> {
+function ask(
+  path: string,
+  options: Omit<ExtractRequest, "id" | "path"> = {},
+): Promise<ExtractResponse> {
   const id = (nextId += 1);
   return new Promise<ExtractResponse>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    extractionWorker().postMessage({
-      id,
-      path,
-      ...(page === undefined ? {} : { page }),
-    });
+    extractionWorker().postMessage({ id, path, ...options });
   });
 }
 
@@ -125,7 +130,7 @@ export function pdfPageText(
   const cached = pageCache.get(key);
   if (cached && cached.revision === entry.info.revision) return cached.value;
   const value = assertInsideWorkspace(workspace.root, entry.absPath)
-    .then(() => ask(entry.absPath, page))
+    .then(() => ask(entry.absPath, { page }))
     .then((response) => {
       if (!("page" in response))
         throw new Error("The page's text could not be read.");
@@ -134,4 +139,26 @@ export function pdfPageText(
   return remember(pageCache, key, { revision: entry.info.revision, value });
 }
 
-export type { PageText };
+/** The PDF's bookmarks, flattened, with the page each opens. */
+export function pdfOutline(
+  workspace: OpenWorkspace,
+  resourceId: string,
+): Promise<OutlineEntry[]> {
+  let entry;
+  try {
+    entry = pdfEntry(workspace, resourceId);
+  } catch (error) {
+    return Promise.reject(error as Error);
+  }
+  const cached = outlineCache.get(resourceId);
+  if (cached && cached.revision === entry.info.revision) return cached.value;
+  const value = assertInsideWorkspace(workspace.root, entry.absPath)
+    .then(() => ask(entry.absPath, { outline: true }))
+    .then((response) => ("outline" in response ? response.outline : []));
+  return remember(outlineCache, resourceId, {
+    revision: entry.info.revision,
+    value,
+  });
+}
+
+export type { OutlineEntry, PageText };
