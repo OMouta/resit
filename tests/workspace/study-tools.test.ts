@@ -23,6 +23,10 @@ import {
 } from "../../apps/desktop/src/main/practice/store";
 import { listNoteRevisions } from "../../apps/desktop/src/main/workspace/history";
 import {
+  createProject,
+  resolveScope,
+} from "../../apps/desktop/src/main/workspace/projects";
+import {
   activitiesPath,
   createNote,
   createSubject,
@@ -132,6 +136,33 @@ describe("study write tools", () => {
       title: "Not mine to write",
     });
     expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+  });
+
+  it("adds a note made in a project's conversation to the project", async () => {
+    const project = await createProject(workspace, {
+      title: "Exam prep",
+      subjectIds: [],
+      resourceIds: [physicsNoteId],
+    });
+    const created = await run(
+      "study_create_note",
+      { subjectId: physicsId, title: "Forces cheat sheet" },
+      {
+        scope: {
+          ...resolveScope(workspace, {
+            subjectIds: [],
+            resourceIds: [],
+            projectId: project.id,
+          }),
+          projectId: project.id,
+        },
+      },
+    );
+    expect(created.failed).toBe(false);
+    expect(workspace.projects.get(project.id)?.info.resourceIds).toEqual([
+      physicsNoteId,
+      created.data.id,
+    ]);
   });
 
   it("replaces text in a note and keeps what it replaced", async () => {

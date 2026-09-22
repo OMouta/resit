@@ -115,6 +115,28 @@ export async function deleteProject(
 }
 
 /**
+ * Adds files to a project, leaving out those one of its subjects already
+ * holds. Nothing changes for a project that no longer exists.
+ */
+export async function joinProject(
+  workspace: OpenWorkspace,
+  projectId: string,
+  resourceIds: string[],
+): Promise<void> {
+  const project = workspace.projects.get(projectId)?.info;
+  if (!project) return;
+  const loose = resourceIds.filter((id) => {
+    const resource = workspace.resources.get(id)?.info;
+    return resource && !project.subjectIds.includes(resource.subjectId);
+  });
+  if (loose.length === 0) return;
+  await updateProject(workspace, {
+    id: projectId,
+    resourceIds: [...project.resourceIds, ...loose],
+  });
+}
+
+/**
  * The subjects and files a conversation reaches: its own, and its
  * project's as the project stands now.
  */

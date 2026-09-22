@@ -49,6 +49,7 @@ import {
   updateAnnotation,
 } from "../workspace/annotations";
 import { assertInsideWorkspace } from "../workspace/files";
+import { joinProject } from "../workspace/projects";
 import { saveNoteWithHistory } from "../workspace/history";
 import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
 import { readablePages, recognizedPages } from "../workspace/ocr";
@@ -399,6 +400,20 @@ export function studyTools(
     ...(info.folder ? { folder: info.folder } : {}),
   });
   const changed = (change: StudyChange) => grant.onChange?.(change);
+  /**
+   * Subjects a new note may go into: those in scope, and in a project's
+   * conversation the subjects its files come from, since the note joins
+   * the project.
+   */
+  const homes = new Set([
+    ...scope.subjectIds,
+    ...(scope.projectId
+      ? scope.resourceIds.flatMap((id) => {
+          const subjectId = workspace.resources.get(id)?.info.subjectId;
+          return subjectId ? [subjectId] : [];
+        })
+      : []),
+  ]);
   /** A subject the turn may read and write, or why it may not. */
   const subjectFor = (subjectId: string): ToolResult | null => {
     if (!workspace.subjects.has(subjectId))
@@ -1533,7 +1548,7 @@ export function studyTools(
     ),
     define(
       "study_create_note",
-      "Create a note in one of the student's subjects and write Markdown into it. Use it for summaries, worked solutions, and study sheets they asked for.",
+      "Create a note in one of the student's subjects and write Markdown into it. Use it for summaries, worked solutions, and study sheets they asked for. In a project's conversation the note also joins the project.",
       {
         subjectId: z.string().describe("The subject the note belongs to"),
         title: z.string().min(1).max(200).describe("The note's title"),
@@ -1551,7 +1566,7 @@ export function studyTools(
       async ({ subjectId, title, markdown, folder }) => {
         if (!workspace.subjects.has(subjectId))
           return failure("NOT_FOUND", `No subject has the ID ${subjectId}.`);
-        if (!scope.subjectIds.includes(subjectId))
+        if (!homes.has(subjectId))
           return failure(
             "OUT_OF_SCOPE",
             "That subject is not in this conversation. Ask the student to add it before writing to it.",
@@ -1563,6 +1578,8 @@ export function studyTools(
             ...(folder ? { folder } : {}),
             ...(markdown ? { body: markdown } : {}),
           });
+          if (scope.projectId)
+            await joinProject(workspace, scope.projectId, [created.id]);
           changed({ kind: "note", resourceId: created.id });
           return ok({
             ...describe(created),

@@ -259,7 +259,11 @@ export async function startTurn(
   const profile = await learnerContext(workspace, scope).catch(() => null);
   const prompt = `${composeContext(workspace, scope, input.context, project)}${profile ? `\n${profile}` : ""}\n\n${input.text}`;
   const grant = turnGrant(workspace, emit, {
-    scope,
+    // The project stays named, so notes made here can join it.
+    scope: {
+      ...scope,
+      ...(meta.scope.projectId ? { projectId: meta.scope.projectId } : {}),
+    },
     context: input.context,
     images: providerId === "claude",
   });
