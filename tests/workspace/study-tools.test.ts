@@ -695,8 +695,8 @@ describe("Moodle downloads", () => {
 });
 
 describe("downloads from the web", () => {
-  const pdf = Buffer.from("%PDF-1.4 a paper");
-  const web = (body: Uint8Array | string, type: string) => () =>
+  const pdf = "%PDF-1.4 a paper";
+  const web = (body: string, type: string) => () =>
     Promise.resolve(new Response(body, { headers: { "content-type": type } }));
 
   it("downloads a file only once the student allows it", async () => {
