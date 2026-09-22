@@ -1,4 +1,5 @@
 import {
+  ClipboardListIcon,
   FilePlusIcon,
   FileTextIcon,
   FolderKanbanIcon,
@@ -24,12 +25,19 @@ import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { useLocale } from "@resit/ui/hooks/use-locale";
 
+import { localInstant } from "../../../shared/planning";
 import type {
   ProjectInfo,
   ResourceKind,
   SubjectInfo,
   WorkspaceSnapshot,
 } from "../../../shared/workspace";
+import {
+  isDeadline,
+  isSubmitted,
+  submissionLabel,
+  useMoodleActivities,
+} from "../lib/moodle-activities";
 
 const icons: Record<ResourceKind, typeof FileTextIcon> = {
   note: FileTextIcon,
@@ -106,6 +114,7 @@ export function ProjectView({
   onAsk,
   onNewNote,
   onImport,
+  onOpenActivity,
   onEdit,
   onDelete,
 }: {
@@ -116,10 +125,15 @@ export function ProjectView({
   onAsk: () => void;
   onNewNote: (subjectId: string) => void;
   onImport: (subjectId: string) => void;
+  onOpenActivity: (
+    subjectId: string,
+    activity: { moduleId: number; name: string },
+  ) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const { t } = useLocale();
+  const { t, dateTime, date, relative } = useLocale();
+  const records = useMoodleActivities();
   if (!project)
     return (
       <EmptyState
@@ -146,6 +160,27 @@ export function ProjectView({
         ? files.some((resource) => resource.subjectId === subject.id)
         : !subject.archived,
   );
+  const linked = project.activity
+    ? records
+        ?.find((record) => record.subjectId === project.activity?.subjectId)
+        ?.activities.find(
+          (entry) => entry.moduleId === project.activity?.moduleId,
+        )
+    : undefined;
+  const moodleDue = linked?.dates.find(isDeadline);
+  const due = moodleDue
+    ? { at: moodleDue.at, label: dateTime(moodleDue.at) }
+    : project.due
+      ? {
+          at: localInstant(
+            project.due.date,
+            project.due.time ?? "23:59",
+          ).toISOString(),
+          label: project.due.time
+            ? dateTime(localInstant(project.due.date, project.due.time))
+            : date(localInstant(project.due.date, "12:00")),
+        }
+      : null;
   const counts = new Map<string, number>();
   for (const resource of snapshot.resources)
     counts.set(resource.subjectId, (counts.get(resource.subjectId) ?? 0) + 1);
@@ -158,6 +193,16 @@ export function ProjectView({
             <h1 className="text-3xl font-bold tracking-[-0.025em]">
               {project.title}
             </h1>
+            {due ? (
+              <p className="text-sm">
+                <span className="font-medium">
+                  {t("Due {date}", { date: due.label })}
+                </span>
+                <span className="ml-2 text-muted-foreground">
+                  {relative(due.at)}
+                </span>
+              </p>
+            ) : null}
             <p className="text-sm text-muted-foreground">
               {t(
                 "A conversation about this project reads these subjects and files.",
@@ -195,6 +240,38 @@ export function ProjectView({
             </Button>
           </div>
         </header>
+
+        {project.activity && linked ? (
+          <section
+            className="flex flex-col gap-2"
+            aria-label={t("Moodle assignment")}
+          >
+            <SectionTitle>{t("Moodle assignment")}</SectionTitle>
+            <button
+              type="button"
+              onClick={() =>
+                project.activity &&
+                onOpenActivity(project.activity.subjectId, linked)
+              }
+              className="flex min-h-row w-full items-center gap-2.5 rounded-control px-2 py-1.5 text-left text-sm hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
+            >
+              <ClipboardListIcon className="size-4 shrink-0 text-subtle-foreground" />
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {linked.name}
+              </span>
+              {submissionLabel(linked) ? (
+                <span
+                  className={cn(
+                    "shrink-0 text-xs",
+                    isSubmitted(linked) ? "text-success" : "text-warning",
+                  )}
+                >
+                  {t(submissionLabel(linked) ?? "")}
+                </span>
+              ) : null}
+            </button>
+          </section>
+        ) : null}
 
         {subjects.length === 0 && files.length === 0 ? (
           <EmptyState

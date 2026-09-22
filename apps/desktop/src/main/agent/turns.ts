@@ -16,6 +16,7 @@ import type {
   TurnContext,
 } from "../../shared/conversations";
 import type { DesktopEvent } from "../../shared/ipc";
+import type { ProjectInfo } from "../../shared/workspace";
 import {
   appendMessage,
   bindClaudeSession,
@@ -92,18 +93,26 @@ function composeContext(
   workspace: OpenWorkspace,
   scope: ConversationScope,
   context: TurnContext,
-  project: string | undefined,
+  project: ProjectInfo | undefined,
 ): string {
   const subjects = scope.subjectIds
     .map((id) => workspace.subjects.get(id)?.info.name)
     .filter(Boolean);
   const lines = [
-    `Conversation scope${project ? ` (the project "${project}")` : ""}: ${subjects.length > 0 ? subjects.join(", ") : "no subjects"}${
+    `Conversation scope${project ? ` (the project "${project.title}")` : ""}: ${subjects.length > 0 ? subjects.join(", ") : "no subjects"}${
       scope.resourceIds.length > 0
         ? `, plus ${scope.resourceIds.length} added ${scope.resourceIds.length === 1 ? "file" : "files"}`
         : ""
     }. The study tools read and write the files in this scope, and the file open below.`,
   ];
+  if (project?.activity)
+    lines.push(
+      `The project is the work for Moodle activity ${project.activity.moduleId}; study_read_activity reads its brief and dates.`,
+    );
+  else if (project?.due)
+    lines.push(
+      `The project is due ${project.due.date}${project.due.time ? ` at ${project.due.time}` : ""}.`,
+    );
   const focused = context.focused;
   if (focused) {
     const entry = workspace.resources.get(focused.resourceId);
@@ -253,7 +262,7 @@ export async function startTurn(
   // The project's subjects and files as they are now.
   const scope = resolveScope(workspace, meta.scope);
   const project = meta.scope.projectId
-    ? workspace.projects.get(meta.scope.projectId)?.info.title
+    ? workspace.projects.get(meta.scope.projectId)?.info
     : undefined;
   // A profile that cannot be read leaves the message without it.
   const profile = await learnerContext(workspace, scope).catch(() => null);

@@ -58,6 +58,8 @@ import type {
   NoteRevision,
   NoteRevisionContent,
   PackageOptions,
+  ProjectActivity,
+  ProjectDue,
   ProjectInfo,
   PackageSummary,
   RecentWorkspace,
@@ -247,12 +249,17 @@ export interface DesktopApi {
     title: string;
     subjectIds: string[];
     resourceIds: string[];
+    due?: ProjectDue | null;
+    activity?: ProjectActivity | null;
   }): Promise<ProjectInfo>;
+  /** A due date or activity of null clears it. */
   updateProject(input: {
     id: string;
     title?: string;
     subjectIds?: string[];
     resourceIds?: string[];
+    due?: ProjectDue | null;
+    activity?: ProjectActivity | null;
   }): Promise<ProjectInfo>;
   /** Moves the project to the trash. Its subjects and files stay. */
   deleteProject(id: string): Promise<WorkspaceSnapshot>;

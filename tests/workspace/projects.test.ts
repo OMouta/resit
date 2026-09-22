@@ -117,3 +117,30 @@ it("deletes only the project, which the trash can bring back", async () => {
   await restoreFromTrash(workspace, deleted!.id);
   expect(snapshot(workspace).projects).toEqual([project]);
 });
+
+it("keeps a due date or the Moodle activity it is for, until cleared", async () => {
+  const mathematics = snapshot(workspace).subjects[0]!;
+  const project = await createProject(workspace, {
+    title: "Report",
+    subjectIds: [mathematics.id],
+    resourceIds: [],
+    due: { date: "2026-10-09", time: "23:59" },
+  });
+  expect(project.due).toEqual({ date: "2026-10-09", time: "23:59" });
+
+  const linked = await updateProject(workspace, {
+    id: project.id,
+    due: null,
+    activity: { subjectId: mathematics.id, moduleId: 203 },
+  });
+  expect(linked.due).toBeUndefined();
+  expect(linked.activity).toEqual({ subjectId: mathematics.id, moduleId: 203 });
+
+  // Renaming leaves both as they are, and they survive a reopen.
+  await updateProject(workspace, { id: project.id, title: "Final report" });
+  const reopened = await openWorkspace(workspace.root);
+  expect(snapshot(reopened).projects[0]).toMatchObject({
+    title: "Final report",
+    activity: { subjectId: mathematics.id, moduleId: 203 },
+  });
+});

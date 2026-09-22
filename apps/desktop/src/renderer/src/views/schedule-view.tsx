@@ -61,7 +61,11 @@ import {
   type StudySession,
   type TimeSlot,
 } from "../../../shared/planning";
-import type { SubjectInfo, WorkspaceSnapshot } from "../../../shared/workspace";
+import type {
+  ProjectInfo,
+  SubjectInfo,
+  WorkspaceSnapshot,
+} from "../../../shared/workspace";
 import { api, errorMessage } from "../lib/api";
 import {
   activityType,
@@ -104,6 +108,7 @@ export interface ScheduleViewProps {
   onOpenActivity: (subjectId: string, activity: Activity) => void;
   /** The course page resit saved for a subject that follows Moodle. */
   onOpenCourse: (subjectId: string) => void;
+  onOpenProject: (projectId: string) => void;
   onOpenSettings: () => void;
   onOpenResource: (resourceId: string) => void;
   onOpenQuiz: (subjectId: string, quiz: { id: string; title: string }) => void;
@@ -396,6 +401,8 @@ export function ScheduleView(props: ScheduleViewProps) {
                   onResolve={(ids, accept) => void resolve(ids, accept)}
                   onChangeTimes={(times) => void changeTimes(times)}
                   onEditTimes={() => setAvailabilityOpen(true)}
+                  projects={snapshot.projects}
+                  onOpenProject={props.onOpenProject}
                   dayLabel={(day) =>
                     `${weekday(localInstant(day, "12:00"))}, ${formatDate(localInstant(day, "12:00"), { year: undefined })}`
                   }
@@ -676,6 +683,8 @@ function Week({
   onResolve,
   onChangeTimes,
   onEditTimes,
+  projects,
+  onOpenProject,
 }: {
   days: string[];
   plan: PlanFile;
@@ -694,6 +703,8 @@ function Week({
   onChangeTimes: (times: Availability[]) => void;
   /** The list of study times, which also works from the keyboard. */
   onEditTimes: () => void;
+  projects: ProjectInfo[];
+  onOpenProject: (projectId: string) => void;
 }) {
   const { t, time } = useLocale();
   const byDay = useMemo(() => {
@@ -714,15 +725,35 @@ function Week({
     return deadlines;
   }, [records, subjects]);
 
-  /** Assessments and Moodle deadlines: dated, but not blocks of time. */
+  /** Assessments and deadlines: dated, but not blocks of time. */
   const dated = (day: string) => {
     const assessments = plan.assessments.filter(
       (assessment) => assessment.date === day,
     );
     const deadlines = byDay.get(day) ?? [];
-    if (assessments.length === 0 && deadlines.length === 0) return null;
+    // A project for a Moodle assignment shows as that assignment.
+    const due = projects.filter(
+      (project) => !project.activity && project.due?.date === day,
+    );
+    if (assessments.length === 0 && deadlines.length === 0 && due.length === 0)
+      return null;
     return (
       <>
+        {due.map((project) => (
+          <button
+            key={project.id}
+            type="button"
+            onClick={() => onOpenProject(project.id)}
+            className="flex w-full flex-col gap-0.5 rounded-md border-l-[3px] border-primary px-2 py-1 text-left text-2xs hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
+          >
+            <span className="tabular-nums text-muted-foreground">
+              {project.due?.time
+                ? t("Due {time}", { time: project.due.time })
+                : t("Due")}
+            </span>
+            <span className="line-clamp-2 font-medium">{project.title}</span>
+          </button>
+        ))}
         {assessments.map((assessment) => {
           const subject = assessment.subjectId
             ? subjects.get(assessment.subjectId)

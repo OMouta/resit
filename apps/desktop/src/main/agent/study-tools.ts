@@ -847,7 +847,14 @@ export function studyTools(
             (candidate) => String(candidate.moduleId) === activityId,
           );
           if (!activity) continue;
-          if (!scope.subjectIds.includes(entry.subjectId))
+          const linked = scope.projectId
+            ? workspace.projects.get(scope.projectId)?.info.activity
+            : undefined;
+          // A project's own assignment is readable wherever its course is.
+          const isLinked =
+            linked?.subjectId === entry.subjectId &&
+            linked.moduleId === activity.moduleId;
+          if (!isLinked && !scope.subjectIds.includes(entry.subjectId))
             return failure(
               "OUT_OF_SCOPE",
               "That activity's subject is not in this conversation. Ask the student to add it.",

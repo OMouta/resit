@@ -13,15 +13,25 @@ import {
 } from "@resit/ui/components/dialog";
 import { Input } from "@resit/ui/components/input";
 import { Label } from "@resit/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@resit/ui/components/select";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type {
+  ProjectActivity,
+  ProjectDue,
   ProjectInfo,
   ResourceInfo,
   SubjectInfo,
 } from "../../../shared/workspace";
+import { useMoodleActivities } from "../lib/moodle-activities";
 
 export interface ProjectRequest {
   title: string;
@@ -31,8 +41,12 @@ export interface ProjectRequest {
     title: string;
     subjectIds: string[];
     resourceIds: string[];
+    due: ProjectDue | null;
+    activity: ProjectActivity | null;
   }) => Promise<void>;
 }
+
+const NO_ACTIVITY = "none";
 
 /** Lowercase without accents, so "analise" finds "Análise". */
 function fold(text: string): string {
@@ -56,15 +70,40 @@ export function ProjectDialog({
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [resourceIds, setResourceIds] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
+  const [activity, setActivity] = useState(NO_ACTIVITY);
   const [busy, setBusy] = useState(false);
+  const records = useMoodleActivities();
 
   useEffect(() => {
     if (!request) return;
-    setTitle(request.project?.title ?? "");
-    setSubjectIds(request.project?.subjectIds ?? []);
-    setResourceIds(request.project?.resourceIds ?? []);
+    const project = request.project;
+    setTitle(project?.title ?? "");
+    setSubjectIds(project?.subjectIds ?? []);
+    setResourceIds(project?.resourceIds ?? []);
+    setDueDate(project?.due?.date ?? "");
+    setDueTime(project?.due?.time ?? "");
+    setActivity(
+      project?.activity
+        ? `${project.activity.subjectId}:${project.activity.moduleId}`
+        : NO_ACTIVITY,
+    );
     setFilter("");
   }, [request]);
+
+  // Assignments from the courses subjects follow, for a project to be the work of.
+  const assignments = (records ?? []).flatMap((record) =>
+    record.activities
+      .filter((entry) => entry.modname === "assign")
+      .map((entry) => ({
+        value: `${record.subjectId}:${entry.moduleId}`,
+        subjectId: record.subjectId,
+        moduleId: entry.moduleId,
+        name: entry.name,
+      })),
+  );
+  const linked = assignments.find((entry) => entry.value === activity);
 
   const names = useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject.name])),
@@ -99,6 +138,16 @@ export function ProjectDialog({
               try {
                 await request.onSubmit({
                   title: title.trim(),
+                  due:
+                    linked || !dueDate
+                      ? null
+                      : {
+                          date: dueDate,
+                          ...(dueTime ? { time: dueTime } : {}),
+                        },
+                  activity: linked
+                    ? { subjectId: linked.subjectId, moduleId: linked.moduleId }
+                    : null,
                   subjectIds,
                   // Files of a subject chosen later are covered by it.
                   resourceIds: resourceIds.filter((id) => {
@@ -133,6 +182,45 @@ export function ProjectDialog({
                 onChange={(event) => setTitle(event.target.value)}
               />
             </div>
+            {assignments.length > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="project-activity">
+                  {t("Moodle assignment")}
+                </Label>
+                <Select value={activity} onValueChange={setActivity}>
+                  <SelectTrigger id="project-activity" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_ACTIVITY}>{t("None")}</SelectItem>
+                    {assignments.map((entry) => (
+                      <SelectItem key={entry.value} value={entry.value}>
+                        {names.get(entry.subjectId) ?? ""} · {entry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            {linked ? null : (
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5">
+                <Label htmlFor="project-due">{t("Due")}</Label>
+                <Label htmlFor="project-due-time">{t("Time")}</Label>
+                <Input
+                  id="project-due"
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                />
+                <Input
+                  id="project-due-time"
+                  type="time"
+                  value={dueTime}
+                  disabled={!dueDate}
+                  onChange={(event) => setDueTime(event.target.value)}
+                />
+              </div>
+            )}
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-medium">
                 {t("Subjects")}

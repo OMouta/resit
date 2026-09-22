@@ -5,6 +5,7 @@ import {
   moodleLinkSchema,
   type MoodleLink,
 } from "./moodle";
+import { dateSchema, timeSchema } from "./planning";
 
 export const SUBJECT_COLOR_VALUES = [
   "gray",
@@ -72,6 +73,20 @@ export type SidecarFile = z.infer<typeof sidecarFileSchema>;
 
 export type ResourceKind = "note" | BinaryKind;
 
+/** When a project is due, on the student's clock. */
+export const projectDueSchema = z.object({
+  date: dateSchema,
+  time: timeSchema.optional(),
+});
+export type ProjectDue = z.infer<typeof projectDueSchema>;
+
+/** The Moodle activity a project is the work for, such as an assignment. */
+export const projectActivitySchema = z.object({
+  subjectId: z.string().min(1),
+  moduleId: z.number().int().nonnegative(),
+});
+export type ProjectActivity = z.infer<typeof projectActivitySchema>;
+
 /**
  * `projects/<name>.json`: subjects and files from across the workspace,
  * grouped. A project refers to them; it does not copy them.
@@ -83,6 +98,8 @@ export const projectFileSchema = z.looseObject({
   title: z.string().min(1),
   subjectIds: z.array(z.string()).catch([]),
   resourceIds: z.array(z.string()).catch([]),
+  due: projectDueSchema.optional().catch(undefined),
+  activity: projectActivitySchema.optional().catch(undefined),
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -94,6 +111,21 @@ export interface ProjectInfo {
   subjectIds: string[];
   /** Files added on their own, beyond the subjects. */
   resourceIds: string[];
+  /** Set by the student. A linked Moodle activity's own date wins. */
+  due?: ProjectDue;
+  activity?: ProjectActivity;
+}
+
+/** What the window is told about a project file. */
+export function projectInfo(file: ProjectFile): ProjectInfo {
+  return {
+    id: file.id,
+    title: file.title,
+    subjectIds: file.subjectIds,
+    resourceIds: file.resourceIds,
+    ...(file.due ? { due: file.due } : {}),
+    ...(file.activity ? { activity: file.activity } : {}),
+  };
 }
 
 export interface SubjectInfo {

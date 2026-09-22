@@ -15,6 +15,7 @@ import { basename, dirname, join, relative } from "node:path";
 import type { MoodleFileRef, MoodleLink } from "../../shared/moodle";
 import {
   projectFileSchema,
+  projectInfo,
   sidecarFileSchema,
   subjectFileSchema,
   workspaceFileSchema,
@@ -332,15 +333,7 @@ async function scanProjects(
       });
       continue;
     }
-    projects.set(project.id, {
-      path,
-      info: {
-        id: project.id,
-        title: project.title,
-        subjectIds: project.subjectIds,
-        resourceIds: project.resourceIds,
-      },
-    });
+    projects.set(project.id, { path, info: projectInfo(project) });
   }
   return projects;
 }

@@ -43,6 +43,7 @@ import {
   PRACTICE_TAB_ID,
   parseProjectTabId,
   PROFILE_TAB_ID,
+  projectTabId,
   quizTabId,
   SCHEDULE_TAB_ID,
   type LayoutAction,
@@ -223,6 +224,15 @@ export function WorkspacePane({
           moodle={moodle}
           active={active}
           onOpenActivity={openActivity}
+          onOpenProject={(projectId) =>
+            dispatch({
+              type: "open",
+              resourceId: projectTabId(projectId),
+              title:
+                snapshot.projects.find((project) => project.id === projectId)
+                  ?.title ?? t("Project"),
+            })
+          }
           onOpenCourse={(subjectId) =>
             dispatch({
               type: "open",
@@ -285,6 +295,7 @@ export function WorkspacePane({
           onImport={(subjectId) =>
             projectActions.importFiles(projectId, subjectId)
           }
+          onOpenActivity={openActivity}
           onEdit={() => projectActions.edit(projectId)}
           onDelete={() => projectActions.remove(projectId)}
         />

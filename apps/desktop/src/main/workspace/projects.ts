@@ -4,6 +4,9 @@ import { mkdir } from "node:fs/promises";
 import type { ConversationScope } from "../../shared/conversations";
 import {
   projectFileSchema,
+  projectInfo,
+  type ProjectActivity,
+  type ProjectDue,
   type ProjectFile,
   type ProjectInfo,
 } from "../../shared/workspace";
@@ -34,7 +37,13 @@ function known(
 
 export async function createProject(
   workspace: OpenWorkspace,
-  input: { title: string; subjectIds: string[]; resourceIds: string[] },
+  input: {
+    title: string;
+    subjectIds: string[];
+    resourceIds: string[];
+    due?: ProjectDue | null | undefined;
+    activity?: ProjectActivity | null | undefined;
+  },
 ): Promise<ProjectInfo> {
   const directory = projectsDir(workspace);
   await mkdir(directory, { recursive: true });
@@ -46,16 +55,13 @@ export async function createProject(
     id: randomUUID(),
     title: input.title,
     ...known(workspace, input),
+    ...(input.due ? { due: input.due } : {}),
+    ...(input.activity ? { activity: input.activity } : {}),
     createdAt: at,
     updatedAt: at,
   };
   await writeJson(path, file);
-  const info: ProjectInfo = {
-    id: file.id,
-    title: file.title,
-    subjectIds: file.subjectIds,
-    resourceIds: file.resourceIds,
-  };
+  const info = projectInfo(file);
   workspace.projects.set(info.id, { info, path });
   return info;
 }
@@ -66,7 +72,10 @@ function projectEntry(workspace: OpenWorkspace, id: string) {
   return entry;
 }
 
-/** Renames a project or changes what it holds. Its file keeps its name. */
+/**
+ * Renames a project or changes what it holds. Its file keeps its name. A
+ * due date or activity of null clears it.
+ */
 export function updateProject(
   workspace: OpenWorkspace,
   input: {
@@ -74,6 +83,8 @@ export function updateProject(
     title?: string | undefined;
     subjectIds?: string[] | undefined;
     resourceIds?: string[] | undefined;
+    due?: ProjectDue | null | undefined;
+    activity?: ProjectActivity | null | undefined;
   },
 ): Promise<ProjectInfo> {
   const entry = projectEntry(workspace, input.id);
@@ -83,19 +94,20 @@ export function updateProject(
       subjectIds: input.subjectIds ?? file.subjectIds,
       resourceIds: input.resourceIds ?? file.resourceIds,
     });
+    const { due, activity, ...rest } = file;
+    const nextDue = input.due === undefined ? due : input.due;
+    const nextActivity =
+      input.activity === undefined ? activity : input.activity;
     const next: ProjectFile = {
-      ...file,
+      ...rest,
       ...(input.title === undefined ? {} : { title: input.title }),
       ...contents,
+      ...(nextDue ? { due: nextDue } : {}),
+      ...(nextActivity ? { activity: nextActivity } : {}),
       updatedAt: new Date().toISOString(),
     };
     await writeJson(entry.path, next);
-    entry.info = {
-      id: next.id,
-      title: next.title,
-      subjectIds: next.subjectIds,
-      resourceIds: next.resourceIds,
-    };
+    entry.info = projectInfo(next);
     return entry.info;
   });
 }

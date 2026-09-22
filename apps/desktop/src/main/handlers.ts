@@ -33,6 +33,8 @@ import {
   annotationColorSchema,
   annotationSegmentSchema,
   annotationTypeSchema,
+  projectActivitySchema,
+  projectDueSchema,
   subjectColorSchema,
 } from "../shared/workspace";
 import { deliverRenderedPage } from "./agent/render";
@@ -549,6 +551,8 @@ export function registerHandlers(
   const projectContents = {
     subjectIds: z.array(id).max(100),
     resourceIds: z.array(id).max(2000),
+    due: projectDueSchema.nullable().optional(),
+    activity: projectActivitySchema.nullable().optional(),
   };
 
   handle(
@@ -565,6 +569,8 @@ export function registerHandlers(
         title: title.optional(),
         subjectIds: projectContents.subjectIds.optional(),
         resourceIds: projectContents.resourceIds.optional(),
+        due: projectContents.due,
+        activity: projectContents.activity,
       }),
     ]),
     (input) => updateProject(currentWorkspace(), input),
