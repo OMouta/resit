@@ -125,6 +125,8 @@ const moodleActivitySchema = z.object({
   sectionName: z.string(),
   /** The activity's page in Moodle. */
   url: z.string(),
+  /** Where a link activity points, outside Moodle. */
+  link: z.string().optional(),
   dates: z.array(moodleActivityDateSchema),
   /**
    * The assignment brief, a page's or book's text, or the description the

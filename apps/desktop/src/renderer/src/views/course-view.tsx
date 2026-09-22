@@ -28,6 +28,7 @@ import {
   dateLabel,
   hasPage,
   isLabel,
+  openInBrowser,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -182,9 +183,7 @@ export function CourseView({
                           onOpen={() =>
                             hasPage(activity)
                               ? onOpenActivity(subject.id, activity)
-                              : void api
-                                  .openExternal(activity.url)
-                                  .catch(() => undefined)
+                              : openInBrowser(activity)
                           }
                         />
                       ),
@@ -215,6 +214,14 @@ function Text({
   );
 }
 
+function hostOf(address: string): string | null {
+  try {
+    return new URL(address).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 function ActivityRow({
   activity,
   onOpen,
@@ -239,6 +246,7 @@ function ActivityRow({
         <span className="truncate text-xs text-muted-foreground">
           {[
             t(activityType(activity.modname)),
+            activity.link ? hostOf(activity.link) : null,
             next ? `${t(dateLabel(next))} ${dateTime(next.at)}` : null,
           ]
             .filter(Boolean)
@@ -247,7 +255,9 @@ function ActivityRow({
       </span>
       {hasPage(activity) ? null : (
         <ExternalLinkIcon
-          aria-label={t("Opens in Moodle")}
+          aria-label={
+            activity.link ? t("Opens in your browser") : t("Opens in Moodle")
+          }
           className="size-4 shrink-0 text-subtle-foreground"
         />
       )}

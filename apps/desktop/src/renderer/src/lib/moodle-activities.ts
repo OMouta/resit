@@ -101,6 +101,11 @@ export function isLabel(activity: Activity): boolean {
   return activity.modname === "label";
 }
 
+/** Opens a link activity's own address, or anything else in Moodle. */
+export function openInBrowser(activity: Activity): void {
+  void api.openExternal(activity.link ?? activity.url).catch(() => undefined);
+}
+
 /** resit has something to show for it beyond a link to Moodle. */
 export function hasPage(activity: Activity): boolean {
   return Boolean(activity.brief || activity.attachments?.length);

@@ -21,6 +21,7 @@ import {
   checkedLabel,
   dateLabel,
   isDeadline,
+  openInBrowser,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -126,11 +127,10 @@ export function ActivityView({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <Button
                 variant="secondary"
-                onClick={() =>
-                  void api.openExternal(activity.url).catch(() => undefined)
-                }
+                onClick={() => openInBrowser(activity)}
               >
-                <ExternalLinkIcon /> {t("Open in Moodle")}
+                <ExternalLinkIcon />{" "}
+                {activity.link ? t("Open link") : t("Open in Moodle")}
               </Button>
               <p className="text-xs text-subtle-foreground">
                 {checkedLabel(record.checkedAt, { t, relative })}

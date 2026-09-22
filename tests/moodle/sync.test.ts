@@ -658,6 +658,22 @@ function servePages(pageModified = 1700000000): void {
             }),
           ],
         },
+        {
+          id: 302,
+          name: "Khan Academy",
+          modname: "url",
+          url: `${SITE}/mod/url/view.php?id=302`,
+          contents: [
+            {
+              type: "url",
+              filename: "Khan Academy",
+              filepath: null,
+              filesize: 0,
+              fileurl: "https://www.khanacademy.org/math",
+              timemodified: 1700000000,
+            },
+          ],
+        },
       ],
     },
   ];
@@ -687,7 +703,9 @@ describe("pages and books", () => {
     expect(plan.skipped).toEqual([]);
     const [record] = await listActivities(workspace);
     expect(
-      record?.activities.map((activity) => [activity.name, activity.brief]),
+      record?.activities
+        .filter((activity) => activity.modname !== "url")
+        .map((activity) => [activity.name, activity.brief]),
     ).toEqual([
       ["Derivative rules", "### Rules\n\nUse the **chain rule**."],
       [
@@ -695,6 +713,18 @@ describe("pages and books", () => {
         "### Limits\n\nLimits come first.\n\n### Continuity\n\nThen continuity.",
       ],
     ]);
+  });
+
+  it("keeps where a link activity points", async () => {
+    servePages();
+    await listItems(workspace, session, subjectId);
+    const [record] = await listActivities(workspace);
+    expect(record?.activities.find((entry) => entry.modname === "url")).toEqual(
+      expect.objectContaining({
+        url: `${SITE}/mod/url/view.php?id=302`,
+        link: "https://www.khanacademy.org/math",
+      }),
+    );
   });
 
   it("reads a page again only when Moodle says it changed", async () => {

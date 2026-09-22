@@ -64,6 +64,7 @@ import {
   hasPage,
   isDeadline,
   isLabel,
+  openInBrowser,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -299,9 +300,7 @@ export function ScheduleView(props: ScheduleViewProps) {
                   onOpenDeadline={(subjectId, activity) =>
                     hasPage(activity)
                       ? props.onOpenActivity(subjectId, activity)
-                      : void api
-                          .openExternal(activity.url)
-                          .catch(() => undefined)
+                      : openInBrowser(activity)
                   }
                 />
                 {plan.availability.length === 0 ? (
@@ -885,9 +884,6 @@ function MoodleSections({
     });
   };
 
-  const openInMoodle = (activity: Activity) =>
-    void api.openExternal(activity.url).catch(() => undefined);
-
   const failedNames = failures
     .map(
       (failure) =>
@@ -973,7 +969,7 @@ function MoodleSections({
                         ? () => onOpenActivity(entry.subject.id, entry.activity)
                         : undefined
                     }
-                    onOpenInMoodle={() => openInMoodle(entry.activity)}
+                    onOpenInMoodle={() => openInBrowser(entry.activity)}
                   />
                 ))}
               </ul>

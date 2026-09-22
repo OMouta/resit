@@ -321,12 +321,17 @@ function planActivities(
           key: itemKey(module.id, `${file.filepath}${file.filename}`),
           filename: file.filename,
         }));
+      // A link activity's address is its one "url" content.
+      const target = module.contents?.find(
+        (content) => content.type === "url" && content.fileurl,
+      )?.fileurl;
       activities.push({
         moduleId: module.id,
         name: module.name,
         modname: module.modname,
         sectionName: section.name.trim(),
         url: module.url,
+        ...(module.modname === "url" && target ? { link: target } : {}),
         dates: (module.dates ?? [])
           .filter((date) => date.timestamp > 0)
           .map((date) => ({

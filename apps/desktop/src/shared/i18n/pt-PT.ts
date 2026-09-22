@@ -610,6 +610,7 @@ export const messages: Record<string, string> = {
   "Open anyway": "Abrir mesmo assim",
   "Open in default app": "Abrir na aplicação predefinida",
   "Open in Moodle": "Abrir no Moodle",
+  "Open link": "Abrir ligação",
   "Open practice": "Abrir a prática",
   "Open settings": "Abrir as definições",
   "Open the graph": "Abrir o grafo",
@@ -621,6 +622,7 @@ export const messages: Record<string, string> = {
   "Opening a PDF": "Ao abrir um PDF",
   Opens: "Abre",
   "Opens in Moodle": "Abre no Moodle",
+  "Opens in your browser": "Abre no seu navegador",
   "Options. Pick the right one.": "Opções. Escolha a certa.",
   "Otherwise resit starts on the workspace screen.":
     "Caso contrário, o resit abre no ecrã dos espaços de trabalho.",
