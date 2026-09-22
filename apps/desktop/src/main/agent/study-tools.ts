@@ -50,6 +50,7 @@ import {
   updateAnnotation,
 } from "../workspace/annotations";
 import { assertInsideWorkspace } from "../workspace/files";
+import { t } from "../i18n";
 import { joinProject } from "../workspace/projects";
 import { saveNoteWithHistory } from "../workspace/history";
 import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
@@ -138,6 +139,21 @@ const SAVE_EXTENSIONS = new Set([
 ]);
 const MAX_SAVE_BYTES = 1024 * 1024;
 
+/** What a download from the web may be, by its type and by its extension. */
+const WEB_TYPES: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/svg+xml": ".svg",
+  "text/plain": ".txt",
+  "text/csv": ".csv",
+};
+const WEB_EXTENSIONS = new Set(Object.values(WEB_TYPES).concat(".jpeg"));
+const MAX_WEB_BYTES = 50 * 1024 * 1024;
+const WEB_TIMEOUT_MS = 60_000;
+
 const IMAGE_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -195,6 +211,16 @@ export interface TurnGrant {
   onChange?: ((change: StudyChange) => void) | undefined;
   /** The student's Moodle connection, for downloading course files. */
   moodle?: (() => Promise<MoodleSession>) | undefined;
+  /** Asks the student in the AI panel, and resolves to their answer. */
+  ask?:
+    | ((question: {
+        kind: string;
+        title: string;
+        detail: string;
+      }) => Promise<boolean>)
+    | undefined;
+  /** Fetches from the web, through the system's proxy and certificates. */
+  web?: ((url: string, init?: RequestInit) => Promise<Response>) | undefined;
 }
 
 function ok(value: unknown, extra: ToolContent[] = []): ToolResult {
@@ -257,6 +283,14 @@ export function describeToolCall(
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
       return `Edited ${title("noteId")}`;
+    case "study_import_url":
+      return `Downloaded a file from ${(() => {
+        try {
+          return new URL(String(input.url ?? "")).hostname;
+        } catch {
+          return "the web";
+        }
+      })()}`;
     case "study_save_file":
       return `Saved “${String(input.filename ?? "")}”`;
     case "study_create_folder":
@@ -1757,6 +1791,133 @@ export function studyTools(
       },
     ),
     define(
+      "study_import_url",
+      "Download a PDF, image, or text file from the web into a subject. The student is asked first and may say no. Use it when they ask for something online, such as a paper, a worksheet, or a figure.",
+      {
+        subjectId: z.string().describe("The subject it goes in"),
+        url: z.string().max(2000).describe("The file's web address"),
+        title: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("A title; taken from the address if left out"),
+        folder: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("An existing folder inside the subject"),
+      },
+      async ({ subjectId, url, title, folder }) => {
+        if (!workspace.subjects.has(subjectId))
+          return failure("NOT_FOUND", `No subject has the ID ${subjectId}.`);
+        if (!homes.has(subjectId))
+          return failure(
+            "OUT_OF_SCOPE",
+            "That subject is not in this conversation. Ask the student to add it before writing to it.",
+          );
+        let address: URL;
+        try {
+          address = new URL(url);
+        } catch {
+          return failure("INVALID_INPUT", "That is not a web address.");
+        }
+        if (address.protocol !== "https:" && address.protocol !== "http:")
+          return failure(
+            "INVALID_INPUT",
+            "Only web addresses can be downloaded.",
+          );
+        if (!grant.ask || !grant.web)
+          return failure(
+            "UNAVAILABLE",
+            "resit cannot download from the web here.",
+          );
+        const allowed = await grant.ask({
+          kind: "import-url",
+          title: t("Download a file from the web?"),
+          detail: t("{address}, into {subject}", {
+            address: `${address.host}${address.pathname}`,
+            subject: subjectNames.get(subjectId) ?? "",
+          }),
+        });
+        if (!allowed)
+          return failure("DECLINED", "The student did not allow the download.");
+
+        let bytes: Uint8Array;
+        let type: string;
+        try {
+          const response = await grant.web(address.toString(), {
+            redirect: "follow",
+            signal: AbortSignal.timeout(WEB_TIMEOUT_MS),
+          });
+          if (!response.ok)
+            return failure(
+              "DOWNLOAD_FAILED",
+              `The site answered ${response.status}.`,
+            );
+          const declared = Number(response.headers.get("content-length") ?? "");
+          if (Number.isFinite(declared) && declared > MAX_WEB_BYTES)
+            return failure("TOO_LARGE", "That file is larger than 50 MB.");
+          type = (response.headers.get("content-type") ?? "")
+            .split(";")[0]!
+            .trim()
+            .toLowerCase();
+          bytes = new Uint8Array(await response.arrayBuffer());
+        } catch (error) {
+          return failure(
+            "DOWNLOAD_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+        if (bytes.byteLength > MAX_WEB_BYTES)
+          return failure("TOO_LARGE", "That file is larger than 50 MB.");
+        const segment = decodeURIComponent(
+          address.pathname.split("/").filter(Boolean).at(-1) ?? "download",
+        );
+        const named = extname(segment).toLowerCase();
+        const extension =
+          WEB_TYPES[type] ?? (WEB_EXTENSIONS.has(named) ? named : null);
+        if (!extension)
+          return failure(
+            "UNSUPPORTED",
+            `resit downloads PDFs, images, and text files, not ${type || "that kind of file"}.`,
+          );
+        // A page that says it is a PDF but is not one is usually a sign-in page.
+        if (
+          extension === ".pdf" &&
+          Buffer.from(bytes.subarray(0, 5)).toString("latin1") !== "%PDF-"
+        )
+          return failure(
+            "UNSUPPORTED",
+            "The address did not return a PDF. It may need a sign-in in the browser.",
+          );
+        const base =
+          (named ? segment.slice(0, -named.length) : segment) || "download";
+        try {
+          const saved = await addFile(workspace, {
+            subjectId,
+            filename: `${base}${extension}`,
+            title: title?.trim() || base,
+            bytes,
+            ...(folder ? { folder } : {}),
+          });
+          if (scope.projectId)
+            await joinProject(workspace, scope.projectId, [saved.id]);
+          changed({ kind: "files" });
+          return ok({
+            ...describe(saved),
+            path: saved.path,
+            source: address.toString(),
+            bytes: bytes.byteLength,
+          });
+        } catch (error) {
+          return failure(
+            "WRITE_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
       "study_save_file",
       "Save text you wrote as a new file in a subject: an SVG diagram, a CSV table, a LaTeX document, or code. For prose, use study_create_note instead.",
       {
@@ -2142,6 +2303,7 @@ export const STUDY_TOOLS = [
   "study_read_announcements",
   "study_download_moodle_files",
   "study_create_note",
+  "study_import_url",
   "study_save_file",
   "study_create_folder",
   "study_move_file",

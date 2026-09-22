@@ -75,6 +75,9 @@ export async function codexLaunch(options?: {
             `mcp_servers.${mcp.name}.url=${mcp.url}`,
             "-c",
             `mcp_servers.${mcp.name}.bearer_token_env_var="RESIT_MCP_TOKEN"`,
+            // A tool may wait for the student to allow it.
+            "-c",
+            `mcp_servers.${mcp.name}.tool_timeout_sec=600`,
           ]
         : []),
     ],

@@ -618,6 +618,64 @@ describe("Moodle downloads", () => {
   });
 });
 
+describe("downloads from the web", () => {
+  const pdf = Buffer.from("%PDF-1.4 a paper");
+  const web = (body: Uint8Array | string, type: string) => () =>
+    Promise.resolve(new Response(body, { headers: { "content-type": type } }));
+
+  it("downloads a file only once the student allows it", async () => {
+    const asked: string[] = [];
+    const declined = await run(
+      "study_import_url",
+      {
+        subjectId: mathematicsId,
+        url: "https://example.org/papers/limits.pdf",
+      },
+      {
+        ask: (question) => {
+          asked.push(question.detail);
+          return Promise.resolve(false);
+        },
+        web: web(pdf, "application/pdf"),
+      },
+    );
+    expect(errorCode(declined.data)).toBe("DECLINED");
+    expect(asked).toEqual(["example.org/papers/limits.pdf, into Mathematics"]);
+
+    const saved = await run(
+      "study_import_url",
+      {
+        subjectId: mathematicsId,
+        url: "https://example.org/papers/limits.pdf",
+      },
+      { ask: () => Promise.resolve(true), web: web(pdf, "application/pdf") },
+    );
+    expect(saved.failed).toBe(false);
+    expect(saved.data).toMatchObject({ title: "limits", kind: "pdf" });
+  });
+
+  it("refuses a sign-in page that claims to be a PDF, and other types", async () => {
+    const page = await run(
+      "study_import_url",
+      { subjectId: mathematicsId, url: "https://example.org/paper.pdf" },
+      {
+        ask: () => Promise.resolve(true),
+        web: web("<html>Sign in</html>", "application/pdf"),
+      },
+    );
+    expect(errorCode(page.data)).toBe("UNSUPPORTED");
+    const program = await run(
+      "study_import_url",
+      { subjectId: mathematicsId, url: "https://example.org/setup.exe" },
+      {
+        ask: () => Promise.resolve(true),
+        web: web("MZ", "application/octet-stream"),
+      },
+    );
+    expect(errorCode(program.data)).toBe("UNSUPPORTED");
+  });
+});
+
 describe("practice tools", () => {
   it("suggests cards that wait for the student, and refuses another subject", async () => {
     const made = await run("study_create_flashcards", {

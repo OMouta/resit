@@ -48,7 +48,7 @@ Ask it to write something down and it edits the note itself. Ask it to mark a pa
 
 Claude can also look at a page instead of reading its text, which is how it handles diagrams, handwriting, and scans. Codex reads text only.
 
-Your messages, the open file's name, selected text, and whatever the assistant reads go to the provider you picked. It cannot run commands or reach anything outside your workspace.
+Your messages, the open file's name, selected text, and whatever the assistant reads go to the provider you picked. It cannot run commands. Outside your workspace, it can only download files from your Moodle courses, and files from the web when you allow it.
 
 ## Keep your files
 

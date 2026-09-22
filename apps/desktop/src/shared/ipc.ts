@@ -178,7 +178,19 @@ export type DesktopEvent =
       done: number;
       total: number;
     }
+  | { type: "approval-requested"; request: ApprovalRequest }
+  | { type: "approval-settled"; id: string; conversationId: string }
   | TurnEvent;
+
+/** Something the assistant wants to do that the student allows first. */
+export interface ApprovalRequest {
+  id: string;
+  conversationId: string;
+  /** What is asked, such as `import-url`, so "always" covers only that. */
+  kind: string;
+  title: string;
+  detail: string;
+}
 
 /** One note's links to another note or document, and how many there are. */
 export interface ResourceLink {
@@ -480,6 +492,15 @@ export interface DesktopApi {
     subjectId: string;
     keys: string[];
   }): Promise<MoodleDownloadResult>;
+  /** The student's answer to something the assistant asked to do. */
+  answerApproval(input: {
+    id: string;
+    approved: boolean;
+    /** Allow the same kind of request for the rest of the conversation. */
+    always?: boolean;
+  }): Promise<void>;
+  /** What a conversation's assistant is waiting for the student to allow. */
+  listApprovals(conversationId: string): Promise<ApprovalRequest[]>;
   /** An image from course text, saved in the workspace by name. */
   readMoodleMedia(name: string): Promise<Uint8Array>;
   /** Activities as resit last saw them, without contacting Moodle. */
@@ -618,6 +639,8 @@ export const CHANNELS = {
   downloadMoodleItems: "resit:moodle-download",
   listMoodleActivities: "resit:moodle-activities",
   readMoodleMedia: "resit:moodle-media",
+  answerApproval: "resit:approval-answer",
+  listApprovals: "resit:approvals",
   refreshMoodleActivities: "resit:moodle-activities-refresh",
   getProviderStatus: "resit:provider-status",
   getModels: "resit:provider-models",

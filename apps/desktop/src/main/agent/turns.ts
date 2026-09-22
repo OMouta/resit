@@ -23,7 +23,10 @@ import {
   claudeSessionFor,
   readConversation,
 } from "../conversations/store";
+import { net } from "electron";
+
 import { liveContext } from "../context";
+import { askStudent, declineApprovals } from "./approvals";
 import { moodleSession } from "../moodle/credentials";
 import { learnerContext } from "../learner/store";
 import { claudeStatus } from "../providers/claude";
@@ -193,7 +196,12 @@ function assistantErrorText(code: string): string {
 function turnGrant(
   workspace: OpenWorkspace,
   emit: (event: DesktopEvent) => void,
-  input: { scope: ConversationScope; context: TurnContext; images: boolean },
+  input: {
+    conversationId: string;
+    scope: ConversationScope;
+    context: TurnContext;
+    images: boolean;
+  },
 ): TurnGrant {
   return {
     scope: input.scope,
@@ -201,6 +209,9 @@ function turnGrant(
     images: input.images,
     liveContext,
     moodle: moodleSession,
+    ask: (question) =>
+      askStudent(emit, { ...question, conversationId: input.conversationId }),
+    web: (url, init) => net.fetch(url, init),
     renderPage: ({ resourceId, page }) =>
       renderPdfPage(emit, {
         resourceId,
@@ -273,6 +284,7 @@ export async function startTurn(
   const profile = await learnerContext(workspace, scope).catch(() => null);
   const prompt = `${composeContext(workspace, scope, input.context, project)}${profile ? `\n${profile}` : ""}\n\n${input.text}`;
   const grant = turnGrant(workspace, emit, {
+    conversationId: input.conversationId,
     // The project stays named, so notes made here can join it.
     scope: {
       ...scope,
@@ -338,6 +350,8 @@ async function deliver(
     });
   } finally {
     active.delete(conversationId);
+    // A question left open when the turn ended can no longer be answered.
+    declineApprovals(conversationId);
   }
 }
 
@@ -572,6 +586,7 @@ export async function stopTurn(conversationId: string): Promise<void> {
   const turn = active.get(conversationId);
   if (!turn) return;
   turn.cancelled = true;
+  declineApprovals(conversationId);
   if (turn.stop) {
     await turn.stop().catch(() => undefined);
     return;
@@ -591,6 +606,7 @@ export async function stopTurn(conversationId: string): Promise<void> {
 
 /** Ends every running turn, for closing the workspace or quitting. */
 export function abortAllTurns(): void {
+  declineApprovals();
   for (const turn of active.values()) {
     turn.cancelled = true;
     turn.controller.abort();

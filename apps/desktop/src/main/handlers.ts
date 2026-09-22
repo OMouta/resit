@@ -79,6 +79,7 @@ import {
   moodleUserId,
 } from "./moodle/credentials";
 import { readMedia } from "./moodle/media";
+import { answerApproval, openApprovals } from "./agent/approvals";
 import {
   downloadItems,
   listActivities,
@@ -1310,6 +1311,22 @@ export function registerHandlers(
 
   handle(CHANNELS.readMoodleMedia, z.tuple([z.string().max(100)]), (name) =>
     readMedia(currentWorkspace(), name),
+  );
+
+  handle(
+    CHANNELS.answerApproval,
+    z.tuple([
+      z.object({
+        id: z.string().max(100),
+        approved: z.boolean(),
+        always: z.boolean().optional(),
+      }),
+    ]),
+    ({ id, approved, always }) => answerApproval(id, approved, always),
+  );
+
+  handle(CHANNELS.listApprovals, z.tuple([id]), (conversationId) =>
+    openApprovals(conversationId),
   );
 
   handle(CHANNELS.refreshMoodleActivities, z.tuple([]), async () => {

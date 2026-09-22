@@ -42,6 +42,7 @@ import { useLocale, type LocaleFormatters } from "@resit/ui/hooks/use-locale";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
 import { cn } from "@resit/ui/lib/utils";
 import { AiPanel } from "@resit/ui/patterns/ai/ai-panel";
+import { ApprovalCard } from "@resit/ui/patterns/ai/approval-card";
 import {
   ScopeChip,
   ScopeMismatchNotice,
@@ -64,6 +65,7 @@ import type {
   ToolSummary,
   TurnContext,
 } from "../../../shared/conversations";
+import type { ApprovalRequest } from "../../../shared/ipc";
 import type { AppSettings, SettingsPatch } from "../../../shared/settings";
 import type {
   ProjectInfo,
@@ -286,6 +288,37 @@ export function ChatPanel({
   const currentId = current?.meta.id ?? null;
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
+  /** What the assistant is waiting for the student to allow. */
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  useEffect(() => {
+    if (!currentId) {
+      setApprovals([]);
+      return;
+    }
+    let current = true;
+    api.listApprovals(currentId).then(
+      (list) => {
+        if (current) setApprovals(list);
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [currentId]);
+  useEffect(
+    () =>
+      api.onEvent((event) => {
+        if (
+          event.type === "approval-requested" &&
+          event.request.conversationId === currentIdRef.current
+        )
+          setApprovals((list) => [...list, event.request]);
+        else if (event.type === "approval-settled")
+          setApprovals((list) => list.filter((entry) => entry.id !== event.id));
+      }),
+    [],
+  );
 
   const tab = activeTab(layout);
   const focused = tab ? resources.get(tab.resourceId) : undefined;
@@ -792,28 +825,50 @@ export function ChatPanel({
       turns={turns}
       status={status}
       notice={
-        mismatch ? (
-          <ScopeMismatchNotice
-            title={mismatch.title}
-            subjectName={
-              subjects.get(mismatch.subjectId)?.name ?? "its subject"
-            }
-            onAddToScope={() =>
-              void updateScope({
-                ...scope,
-                resourceIds: [...scope.resourceIds, mismatch.id],
-              })
-            }
-            onNewConversation={() =>
-              void createConversation({
-                subjectIds: [mismatch.subjectId],
-                resourceIds: [],
-              })
-            }
-            onDismiss={() =>
-              setDismissed(`${current?.meta.id ?? ""}:${mismatch.id}`)
-            }
-          />
+        approvals.length > 0 || mismatch ? (
+          <div className="flex flex-col gap-2">
+            {approvals.map((request) => (
+              <ApprovalCard
+                key={request.id}
+                title={request.title}
+                description={request.detail}
+                status="pending"
+                onApprove={({ always }) =>
+                  void api.answerApproval({
+                    id: request.id,
+                    approved: true,
+                    always,
+                  })
+                }
+                onReject={() =>
+                  void api.answerApproval({ id: request.id, approved: false })
+                }
+              />
+            ))}
+            {mismatch ? (
+              <ScopeMismatchNotice
+                title={mismatch.title}
+                subjectName={
+                  subjects.get(mismatch.subjectId)?.name ?? "its subject"
+                }
+                onAddToScope={() =>
+                  void updateScope({
+                    ...scope,
+                    resourceIds: [...scope.resourceIds, mismatch.id],
+                  })
+                }
+                onNewConversation={() =>
+                  void createConversation({
+                    subjectIds: [mismatch.subjectId],
+                    resourceIds: [],
+                  })
+                }
+                onDismiss={() =>
+                  setDismissed(`${current?.meta.id ?? ""}:${mismatch.id}`)
+                }
+              />
+            ) : null}
+          </div>
         ) : undefined
       }
       composer={{

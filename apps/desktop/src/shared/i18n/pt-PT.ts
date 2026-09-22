@@ -5,6 +5,7 @@
 export const messages: Record<string, string> = {
   "“{name}” is already in your profile.": "“{name}” já está no seu perfil.",
   "{address} is not a valid address.": "{address} não é um endereço válido.",
+  "{address}, into {subject}": "{address}, para {subject}",
   "{count} activities": "{count} atividades",
   "{count} activities resit does not download ({detail})":
     "{count} atividades que o resit não transfere ({detail})",
@@ -328,6 +329,7 @@ export const messages: Record<string, string> = {
   "Download {count}": "Transferir {count}",
   "Download {count} new files": "Transferir {count} ficheiros novos",
   "Download 1 new file": "Transferir 1 ficheiro novo",
+  "Download a file from the web?": "Transferir um ficheiro da web?",
   "Download progress": "Progresso da transferência",
   "Downloading from Moodle": "A transferir do Moodle",
   "Downloading text recognition data":
