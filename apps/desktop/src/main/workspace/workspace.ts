@@ -1259,6 +1259,26 @@ export function importDownload(
   );
 }
 
+/** Adds a file made in resit, such as one the assistant wrote. */
+export function addFile(
+  workspace: OpenWorkspace,
+  input: {
+    subjectId: string;
+    folder?: string | undefined;
+    filename: string;
+    title: string;
+    bytes: Uint8Array;
+  },
+): Promise<ResourceInfo> {
+  subjectEntry(workspace, input.subjectId);
+  const folder = writableFolder(workspace, input.subjectId, input.folder);
+  return addBinary(
+    workspace,
+    { ...input, ...(folder ? { folder } : { folder: undefined }) },
+    (temporary) => writeFile(temporary, input.bytes, { flag: "wx" }),
+  );
+}
+
 /**
  * Replaces an imported file's contents, with a newer copy from Moodle or a
  * kept one. The resource keeps its ID, so open tabs and links still point

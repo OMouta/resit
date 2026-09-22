@@ -167,6 +167,23 @@ describe("study write tools", () => {
     ]);
   });
 
+  it("saves a diagram it wrote as a file, and only text formats", async () => {
+    const saved = await run("study_save_file", {
+      subjectId: mathematicsId,
+      filename: "unit-circle.svg",
+      content: '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>',
+    });
+    expect(saved.failed).toBe(false);
+    expect(saved.data).toMatchObject({ title: "unit-circle", kind: "image" });
+
+    const refused = await run("study_save_file", {
+      subjectId: mathematicsId,
+      filename: "setup.exe",
+      content: "MZ",
+    });
+    expect(errorCode(refused.data)).toBe("UNSUPPORTED");
+  });
+
   it("files a note into a new folder and renames it", async () => {
     const folder = await run("study_create_folder", {
       subjectId: mathematicsId,

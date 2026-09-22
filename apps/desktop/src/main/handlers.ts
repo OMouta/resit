@@ -265,6 +265,8 @@ const NEVER_LAUNCH = new Set([
   ".sh",
   ".app",
   ".js",
+  ".py",
+  ".pyw",
   ".vbs",
   ".scr",
   ".lnk",

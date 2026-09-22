@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { extname } from "node:path";
+import { basename, extname } from "node:path";
 
 import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
@@ -56,6 +56,7 @@ import { locateQuote, pagesWithQuote } from "../workspace/pdf-highlight";
 import { readablePages, recognizedPages } from "../workspace/ocr";
 import { foldText, searchWorkspace } from "../workspace/search";
 import {
+  addFile,
   createFolder,
   createNote,
   moveResource,
@@ -112,6 +113,30 @@ const TEXT_EXTENSIONS = new Set([
   ".js",
   ".ts",
 ]);
+
+/** Text formats the assistant may save as files. Notes are Markdown already. */
+const SAVE_EXTENSIONS = new Set([
+  ".svg",
+  ".csv",
+  ".tsv",
+  ".txt",
+  ".tex",
+  ".bib",
+  ".json",
+  ".yaml",
+  ".yml",
+  ".py",
+  ".m",
+  ".r",
+  ".c",
+  ".h",
+  ".cpp",
+  ".java",
+  ".js",
+  ".ts",
+  ".sql",
+]);
+const MAX_SAVE_BYTES = 1024 * 1024;
 
 const IMAGE_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -232,6 +257,8 @@ export function describeToolCall(
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
       return `Edited ${title("noteId")}`;
+    case "study_save_file":
+      return `Saved “${String(input.filename ?? "")}”`;
     case "study_create_folder":
       return `Created the folder “${String(input.name ?? "")}”`;
     case "study_move_file":
@@ -1730,6 +1757,68 @@ export function studyTools(
       },
     ),
     define(
+      "study_save_file",
+      "Save text you wrote as a new file in a subject: an SVG diagram, a CSV table, a LaTeX document, or code. For prose, use study_create_note instead.",
+      {
+        subjectId: z.string().describe("The subject it goes in"),
+        filename: z
+          .string()
+          .min(1)
+          .max(120)
+          .describe(
+            "A file name with its extension, such as free-body-diagram.svg",
+          ),
+        content: z.string().min(1).describe("The file's text"),
+        title: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("A title; the file name if left out"),
+        folder: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("An existing folder inside the subject"),
+      },
+      async ({ subjectId, filename, content, title, folder }) => {
+        if (!workspace.subjects.has(subjectId))
+          return failure("NOT_FOUND", `No subject has the ID ${subjectId}.`);
+        if (!homes.has(subjectId))
+          return failure(
+            "OUT_OF_SCOPE",
+            "That subject is not in this conversation. Ask the student to add it before writing to it.",
+          );
+        const name = basename(filename.replaceAll("\\", "/"));
+        const extension = extname(name).toLowerCase();
+        if (!SAVE_EXTENSIONS.has(extension))
+          return failure(
+            "UNSUPPORTED",
+            `resit saves ${[...SAVE_EXTENSIONS].join(", ")} files. Use study_create_note for Markdown.`,
+          );
+        const bytes = new TextEncoder().encode(content);
+        if (bytes.byteLength > MAX_SAVE_BYTES)
+          return failure("TOO_LARGE", "That file is larger than 1 MB.");
+        try {
+          const saved = await addFile(workspace, {
+            subjectId,
+            filename: name,
+            title: title?.trim() || name.slice(0, -extension.length),
+            bytes,
+            ...(folder ? { folder } : {}),
+          });
+          if (scope.projectId)
+            await joinProject(workspace, scope.projectId, [saved.id]);
+          changed({ kind: "files" });
+          return ok({ ...describe(saved), path: saved.path, created: true });
+        } catch (error) {
+          return failure(
+            "WRITE_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      },
+    ),
+    define(
       "study_create_folder",
       "Create a folder in a subject, or inside one of its folders, to organise notes and files.",
       {
@@ -2053,6 +2142,7 @@ export const STUDY_TOOLS = [
   "study_read_announcements",
   "study_download_moodle_files",
   "study_create_note",
+  "study_save_file",
   "study_create_folder",
   "study_move_file",
   "study_add_to_project",
