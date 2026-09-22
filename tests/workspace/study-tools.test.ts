@@ -420,6 +420,19 @@ describe("study read tools", () => {
     expect(drawn.data.page).toBe(2);
   });
 
+  it("reads a run of pages in one call", async () => {
+    const read = await run("study_read_pdf_page", {
+      documentId: pdfId,
+      page: 1,
+      lastPage: 9,
+    });
+    const pages = read.data.pages as { page: number; text: string }[];
+    expect(pages.map((entry) => entry.page)).toEqual([1, 2]);
+    expect(pages[1]?.text).toContain("Differentiate x squared");
+    // The PDF ends at page 2, so nothing is left to read.
+    expect(read.data.nextPage).toBeUndefined();
+  });
+
   it("finds which pages hold a phrase", async () => {
     const found = await run("study_search_pdf", {
       documentId: pdfId,

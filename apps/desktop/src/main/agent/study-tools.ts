@@ -81,6 +81,9 @@ const WEEKDAYS = [
 
 const MAX_NOTE_CHARS = 60_000;
 const MAX_PAGE_CHARS = 20_000;
+/** A run of pages read at once, by count and by characters. */
+const MAX_RANGE_PAGES = 20;
+const MAX_RANGE_CHARS = 60_000;
 const MAX_FILE_CHARS = 40_000;
 const MAX_ANNOTATION_CHARS = 2000;
 const MAX_NOTE_BYTES = 2 * 1024 * 1024;
@@ -227,7 +230,9 @@ export function describeToolCall(
     case "study_read_note":
       return `Read ${title("noteId")}`;
     case "study_read_pdf_page":
-      return `${input.as === "image" ? "Looked at" : "Read"} ${title("documentId")}, page ${page}`;
+      return typeof input.lastPage === "number" && input.lastPage > Number(page)
+        ? `Read ${title("documentId")}, pages ${page}–${String(input.lastPage)}`
+        : `${input.as === "image" ? "Looked at" : "Read"} ${title("documentId")}, page ${page}`;
     case "study_search_pdf":
       return `Searched ${title("documentId")} for “${String(input.query ?? "")}”`;
     case "study_get_pdf_annotations":
@@ -640,8 +645,8 @@ export function studyTools(
     define(
       "study_read_pdf_page",
       canSeeImages
-        ? 'Read one PDF page. Pages are numbered from 1. Ask for "text" to get the words, or "image" to look at the page itself, which is the only way to read diagrams, graphs, handwriting, and scanned pages.'
-        : "Read the extracted text of one PDF page. Pages are numbered from 1. Scanned pages may have no text.",
+        ? 'Read PDF pages, numbered from 1. Ask for "text" to get the words, of one page or of a run of pages up to lastPage, or for "image" to look at one page itself, which is the only way to read diagrams, graphs, handwriting, and scanned pages.'
+        : "Read the extracted text of a PDF page, or of a run of pages up to lastPage. Pages are numbered from 1. Scanned pages may have no text.",
       {
         documentId: z.string().describe("The PDF's ID"),
         page: z
@@ -649,17 +654,60 @@ export function studyTools(
           .int()
           .positive()
           .describe("Page number, starting at 1"),
+        lastPage: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe(
+            `Read text up to and including this page, at most ${MAX_RANGE_PAGES} pages`,
+          ),
         as: z
           .enum(["text", "image"])
           .optional()
           .describe('"text" by default; "image" draws the page'),
       },
-      async ({ documentId, page, as }) => {
+      async ({ documentId, page, lastPage, as }) => {
         const info = pdf(documentId);
         if ("content" in info) return info;
         const pages = await readablePages(workspace, documentId);
         if (page > pages.length)
           return failure("NOT_FOUND", `The PDF has ${pages.length} pages.`);
+        if (lastPage !== undefined && lastPage > page) {
+          if (as === "image")
+            return failure(
+              "INVALID_INPUT",
+              "Look at one page at a time as an image.",
+            );
+          const recognized = await recognizedPages(workspace, documentId);
+          const last = Math.min(
+            lastPage,
+            pages.length,
+            page + MAX_RANGE_PAGES - 1,
+          );
+          const read: { page: number; extraction: string; text: string }[] = [];
+          let budget = MAX_RANGE_CHARS;
+          for (let number = page; number <= last && budget > 0; number += 1) {
+            const text = (pages[number - 1] ?? "").slice(0, budget);
+            budget -= text.length;
+            read.push({
+              page: number,
+              extraction: recognized.has(number) ? "ocr" : "text",
+              text: text || "(No text on this page.)",
+            });
+          }
+          const through = read.at(-1)?.page ?? page;
+          return ok({
+            ...describe(info),
+            revision: info.revision,
+            pageCount: pages.length,
+            pages: read,
+            // Where to carry on, when the range was cut short.
+            ...(through < Math.min(lastPage, pages.length)
+              ? { nextPage: through + 1 }
+              : {}),
+          });
+        }
         const about = {
           ...describe(info),
           revision: info.revision,
