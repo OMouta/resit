@@ -126,8 +126,13 @@ const moodleActivitySchema = z.object({
   /** The activity's page in Moodle. */
   url: z.string(),
   dates: z.array(moodleActivityDateSchema),
-  /** The assignment brief, or the description the course shows, as Markdown. */
+  /**
+   * The assignment brief, a page's or book's text, or the description the
+   * course shows, as Markdown.
+   */
   brief: z.string().optional(),
+  /** When a page or book last changed, so its text is read again only then. */
+  contentModified: z.number().int().nonnegative().optional(),
   /** Files attached to an assignment brief, keyed like download items. */
   attachments: z
     .array(z.object({ key: z.string(), filename: z.string() }))

@@ -601,6 +601,114 @@ describe("activities", () => {
   });
 });
 
+/** A page and a two-chapter book, served as the HTML Moodle sends. */
+function servePages(pageModified = 1700000000): void {
+  const html: Record<string, string> = {
+    "/mod_page/content/3/index.html":
+      "<h3>Rules</h3><p>Use the <b>chain rule</b>.</p>",
+    "/mod_book/chapter/11/index.html": "<p>Limits come first.</p>",
+    "/mod_book/chapter/12/index.html": "<p>Then continuity.</p>",
+  };
+  const pageFile = (path: string, extra: Record<string, unknown> = {}) => ({
+    type: "file",
+    filename: "index.html",
+    filepath: "/",
+    filesize: 0,
+    fileurl: `${SITE}/webservice/pluginfile.php/9${path}`,
+    timemodified: pageModified,
+    ...extra,
+  });
+  const course = [
+    {
+      id: 1,
+      name: "General",
+      section: 0,
+      modules: [
+        {
+          id: 300,
+          name: "Derivative rules",
+          modname: "page",
+          url: `${SITE}/mod/page/view.php?id=300`,
+          contents: [
+            pageFile("/mod_page/content/3/index.html"),
+            file("diagram.png", { timemodified: pageModified }),
+          ],
+        },
+        {
+          id: 301,
+          name: "Course notes",
+          modname: "book",
+          url: `${SITE}/mod/book/view.php?id=301`,
+          contents: [
+            {
+              type: "content",
+              filename: "structure",
+              filepath: "/",
+              filesize: 0,
+              timemodified: 1700000000,
+              content: "[]",
+            },
+            pageFile("/mod_book/chapter/11/index.html", {
+              filepath: "/11/",
+              content: "Limits",
+            }),
+            pageFile("/mod_book/chapter/12/index.html", {
+              filepath: "/12/",
+              content: "Continuity",
+            }),
+          ],
+        },
+      ],
+    },
+  ];
+  useNetworkFetch((url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/server.php"))
+      return Promise.resolve(
+        new Response(JSON.stringify(course), {
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    const path = parsed.pathname.replace(/^.*\/pluginfile\.php\/9/, "");
+    downloads.push(path);
+    return Promise.resolve(
+      new Response(html[path] ?? "", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+  });
+}
+
+describe("pages and books", () => {
+  it("reads their text instead of offering their files", async () => {
+    servePages();
+    const plan = await listItems(workspace, session, subjectId);
+    expect(plan.items).toEqual([]);
+    expect(plan.skipped).toEqual([]);
+    const [record] = await listActivities(workspace);
+    expect(
+      record?.activities.map((activity) => [activity.name, activity.brief]),
+    ).toEqual([
+      ["Derivative rules", "### Rules\n\nUse the **chain rule**."],
+      [
+        "Course notes",
+        "### Limits\n\nLimits come first.\n\n### Continuity\n\nThen continuity.",
+      ],
+    ]);
+  });
+
+  it("reads a page again only when Moodle says it changed", async () => {
+    servePages();
+    await listItems(workspace, session, subjectId);
+    expect(downloads).toHaveLength(3);
+    await refreshActivities(workspace, session);
+    expect(downloads).toHaveLength(3);
+    servePages(1700000500);
+    await refreshActivities(workspace, session);
+    expect(downloads).toHaveLength(6);
+  });
+});
+
 describe("assignment briefs", () => {
   it("keeps structure and drops markup", () => {
     const html = [

@@ -283,6 +283,8 @@ export const moodleContentSchema = z.looseObject({
   fileurl: z.string().optional(),
   timemodified: z.number().catch(0),
   isexternalfile: z.boolean().optional(),
+  /** A book chapter's title, beside its `index.html`. */
+  content: z.string().optional().catch(undefined),
 });
 
 export const moodleModuleSchema = z.looseObject({

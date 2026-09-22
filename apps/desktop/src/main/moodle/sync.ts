@@ -32,6 +32,7 @@ import {
   courseAssignments,
   courseContents,
   downloadFile,
+  MoodleError,
   type MoodleAssignment,
   type MoodleSection,
   type MoodleSession,
@@ -51,14 +52,105 @@ const FILE_MODULES = new Set(["resource", "folder", "assign"]);
 /** Modules that are not activities a student opens. */
 const NOT_ACTIVITIES = new Set(["resource", "folder", "subsection"]);
 
+/** Modules whose HTML resit reads as text rather than downloading. */
+const TEXT_MODULES = new Set(["page", "book"]);
+const MAX_PAGE_BYTES = 2 * 1024 * 1024;
+
+/** A page's or book's text as Markdown, and when Moodle last changed it. */
+interface PageText {
+  markdown: string;
+  modified: number;
+}
+
 /** A course as Moodle describes it, with its assignments keyed by module. */
 interface CourseRead {
   sections: MoodleSection[];
   assignments: ReadonlyMap<number, MoodleAssignment>;
+  pages: ReadonlyMap<number, PageText>;
+}
+
+/** What resit saved the last time it read the subject's course, if anything. */
+async function readSaved(
+  workspace: OpenWorkspace,
+  subjectId: string,
+  link: MoodleLink,
+): Promise<ActivitiesFile | null> {
+  let file: ActivitiesFile;
+  try {
+    file = activitiesFileSchema.parse(
+      await readJson(activitiesPath(workspace, subjectId)),
+    );
+  } catch {
+    // Not read from Moodle yet, or damaged: the next check rewrites it.
+    return null;
+  }
+  // Left over from a course the subject no longer follows.
+  if (file.siteUrl !== link.siteUrl || file.courseId !== link.courseId)
+    return null;
+  return file;
+}
+
+/**
+ * The text of the course's pages and books. Each is read again only when
+ * Moodle says it changed, and one that cannot be read is left without text
+ * rather than failing the whole course: the course page then links to it.
+ */
+async function readPages(
+  session: MoodleSession,
+  sections: MoodleSection[],
+  saved: ActivitiesFile | null,
+): Promise<Map<number, PageText>> {
+  const before = new Map(
+    (saved?.activities ?? []).map((activity) => [activity.moduleId, activity]),
+  );
+  const pages = new Map<number, PageText>();
+  for (const module of sections.flatMap((section) => section.modules)) {
+    if (module.uservisible === false || !TEXT_MODULES.has(module.modname))
+      continue;
+    const chapters = (module.contents ?? []).filter(
+      (content) =>
+        content.type === "file" &&
+        content.filename === "index.html" &&
+        content.fileurl,
+    );
+    if (chapters.length === 0) continue;
+    const modified = Math.max(
+      ...(module.contents ?? []).map((content) => content.timemodified),
+    );
+    const previous = before.get(module.id);
+    if (previous?.brief && previous.contentModified === modified) {
+      pages.set(module.id, { markdown: previous.brief, modified });
+      continue;
+    }
+    try {
+      const parts: string[] = [];
+      for (const chapter of chapters) {
+        const bytes = await downloadFile(
+          session,
+          chapter.fileurl ?? "",
+          MAX_PAGE_BYTES,
+        );
+        const text = briefMarkdown(Buffer.from(bytes).toString("utf8"));
+        // A book's chapters carry their titles; a page has one index.html.
+        parts.push(
+          module.modname === "book" && chapter.content
+            ? `### ${chapter.content}\n\n${text}`
+            : text,
+        );
+      }
+      const markdown = parts.filter(Boolean).join("\n\n");
+      if (markdown) pages.set(module.id, { markdown, modified });
+    } catch (error) {
+      if (!(error instanceof MoodleError)) throw error;
+    }
+  }
+  return pages;
 }
 
 async function readCourse(
+  workspace: OpenWorkspace,
   session: MoodleSession,
+  subjectId: string,
   link: MoodleLink,
 ): Promise<CourseRead> {
   const sections = await courseContents(session, link.courseId);
@@ -71,6 +163,11 @@ async function readCourse(
   return {
     sections,
     assignments: new Map(assignments.map((entry) => [entry.cmid, entry])),
+    pages: await readPages(
+      session,
+      sections,
+      await readSaved(workspace, subjectId, link),
+    ),
   };
 }
 
@@ -111,7 +208,9 @@ export function planCourse(
     const folder = sectionFolder(section);
     const sectionName = section.name.trim();
     for (const module of section.modules) {
-      if (module.uservisible === false) continue;
+      // Pages and books are read as text onto the course page.
+      if (module.uservisible === false || TEXT_MODULES.has(module.modname))
+        continue;
       const files = (
         module.modname === "assign"
           ? (assignments.get(module.id)?.introattachments ?? [])
@@ -167,9 +266,8 @@ export function planCourse(
  * of their own, so they point at their section.
  */
 function planActivities(
-  sections: MoodleSection[],
+  { sections, assignments, pages }: CourseRead,
   link: MoodleLink,
-  assignments: ReadonlyMap<number, MoodleAssignment>,
 ): { activities: MoodleActivity[]; sections: MoodleCourseSection[] } {
   const activities: MoodleActivity[] = [];
   const page: MoodleCourseSection[] = [];
@@ -203,13 +301,13 @@ function planActivities(
       }
       if (!module.url || NOT_ACTIVITIES.has(module.modname)) continue;
       const assignment = assignments.get(module.id);
-      const brief = [
-        assignment?.intro ?? module.description,
-        assignment?.activity,
-      ]
-        .map((html) => (html ? briefMarkdown(html) : ""))
-        .filter(Boolean)
-        .join("\n\n");
+      const text = pages.get(module.id);
+      const brief =
+        text?.markdown ??
+        [assignment?.intro ?? module.description, assignment?.activity]
+          .map((html) => (html ? briefMarkdown(html) : ""))
+          .filter(Boolean)
+          .join("\n\n");
       // The same files planCourse offers, so each one can be downloaded.
       const attachments = (assignment?.introattachments ?? [])
         .filter(
@@ -237,6 +335,7 @@ function planActivities(
             at: new Date(date.timestamp * 1000).toISOString(),
           })),
         ...(brief ? { brief } : {}),
+        ...(text ? { contentModified: text.modified } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       });
     }
@@ -256,7 +355,7 @@ async function saveActivities(
     siteUrl: link.siteUrl,
     courseId: link.courseId,
     checkedAt: new Date().toISOString(),
-    ...planActivities(course.sections, link, course.assignments),
+    ...planActivities(course, link),
   };
   await writeJson(activitiesPath(workspace, subjectId), file);
 }
@@ -296,7 +395,7 @@ export async function listItems(
   subjectId: string,
 ): Promise<MoodleCourseContents> {
   const link = subjectLink(workspace, subjectId);
-  const course = await readCourse(session, link);
+  const course = await readCourse(workspace, session, subjectId, link);
   await saveActivities(workspace, subjectId, link, course);
   return planCourse(
     course.sections,
@@ -320,7 +419,7 @@ export async function refreshActivities(
           workspace,
           info.id,
           info.moodle,
-          await readCourse(session, info.moodle),
+          await readCourse(workspace, session, info.id, info.moodle),
         );
       } catch (error) {
         failures.push({
@@ -341,18 +440,8 @@ export async function listActivities(
   for (const { info } of workspace.subjects.values()) {
     const link = info.moodle;
     if (!link) continue;
-    let file: ActivitiesFile;
-    try {
-      file = activitiesFileSchema.parse(
-        await readJson(activitiesPath(workspace, info.id)),
-      );
-    } catch {
-      // Not read from Moodle yet, or damaged: the next check rewrites it.
-      continue;
-    }
-    // Left over from a course the subject no longer follows.
-    if (file.siteUrl !== link.siteUrl || file.courseId !== link.courseId)
-      continue;
+    const file = await readSaved(workspace, info.id, link);
+    if (!file) continue;
     const owned = file.activities.some((activity) => activity.attachments)
       ? await downloaded(workspace, info.id, link)
       : new Map<string, { resourceId: string }>();
