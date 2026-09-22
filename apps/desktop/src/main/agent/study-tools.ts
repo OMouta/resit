@@ -28,6 +28,7 @@ import {
 import {
   ANNOTATION_COLOR_VALUES,
   ANNOTATION_TYPE_VALUES,
+  TEXT_EXTENSIONS,
   type Annotation,
   type ResourceInfo,
 } from "../../shared/workspace";
@@ -87,33 +88,6 @@ const MAX_ANNOTATION_CHARS = 2000;
 const MAX_NOTE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Files that are plain text, whatever kind resit filed them under. */
-const TEXT_EXTENSIONS = new Set([
-  ".md",
-  ".markdown",
-  ".txt",
-  ".text",
-  ".csv",
-  ".tsv",
-  ".json",
-  ".tex",
-  ".bib",
-  ".srt",
-  ".vtt",
-  ".log",
-  ".xml",
-  ".yaml",
-  ".yml",
-  ".html",
-  ".css",
-  ".py",
-  ".c",
-  ".h",
-  ".cpp",
-  ".java",
-  ".js",
-  ".ts",
-]);
 
 /** Text formats the assistant may save as files. Notes are Markdown already. */
 const SAVE_EXTENSIONS = new Set([

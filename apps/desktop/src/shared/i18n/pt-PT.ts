@@ -37,6 +37,7 @@ export const messages: Record<string, string> = {
   "{count} files, {size}, exported {date}.":
     "{count} ficheiros, {size}, exportados a {date}.",
   "{count} left": "Faltam {count}",
+  "{count} lines": "{count} linhas",
   "{count} link points to notes that were not exported, so it keeps its resit:// address.":
     "{count} ligação aponta para apontamentos que não foram exportados, por isso mantém o endereço resit://.",
   "{count} linked file is in its files folder.":
@@ -57,6 +58,7 @@ export const messages: Record<string, string> = {
     "{count} revisão, {forgotten} esquecidos",
   "{count} reviews, {forgotten} forgotten":
     "{count} revisões, {forgotten} esquecidos",
+  "{count} rows": "{count} linhas",
   "{count} to mark": "{count} por classificar",
   "{count} without a topic": "{count} sem tema",
   "{count} word": "{count} palavra",
@@ -1027,6 +1029,7 @@ export const messages: Record<string, string> = {
   "This deletion has no record of where it came from.":
     "Não há registo de onde veio este item eliminado.",
   "this file": "este ficheiro",
+  "This file could not be opened": "Não foi possível abrir este ficheiro",
   "This file was exported by a newer version of resit. Update resit to open it.":
     "Este ficheiro foi exportado por uma versão mais recente do resit. Atualize o resit para o abrir.",
   "This folder already contains a workspace. Open it instead.":

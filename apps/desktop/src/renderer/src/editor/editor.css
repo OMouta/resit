@@ -169,3 +169,53 @@
 .dark .pdf-container[data-dim="true"] .pdfViewer .page canvas {
   filter: brightness(0.82) contrast(1.04);
 }
+
+/* Code in the text view, in the subject palette so both themes follow. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta .hljs-keyword,
+.hljs-doctag {
+  color: var(--subject-purple);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--subject-green);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-symbol {
+  color: var(--subject-orange);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-title.function_ {
+  color: var(--subject-blue);
+}
+
+.hljs-built_in,
+.hljs-type,
+.hljs-title.class_ {
+  color: var(--subject-brown);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-name {
+  color: var(--subject-pink);
+}
+
+.hljs-deletion {
+  color: var(--destructive);
+}

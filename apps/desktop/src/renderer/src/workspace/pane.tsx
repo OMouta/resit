@@ -14,10 +14,11 @@ import {
 import { useLocale } from "@resit/ui/hooks/use-locale";
 
 import type { MoodleConnection } from "../../../shared/moodle";
-import type {
-  ResourceInfo,
-  SubjectInfo,
-  WorkspaceSnapshot,
+import {
+  isTextFile,
+  type ResourceInfo,
+  type SubjectInfo,
+  type WorkspaceSnapshot,
 } from "../../../shared/workspace";
 import { NoteView } from "../editor/note-view";
 import type { CardRequest } from "../practice/card-dialog";
@@ -25,6 +26,7 @@ import type { QuizEditorRequest } from "../practice/quiz-editor";
 import { ActivityView } from "../views/activity-view";
 import { CourseView } from "../views/course-view";
 import { AttachmentView, ImageView } from "../views/file-views";
+import { TextView } from "../views/text-view";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
 import { PracticeView } from "../views/practice-view";
@@ -113,7 +115,11 @@ function ResourceView({
     case "image":
       return <ImageView resource={resource} />;
     case "attachment":
-      return <AttachmentView resource={resource} />;
+      return isTextFile(resource.path) ? (
+        <TextView resource={resource} />
+      ) : (
+        <AttachmentView resource={resource} />
+      );
   }
 }
 

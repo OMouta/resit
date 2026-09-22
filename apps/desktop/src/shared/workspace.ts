@@ -73,6 +73,48 @@ export type SidecarFile = z.infer<typeof sidecarFileSchema>;
 
 export type ResourceKind = "note" | BinaryKind;
 
+/** Files that are plain text, whatever kind resit filed them under. */
+export const TEXT_EXTENSIONS = new Set([
+  ".md",
+  ".markdown",
+  ".txt",
+  ".text",
+  ".csv",
+  ".tsv",
+  ".json",
+  ".tex",
+  ".bib",
+  ".srt",
+  ".vtt",
+  ".log",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".html",
+  ".css",
+  ".py",
+  ".m",
+  ".r",
+  ".sql",
+  ".c",
+  ".h",
+  ".cpp",
+  ".java",
+  ".js",
+  ".ts",
+]);
+
+/** The file's extension, lowercase and with its dot, or "". */
+export function extensionOf(path: string): string {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot).toLowerCase() : "";
+}
+
+export function isTextFile(path: string): boolean {
+  return TEXT_EXTENSIONS.has(extensionOf(path));
+}
+
 /** When a project is due, on the student's clock. */
 export const projectDueSchema = z.object({
   date: dateSchema,
