@@ -213,6 +213,8 @@ export function describeToolCall(
       return "Listed the Moodle activities";
     case "study_read_activity":
       return "Read a Moodle activity";
+    case "study_read_announcements":
+      return "Read the Moodle announcements";
     case "study_create_note":
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
@@ -846,6 +848,33 @@ export function studyTools(
           });
         }
         return failure("NOT_FOUND", `No activity has the ID ${activityId}.`);
+      },
+    ),
+    define(
+      "study_read_announcements",
+      "Read the newest posts in the Moodle announcements forum of the subjects in scope, where teachers post changes to dates, rooms, and assessments. Posts are what Moodle had at checkedAt.",
+      {
+        subjectId: z
+          .string()
+          .optional()
+          .describe("Only read one subject's announcements"),
+      },
+      async ({ subjectId }) => {
+        const subjects = (await listActivities(workspace)).filter(
+          (entry) =>
+            scope.subjectIds.includes(entry.subjectId) &&
+            (!subjectId || entry.subjectId === subjectId),
+        );
+        return ok({
+          subjects: subjects.map((entry) => ({
+            subjectId: entry.subjectId,
+            subject: subjectNames.get(entry.subjectId) ?? null,
+            checkedAt: entry.checkedAt,
+            announcements: (entry.announcements ?? []).map(
+              ({ url: _url, ...post }) => post,
+            ),
+          })),
+        });
       },
     ),
     define(
@@ -1776,6 +1805,7 @@ export const STUDY_TOOLS = [
   "study_get_open_files",
   "study_list_activities",
   "study_read_activity",
+  "study_read_announcements",
   "study_create_note",
   "study_edit_note",
   "study_highlight_pdf",

@@ -4,6 +4,7 @@ import {
   itemKey,
   type ActivitiesFile,
   type MoodleActivity,
+  type MoodleAnnouncement,
   type MoodleCourseContents,
   type MoodleCourseSection,
   type MoodleDownloadResult,
@@ -31,6 +32,8 @@ import { briefMarkdown } from "./brief";
 import {
   courseAssignments,
   courseContents,
+  courseForums,
+  forumDiscussions,
   downloadFile,
   MoodleError,
   type MoodleAssignment,
@@ -62,11 +65,15 @@ interface PageText {
   modified: number;
 }
 
+/** How many of the newest announcements resit keeps. */
+const ANNOUNCEMENTS = 10;
+
 /** A course as Moodle describes it, with its assignments keyed by module. */
 interface CourseRead {
   sections: MoodleSection[];
   assignments: ReadonlyMap<number, MoodleAssignment>;
   pages: ReadonlyMap<number, PageText>;
+  announcements: MoodleAnnouncement[] | undefined;
 }
 
 /** What resit saved the last time it read the subject's course, if anything. */
@@ -147,6 +154,39 @@ async function readPages(
   return pages;
 }
 
+/**
+ * The newest posts in the course's announcements forum. A site may not
+ * offer the forum functions to the app's token; then the ones saved last
+ * time stay.
+ */
+async function readAnnouncements(
+  session: MoodleSession,
+  link: MoodleLink,
+  saved: ActivitiesFile | null,
+): Promise<MoodleAnnouncement[] | undefined> {
+  try {
+    const news = (await courseForums(session, link.courseId)).find(
+      (forum) => forum.type === "news",
+    );
+    if (!news) return [];
+    const discussions = await forumDiscussions(session, news.id, ANNOUNCEMENTS);
+    return discussions
+      .map((post) => ({
+        id: post.discussion,
+        subject: post.subject,
+        message: briefMarkdown(post.message),
+        author: post.userfullname,
+        postedAt: new Date(post.created * 1000).toISOString(),
+        ...(post.pinned ? { pinned: true } : {}),
+        url: `${link.siteUrl}/mod/forum/discuss.php?d=${post.discussion}`,
+      }))
+      .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
+  } catch (error) {
+    if (!(error instanceof MoodleError)) throw error;
+    return saved?.announcements;
+  }
+}
+
 async function readCourse(
   workspace: OpenWorkspace,
   session: MoodleSession,
@@ -160,14 +200,12 @@ async function readCourse(
   const assignments = hasAssignments
     ? await courseAssignments(session, link.courseId)
     : [];
+  const saved = await readSaved(workspace, subjectId, link);
   return {
     sections,
     assignments: new Map(assignments.map((entry) => [entry.cmid, entry])),
-    pages: await readPages(
-      session,
-      sections,
-      await readSaved(workspace, subjectId, link),
-    ),
+    pages: await readPages(session, sections, saved),
+    announcements: await readAnnouncements(session, link, saved),
   };
 }
 
@@ -361,6 +399,7 @@ async function saveActivities(
     courseId: link.courseId,
     checkedAt: new Date().toISOString(),
     ...planActivities(course, link),
+    ...(course.announcements ? { announcements: course.announcements } : {}),
   };
   await writeJson(activitiesPath(workspace, subjectId), file);
 }
@@ -454,6 +493,7 @@ export async function listActivities(
       subjectId: info.id,
       checkedAt: file.checkedAt,
       ...(file.sections ? { sections: file.sections } : {}),
+      ...(file.announcements ? { announcements: file.announcements } : {}),
       activities: file.activities.map(({ attachments, ...activity }) => ({
         ...activity,
         ...(attachments

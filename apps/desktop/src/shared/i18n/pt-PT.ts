@@ -180,6 +180,7 @@ export const messages: Record<string, string> = {
   "An export or an archive is being written already.":
     "Já está a ser escrita uma exportação ou um arquivo.",
   "An hour before": "Uma hora antes",
+  Announcements: "Avisos",
   "Another copy of resit on this computer has had it open since {time}. Two copies writing to the same files can overwrite each other's changes, so open it here only if resit is no longer running there.":
     "Outra cópia do resit neste computador tem-no aberto desde {time}. Duas cópias a escrever nos mesmos ficheiros podem apagar as alterações uma da outra, por isso abra-o aqui só se o resit já não estiver a funcionar lá.",
   Answer: "Resposta",
@@ -735,6 +736,8 @@ export const messages: Record<string, string> = {
   "Short answer": "Resposta curta",
   Show: "Mostrar",
   "Show a hint": "Mostrar uma pista",
+  "Show all {count}": "Mostrar todos ({count})",
+  "Show fewer": "Mostrar menos",
   "Show the outline": "Mostrar a estrutura",
   "Shown after the gap is revealed": "Aparece depois de o espaço ser revelado",
   Skip: "Saltar",

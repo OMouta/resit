@@ -16,6 +16,7 @@ import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
 
 import {
   courseUrl,
+  type MoodleAnnouncement,
   type MoodleCourseSection,
   type SubjectActivities,
 } from "../../../shared/moodle";
@@ -151,6 +152,10 @@ export function CourseView({
             </ToolbarButton>
           </div>
 
+          {record.announcements?.length ? (
+            <Announcements posts={record.announcements} />
+          ) : null}
+
           {sectionsOf(record).map((section, index) => {
             const items = section.moduleIds.flatMap((id) => {
               const activity = byId.get(id);
@@ -196,6 +201,53 @@ export function CourseView({
         </div>
       </div>
     </ScrollArea>
+  );
+}
+
+/** The newest few posts, with the rest a click away. */
+function Announcements({ posts }: { posts: MoodleAnnouncement[] }) {
+  const { t, relative, dateTime, number } = useLocale();
+  const [all, setAll] = useState(false);
+  const shown = all ? posts : posts.slice(0, 3);
+  return (
+    <section aria-label={t("Announcements")} className="flex flex-col gap-3">
+      <h2 className="text-xl font-semibold tracking-[-0.01em]">
+        {t("Announcements")}
+      </h2>
+      <div className="flex flex-col divide-y rounded-lg border">
+        {shown.map((post) => (
+          <article key={post.id} className="flex flex-col gap-1 px-4 py-3">
+            <div className="flex items-baseline gap-3">
+              <h3 className="min-w-0 flex-1 text-sm font-semibold">
+                {post.subject}
+              </h3>
+              <time
+                dateTime={post.postedAt}
+                title={dateTime(post.postedAt)}
+                className="shrink-0 text-xs text-muted-foreground"
+              >
+                {relative(post.postedAt)}
+              </time>
+            </div>
+            <p className="text-xs text-muted-foreground">{post.author}</p>
+            <div className="mt-1 text-sm">
+              <ChatMarkdown text={post.message} />
+            </div>
+          </article>
+        ))}
+      </div>
+      {posts.length > 3 ? (
+        <Button
+          variant="subtle"
+          className="self-start"
+          onClick={() => setAll((value) => !value)}
+        >
+          {all
+            ? t("Show fewer")
+            : t("Show all {count}", { count: number(posts.length) })}
+        </Button>
+      ) : null}
+    </section>
   );
 }
 

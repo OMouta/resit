@@ -374,6 +374,60 @@ export async function courseAssignments(
   return result.courses.flatMap((course) => course.assignments);
 }
 
+const forumsSchema = z.array(
+  z.looseObject({
+    id: z.number().int(),
+    /** `news` for the course's announcements forum. */
+    type: z.string().catch(""),
+  }),
+);
+
+/** The course's forums, to find the one teachers post announcements in. */
+export function courseForums(
+  session: MoodleSession,
+  courseId: number,
+): Promise<z.infer<typeof forumsSchema>> {
+  return call(session, "mod_forum_get_forums_by_courses", forumsSchema, {
+    "courseids[0]": courseId,
+  });
+}
+
+const discussionsSchema = z.looseObject({
+  discussions: z
+    .array(
+      z.looseObject({
+        /** The discussion, as opposed to `id`, its first post. */
+        discussion: z.number().int(),
+        subject: z.string().catch(""),
+        /** HTML. */
+        message: z.string().catch(""),
+        userfullname: z.string().catch(""),
+        created: z.number().catch(0),
+        pinned: z.boolean().catch(false),
+      }),
+    )
+    .catch([]),
+});
+
+export type MoodleDiscussion = z.infer<
+  typeof discussionsSchema
+>["discussions"][number];
+
+/** The latest discussions in one forum, with each one's first post. */
+export async function forumDiscussions(
+  session: MoodleSession,
+  forumId: number,
+  count: number,
+): Promise<MoodleDiscussion[]> {
+  const result = await call(
+    session,
+    "mod_forum_get_forum_discussions",
+    discussionsSchema,
+    { forumid: forumId, page: 0, perpage: count },
+  );
+  return result.discussions;
+}
+
 /**
  * Downloads one course file. Only the configured site is fetched, so a course
  * cannot point resit at another host with the token attached.

@@ -142,6 +142,19 @@ const moodleActivitySchema = z.object({
 });
 export type MoodleActivity = z.infer<typeof moodleActivitySchema>;
 
+/** A post in the course's announcements forum. */
+const moodleAnnouncementSchema = z.object({
+  id: z.number().int().nonnegative(),
+  subject: z.string(),
+  /** The post, as Markdown. */
+  message: z.string(),
+  author: z.string(),
+  postedAt: z.iso.datetime({ offset: true }),
+  pinned: z.boolean().optional(),
+  url: z.string(),
+});
+export type MoodleAnnouncement = z.infer<typeof moodleAnnouncementSchema>;
+
 /** One section of the course page, with the modules it shows, in order. */
 const moodleCourseSectionSchema = z.object({
   name: z.string(),
@@ -164,6 +177,8 @@ export const activitiesFileSchema = z.object({
   /** Labels are here as activities of type `label`, with their text as the brief. */
   activities: z.array(moodleActivitySchema),
   sections: z.array(moodleCourseSectionSchema).optional(),
+  /** Newest first. Absent when the site does not let resit read forums. */
+  announcements: z.array(moodleAnnouncementSchema).optional(),
 });
 export type ActivitiesFile = z.infer<typeof activitiesFileSchema>;
 
@@ -177,6 +192,7 @@ export interface SubjectActivities {
   subjectId: string;
   checkedAt: string;
   sections?: MoodleCourseSection[];
+  announcements?: MoodleAnnouncement[];
   activities: (Omit<MoodleActivity, "attachments"> & {
     attachments?: {
       key: string;

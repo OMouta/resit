@@ -393,6 +393,16 @@ describe("study read tools", () => {
               brief: "Write a report.",
             },
           ],
+          announcements: [
+            {
+              id: moduleId,
+              subject: `Room change ${courseId}`,
+              message: "The test moves to B2.04.",
+              author: "Prof. Silva",
+              postedAt: "2026-09-19T08:00:00.000Z",
+              url: `${siteUrl}/mod/forum/discuss.php?d=${moduleId}`,
+            },
+          ],
         }),
       );
     }
@@ -412,6 +422,16 @@ describe("study read tools", () => {
 
     const refused = await run("study_read_activity", { activityId: "302" });
     expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+
+    const news = await run("study_read_announcements", {});
+    expect(news.data.subjects).toMatchObject([
+      {
+        subjectId: mathematicsId,
+        announcements: [
+          { subject: "Room change 7", message: "The test moves to B2.04." },
+        ],
+      },
+    ]);
   });
 });
 

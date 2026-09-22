@@ -872,6 +872,17 @@ function MoodleSections({
 
   if (followed.length === 0) return null;
 
+  // What teachers posted in the last two weeks, newest first.
+  const since = Date.now() - 14 * 86_400_000;
+  const recent = followed
+    .flatMap((subject) =>
+      (bySubject.get(subject.id)?.announcements ?? [])
+        .filter((post) => Date.parse(post.postedAt) >= since)
+        .map((post) => ({ subject, post })),
+    )
+    .sort((a, b) => b.post.postedAt.localeCompare(a.post.postedAt))
+    .slice(0, 5);
+
   const dayTitle = (day: Date) => {
     const today = new Date();
     const tomorrow = new Date();
@@ -977,6 +988,38 @@ function MoodleSections({
           ))}
         </section>
       )}
+
+      {recent.length > 0 ? (
+        <section
+          aria-label={t("Announcements")}
+          className="flex flex-col gap-1"
+        >
+          <SectionTitle>{t("Announcements")}</SectionTitle>
+          <ul className="flex flex-col">
+            {recent.map(({ subject, post }) => (
+              <li key={`${subject.id}:${post.id}`} className="flex">
+                <RowBody onOpen={() => onOpenCourse(subject.id)}>
+                  <SubjectDot subject={subject} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span
+                      className="truncate text-sm font-medium"
+                      title={post.subject}
+                    >
+                      {post.subject}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {subject.name} · {post.author}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {relative(post.postedAt)}
+                  </span>
+                </RowBody>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {records && records.length > 0 ? (
         <section aria-label={t("Courses")} className="flex flex-col gap-1">

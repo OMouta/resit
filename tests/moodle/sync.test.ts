@@ -739,6 +739,90 @@ describe("pages and books", () => {
   });
 });
 
+describe("announcements", () => {
+  /** The course from the activities tests, with a news forum beside it. */
+  function serveForum(forums: boolean): void {
+    const json = (body: unknown) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), {
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    useNetworkFetch((url) => {
+      const name = new URL(url).searchParams.get("wsfunction");
+      if (name === "mod_forum_get_forums_by_courses")
+        return json(
+          forums
+            ? [
+                { id: 40, type: "general" },
+                { id: 41, type: "news" },
+              ]
+            : { exception: "x", errorcode: "accessexception" },
+        );
+      if (name === "mod_forum_get_forum_discussions")
+        return json({
+          discussions: [
+            {
+              id: 900,
+              discussion: 90,
+              subject: "Welcome",
+              message: "<p>Classes start on Monday.</p>",
+              userfullname: "Ana Silva",
+              created: 1790000000,
+            },
+            {
+              id: 901,
+              discussion: 91,
+              subject: "Room change",
+              message: "<p>The test moves to <b>B2.04</b>.</p>",
+              userfullname: "Ana Silva",
+              created: 1790500000,
+              pinned: true,
+            },
+          ],
+        });
+      if (name === "mod_assign_get_assignments") return json(assignments);
+      return json(activityCourse());
+    });
+  }
+
+  it("keeps the newest posts first, as Markdown", async () => {
+    serveForum(true);
+    await listItems(workspace, session, subjectId);
+    const [record] = await listActivities(workspace);
+    expect(record?.announcements).toEqual([
+      {
+        id: 91,
+        subject: "Room change",
+        message: "The test moves to **B2.04**.",
+        author: "Ana Silva",
+        postedAt: new Date(1790500000 * 1000).toISOString(),
+        pinned: true,
+        url: `${SITE}/mod/forum/discuss.php?d=91`,
+      },
+      {
+        id: 90,
+        subject: "Welcome",
+        message: "Classes start on Monday.",
+        author: "Ana Silva",
+        postedAt: new Date(1790000000 * 1000).toISOString(),
+        url: `${SITE}/mod/forum/discuss.php?d=90`,
+      },
+    ]);
+  });
+
+  it("still reads the course when the site does not offer forums", async () => {
+    serveForum(true);
+    await listItems(workspace, session, subjectId);
+    serveForum(false);
+    expect(await refreshActivities(workspace, session)).toEqual([]);
+    const [record] = await listActivities(workspace);
+    expect(record?.activities.length).toBeGreaterThan(0);
+    // The posts from the last successful read stay.
+    expect(record?.announcements?.map((post) => post.id)).toEqual([91, 90]);
+  });
+});
+
 describe("assignment briefs", () => {
   it("keeps structure and drops markup", () => {
     const html = [
