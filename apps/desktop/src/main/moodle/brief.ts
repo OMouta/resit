@@ -23,15 +23,30 @@ function decodeEntities(text: string): string {
   );
 }
 
+/** An `<img>` as a Markdown image, when it has an absolute address. */
+function imageMarkdown(tag: string): string {
+  const src = decodeEntities(/\bsrc="([^"]*)"/i.exec(tag)?.[1] ?? "");
+  if (!/^https?:\/\//i.test(src)) return "";
+  const alt = decodeEntities(/\balt="([^"]*)"/i.exec(tag)?.[1] ?? "");
+  // Encoded so the address stays one Markdown token.
+  const address = src.replace(
+    /[\s()<>]/g,
+    (char) =>
+      `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`,
+  );
+  return `![${alt.replace(/[[\]\n]/g, " ").trim()}](${address})`;
+}
+
 /**
  * Turns the HTML Moodle sends for a brief into Markdown the app and the
- * assistant can both read. Paragraphs, headings, lists, emphasis, and links
- * survive; anything else becomes its text. Images are dropped: their
- * addresses only work with the student's token.
+ * assistant can both read. Paragraphs, headings, lists, emphasis, links, and
+ * images survive; anything else becomes its text. An image's address only
+ * works with the student's token, so `mediaSaver` swaps in a saved copy.
  */
 export function briefMarkdown(html: string): string {
   const markdown = html
     .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, "")
+    .replace(/<img\b[^>]*>/gi, imageMarkdown)
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi, "\n\n### $1\n\n")
     .replace(/<li\b[^>]*>/gi, "\n- ")

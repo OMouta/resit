@@ -13,6 +13,10 @@ import {
 } from "../../apps/desktop/src/main/moodle/client";
 import { briefMarkdown } from "../../apps/desktop/src/main/moodle/brief";
 import {
+  mediaSaver,
+  readMedia,
+} from "../../apps/desktop/src/main/moodle/media";
+import {
   downloadItems,
   listActivities,
   listItems,
@@ -923,6 +927,55 @@ describe("assignment briefs", () => {
     expect(briefMarkdown(html)).toBe(
       "### Entrega\n\nAté às 23:59 — ver [as regras](https://x.pt/a?b=1&c=2).\n\nIt's *final*.",
     );
+  });
+});
+
+describe("images in course text", () => {
+  const PNG = new Uint8Array([
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+  ]);
+
+  it("keeps absolute images and drops relative ones", () => {
+    expect(
+      briefMarkdown(
+        `<p><img src="${SITE}/pluginfile.php/9/label/intro/graph (1).png" alt="A graph"><img src="x.png"></p>`,
+      ),
+    ).toBe(
+      `![A graph](${SITE}/pluginfile.php/9/label/intro/graph%20%281%29.png)`,
+    );
+  });
+
+  it("saves the course's own images and leaves others alone", async () => {
+    const fetched: string[] = [];
+    useNetworkFetch((url) => {
+      fetched.push(url);
+      return Promise.resolve(
+        new Response(PNG, { headers: { "content-type": "image/png" } }),
+      );
+    });
+    const save = mediaSaver(workspace, session);
+    const markdown = await save(
+      `![Graph](${SITE}/pluginfile.php/9/label/intro/graph.png) ![Logo](https://elsewhere.example/logo.png)`,
+    );
+    const name = /resit-media:([a-f0-9]+\.png)/.exec(markdown)?.[1] ?? "";
+    expect(markdown).toBe(
+      `![Graph](resit-media:${name}) ![Logo](https://elsewhere.example/logo.png)`,
+    );
+    // Asked for through the web service, with the token, once.
+    expect(fetched).toEqual([
+      `${SITE}/webservice/pluginfile.php/9/label/intro/graph.png?token=secret-token`,
+    ]);
+    expect(await readMedia(workspace, name)).toEqual(Buffer.from(PNG));
+    await mediaSaver(workspace, session)(markdown);
+    await mediaSaver(
+      workspace,
+      session,
+    )(`![Graph](${SITE}/pluginfile.php/9/label/intro/graph.png)`);
+    expect(fetched).toHaveLength(1);
+  });
+
+  it("reads only names it could have saved", async () => {
+    await expect(readMedia(workspace, "../workspace.json")).rejects.toThrow();
   });
 });
 

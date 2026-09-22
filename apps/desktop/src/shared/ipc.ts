@@ -473,6 +473,8 @@ export interface DesktopApi {
     subjectId: string;
     keys: string[];
   }): Promise<MoodleDownloadResult>;
+  /** An image from course text, saved in the workspace by name. */
+  readMoodleMedia(name: string): Promise<Uint8Array>;
   /** Activities as resit last saw them, without contacting Moodle. */
   listMoodleActivities(): Promise<SubjectActivities[]>;
   /** Reads every followed course again. Returns the subjects that failed. */
@@ -608,6 +610,7 @@ export const CHANNELS = {
   listMoodleItems: "resit:moodle-items",
   downloadMoodleItems: "resit:moodle-download",
   listMoodleActivities: "resit:moodle-activities",
+  readMoodleMedia: "resit:moodle-media",
   refreshMoodleActivities: "resit:moodle-activities-refresh",
   getProviderStatus: "resit:provider-status",
   getModels: "resit:provider-models",

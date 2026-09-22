@@ -76,6 +76,7 @@ import {
   moodleStatus,
   moodleUserId,
 } from "./moodle/credentials";
+import { readMedia } from "./moodle/media";
 import {
   downloadItems,
   listActivities,
@@ -1297,6 +1298,10 @@ export function registerHandlers(
 
   handle(CHANNELS.listMoodleActivities, z.tuple([]), () =>
     listActivities(currentWorkspace()),
+  );
+
+  handle(CHANNELS.readMoodleMedia, z.tuple([z.string().max(100)]), (name) =>
+    readMedia(currentWorkspace(), name),
   );
 
   handle(CHANNELS.refreshMoodleActivities, z.tuple([]), async () => {

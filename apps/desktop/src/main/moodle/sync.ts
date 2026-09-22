@@ -30,6 +30,7 @@ import {
   type OpenWorkspace,
 } from "../workspace/workspace";
 import { briefMarkdown } from "./brief";
+import { mediaSaver } from "./media";
 import {
   courseAssignments,
   courseContents,
@@ -465,6 +466,7 @@ function planActivities(
 
 async function saveActivities(
   workspace: OpenWorkspace,
+  session: MoodleSession,
   subjectId: string,
   link: MoodleLink,
   course: CourseRead,
@@ -472,14 +474,30 @@ async function saveActivities(
   const total = gradeOf(
     course.grades.find((item) => item.itemtype === "course"),
   );
+  const { activities, sections } = planActivities(course, link);
+  // The course's own images, saved so they show without a Moodle session.
+  const withImages = mediaSaver(workspace, session);
+  for (const section of sections)
+    if (section.summary) section.summary = await withImages(section.summary);
+  for (const activity of activities)
+    if (activity.brief) activity.brief = await withImages(activity.brief);
+  const announcements = course.announcements
+    ? await Promise.all(
+        course.announcements.map(async (post) => ({
+          ...post,
+          message: await withImages(post.message),
+        })),
+      )
+    : undefined;
   const file: ActivitiesFile = {
     format: "resit-moodle-activities",
     formatVersion: 1,
     siteUrl: link.siteUrl,
     courseId: link.courseId,
     checkedAt: new Date().toISOString(),
-    ...planActivities(course, link),
-    ...(course.announcements ? { announcements: course.announcements } : {}),
+    activities,
+    sections,
+    ...(announcements ? { announcements } : {}),
     ...(total ? { grade: total } : {}),
   };
   await writeJson(activitiesPath(workspace, subjectId), file);
@@ -521,7 +539,7 @@ export async function listItems(
 ): Promise<MoodleCourseContents> {
   const link = subjectLink(workspace, subjectId);
   const course = await readCourse(workspace, session, subjectId, link);
-  await saveActivities(workspace, subjectId, link, course);
+  await saveActivities(workspace, session, subjectId, link, course);
   return planCourse(
     course.sections,
     link,
@@ -542,6 +560,7 @@ export async function refreshActivities(
       try {
         await saveActivities(
           workspace,
+          session,
           info.id,
           info.moodle,
           await readCourse(workspace, session, info.id, info.moodle),
