@@ -58,6 +58,7 @@ import type {
   NoteRevision,
   NoteRevisionContent,
   PackageOptions,
+  OfficeContent,
   ProjectActivity,
   ProjectDue,
   ProjectInfo,
@@ -501,6 +502,8 @@ export interface DesktopApi {
   }): Promise<void>;
   /** What a conversation's assistant is waiting for the student to allow. */
   listApprovals(conversationId: string): Promise<ApprovalRequest[]>;
+  /** A Word, PowerPoint, or Excel file's words, to show them. */
+  readOfficeContent(resourceId: string): Promise<OfficeContent | null>;
   /** An image from course text, saved in the workspace by name. */
   readMoodleMedia(name: string): Promise<Uint8Array>;
   /** Activities as resit last saw them, without contacting Moodle. */
@@ -639,6 +642,7 @@ export const CHANNELS = {
   downloadMoodleItems: "resit:moodle-download",
   listMoodleActivities: "resit:moodle-activities",
   readMoodleMedia: "resit:moodle-media",
+  readOfficeContent: "resit:office-content",
   answerApproval: "resit:approval-answer",
   listApprovals: "resit:approvals",
   refreshMoodleActivities: "resit:moodle-activities-refresh",

@@ -115,6 +115,19 @@ export function isTextFile(path: string): boolean {
   return TEXT_EXTENSIONS.has(extensionOf(path));
 }
 
+/** Word, PowerPoint, and Excel files, whose text resit reads. */
+export const OFFICE_EXTENSIONS = new Set([".docx", ".pptx", ".xlsx"]);
+
+export function isOfficeFile(path: string): boolean {
+  return OFFICE_EXTENSIONS.has(extensionOf(path));
+}
+
+/** The words in an Office file, in the shape its view shows them. */
+export type OfficeContent =
+  | { format: "docx"; paragraphs: string[] }
+  | { format: "pptx"; slides: { lines: string[] }[] }
+  | { format: "xlsx"; sheets: { name: string; rows: string[][] }[] };
+
 /** Audio and video the window plays, by extension. */
 export const MEDIA_TYPES: Record<string, string> = {
   ".mp4": "video/mp4",

@@ -787,7 +787,7 @@ export function studyTools(
     ...(canSeeImages ? [readImage] : []),
     define(
       "study_read_file",
-      "Read a text file the student imported, such as a Markdown file, a transcript, or a data file.",
+      "Read the text of a file the student imported: a Markdown or text file, a transcript, a data file, code, or a Word, PowerPoint, or Excel file.",
       { resourceId: z.string().describe("The file's ID") },
       async ({ resourceId }) => {
         const info = resource(resourceId);
@@ -815,7 +815,7 @@ export function studyTools(
     ),
     define(
       "study_search",
-      "Search the text of notes, PDFs, and text files in scope. Matching ignores case and accents.",
+      "Search the text of notes, PDFs, text files, and Word, PowerPoint, and Excel files in scope. Matching ignores case and accents.",
       {
         query: z.string().min(1).max(200),
         limit: z.number().int().min(1).max(30).optional(),

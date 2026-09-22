@@ -588,6 +588,7 @@ export const messages: Record<string, string> = {
   "No new cards": "Sem cartões novos",
   "No practice on it lately": "Sem prática recente",
   "No subject": "Sem disciplina",
+  "No text on this slide.": "Este diapositivo não tem texto.",
   "No topics": "Sem temas",
   None: "Nenhum",
   "None yet": "Nenhuma ainda",
@@ -706,6 +707,8 @@ export const messages: Record<string, string> = {
   "Replace with": "Substituir por",
   "resit cannot play this file":
     "O resit não consegue reproduzir este ficheiro",
+  "resit cannot read this kind of file.":
+    "O resit não consegue ler este tipo de ficheiro.",
   "resit copies it into a new folder inside the one you choose, then opens it.":
     "O resit copia-o para uma pasta nova dentro da que escolher e depois abre-o.",
   "resit could not find the Codex executable.":
@@ -763,6 +766,7 @@ export const messages: Record<string, string> = {
     "Define CODEX_HOME, para uma segunda conta do Codex.",
   Settings: "Definições",
   "Share with the assistant": "Partilhar com o assistente",
+  Sheets: "Folhas",
   "Short answer": "Resposta curta",
   Show: "Mostrar",
   "Show a hint": "Mostrar uma pista",
@@ -771,6 +775,7 @@ export const messages: Record<string, string> = {
   "Show the outline": "Mostrar a estrutura",
   "Shown after the gap is revealed": "Aparece depois de o espaço ser revelado",
   Skip: "Saltar",
+  "Slide {number}": "Diapositivo {number}",
   "Source no longer in the workspace":
     "A fonte já não está no espaço de trabalho",
   "Split the pane with Ctrl+\\ to keep both open.":
@@ -803,6 +808,8 @@ export const messages: Record<string, string> = {
   "Takes the glare off a white page at night.":
     "Tira o brilho de uma página branca à noite.",
   Text: "Texto",
+  "Text only. The default app shows its layout.":
+    "Só o texto. A aplicação predefinida mostra o aspeto original.",
   "Text recognition": "Reconhecimento de texto",
   "Text recognition did not start": "O reconhecimento de texto não começou",
   "Text recognition languages": "Línguas do reconhecimento de texto",
