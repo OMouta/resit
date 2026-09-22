@@ -1,4 +1,5 @@
 import {
+  FilePlusIcon,
   FileTextIcon,
   FolderKanbanIcon,
   ImageIcon,
@@ -6,9 +7,17 @@ import {
   PaperclipIcon,
   PencilIcon,
   Trash2Icon,
+  UploadIcon,
 } from "lucide-react";
 
 import { Button } from "@resit/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@resit/ui/components/dropdown-menu";
 import { EmptyState } from "@resit/ui/components/empty-state";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { subjectColorClasses } from "@resit/ui/lib/subject-color";
@@ -18,6 +27,7 @@ import { useLocale } from "@resit/ui/hooks/use-locale";
 import type {
   ProjectInfo,
   ResourceKind,
+  SubjectInfo,
   WorkspaceSnapshot,
 } from "../../../shared/workspace";
 
@@ -36,6 +46,57 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** One subject goes straight through; several ask which. */
+function SubjectPicker({
+  subjects,
+  label,
+  menuLabel,
+  icon,
+  onPick,
+}: {
+  subjects: SubjectInfo[];
+  label: string;
+  menuLabel: string;
+  icon: React.ReactNode;
+  onPick: (subjectId: string) => void;
+}) {
+  const [only] = subjects;
+  if (!only) return null;
+  if (subjects.length === 1)
+    return (
+      <Button variant="outline" onClick={() => onPick(only.id)}>
+        {icon} {label}
+      </Button>
+    );
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline">
+          {icon} {label}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>{menuLabel}</DropdownMenuLabel>
+        {subjects.map((subject) => (
+          <DropdownMenuItem
+            key={subject.id}
+            onSelect={() => onPick(subject.id)}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "size-2 rounded-full",
+                subjectColorClasses[subject.color].dot,
+              )}
+            />
+            {subject.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** What a project holds, and a way to ask about all of it. */
 export function ProjectView({
   project,
@@ -43,6 +104,8 @@ export function ProjectView({
   onOpenResource,
   onRevealSubject,
   onAsk,
+  onNewNote,
+  onImport,
   onEdit,
   onDelete,
 }: {
@@ -51,6 +114,8 @@ export function ProjectView({
   onOpenResource: (resourceId: string) => void;
   onRevealSubject: (subjectId: string) => void;
   onAsk: () => void;
+  onNewNote: (subjectId: string) => void;
+  onImport: (subjectId: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -72,6 +137,14 @@ export function ProjectView({
   );
   const names = new Map(
     snapshot.subjects.map((subject) => [subject.id, subject.name]),
+  );
+  // Where a new file can go: the project's subjects, or those of its files.
+  const homes = snapshot.subjects.filter((subject) =>
+    subjects.length > 0
+      ? project.subjectIds.includes(subject.id)
+      : files.length > 0
+        ? files.some((resource) => resource.subjectId === subject.id)
+        : !subject.archived,
   );
   const counts = new Map<string, number>();
   for (const resource of snapshot.resources)
@@ -95,6 +168,20 @@ export function ProjectView({
             <Button onClick={onAsk}>
               <MessageSquareIcon /> {t("Ask about this project")}
             </Button>
+            <SubjectPicker
+              subjects={homes}
+              label={t("New note")}
+              menuLabel={t("New note in")}
+              icon={<FilePlusIcon />}
+              onPick={onNewNote}
+            />
+            <SubjectPicker
+              subjects={homes}
+              label={t("Import files…")}
+              menuLabel={t("Import into")}
+              icon={<UploadIcon />}
+              onPick={onImport}
+            />
             <Button variant="outline" onClick={onEdit}>
               <PencilIcon /> {t("Edit")}
             </Button>

@@ -264,8 +264,35 @@ export function WorkspaceView({
       });
   }, []);
 
+  /** Adds new files to a project, unless one of its subjects holds them. */
+  const joinProject = useCallback(
+    async (projectId: string, created: ResourceInfo[]) => {
+      const project = projects.get(projectId);
+      if (!project) return;
+      const loose = created
+        .filter((resource) => !project.subjectIds.includes(resource.subjectId))
+        .map((resource) => resource.id);
+      if (loose.length === 0) return;
+      try {
+        const updated = await api.updateProject({
+          id: projectId,
+          resourceIds: [...project.resourceIds, ...loose],
+        });
+        setSnapshot((current) => ({
+          ...current,
+          projects: current.projects.map((entry) =>
+            entry.id === updated.id ? updated : entry,
+          ),
+        }));
+      } catch (error) {
+        notices.fail(t("The file was not added to the project"), error);
+      }
+    },
+    [projects, setSnapshot, notices, t],
+  );
+
   const newNote = useCallback(
-    (subjectId: string, folder?: string) => {
+    (subjectId: string, folder?: string, projectId?: string) => {
       const subject = subjects.get(subjectId);
       const where = [subject?.name, folder].filter(Boolean).join(" / ");
       setPrompt({
@@ -285,7 +312,8 @@ export function WorkspaceView({
               ...current,
               resources: [...current.resources, resource],
             }));
-            revealIn(subjectId, folder);
+            if (projectId) await joinProject(projectId, [resource]);
+            else revealIn(subjectId, folder);
             dispatch({ type: "open", resourceId: resource.id, title });
           } catch (error) {
             notices.fail(t("The note was not created"), error);
@@ -293,7 +321,7 @@ export function WorkspaceView({
         },
       });
     },
-    [t, subjects, setSnapshot, notices, revealIn],
+    [t, subjects, setSnapshot, notices, revealIn, joinProject],
   );
 
   const newFolder = useCallback(
@@ -367,7 +395,7 @@ export function WorkspaceView({
   );
 
   const importFiles = useCallback(
-    async (subjectId: string, folder?: string) => {
+    async (subjectId: string, folder?: string, projectId?: string) => {
       try {
         const imported = await api.importFiles(subjectId, folder);
         if (imported.length === 0) return;
@@ -375,7 +403,8 @@ export function WorkspaceView({
           ...current,
           resources: [...current.resources, ...imported],
         }));
-        revealIn(subjectId, folder);
+        if (projectId) await joinProject(projectId, imported);
+        else revealIn(subjectId, folder);
         const first = imported[0];
         if (first)
           dispatch({ type: "open", resourceId: first.id, title: first.title });
@@ -383,7 +412,7 @@ export function WorkspaceView({
         notices.fail(t("Import stopped"), error);
       }
     },
-    [t, setSnapshot, notices, revealIn],
+    [t, setSnapshot, notices, revealIn, joinProject],
   );
 
   const connected = moodle.status === "connected";
@@ -502,6 +531,10 @@ export function WorkspaceView({
     },
     revealSubject: (subjectId: string) =>
       dispatch({ type: "set-expanded", id: subjectId, expanded: true }),
+    newNote: (projectId: string, subjectId: string) =>
+      newNote(subjectId, undefined, projectId),
+    importFiles: (projectId: string, subjectId: string) =>
+      void importFiles(subjectId, undefined, projectId),
   };
 
   const actions = {

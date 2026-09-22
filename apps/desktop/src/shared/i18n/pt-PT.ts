@@ -448,6 +448,7 @@ export const messages: Record<string, string> = {
   "Image tools": "Ferramentas de imagem",
   "Import files": "Importar ficheiros",
   "Import files…": "Importar ficheiros…",
+  "Import into": "Importar para",
   "Import stopped": "A importação parou",
   "In {place}": "Em {place}",
   "In workspace": "No espaço de trabalho",
@@ -548,6 +549,7 @@ export const messages: Record<string, string> = {
   "New folder": "Nova pasta",
   "New folder…": "Nova pasta…",
   "New note": "Novo apontamento",
+  "New note in": "Novo apontamento em",
   "New note in {subject}": "Novo apontamento em {subject}",
   "New project": "Novo projeto",
   "New quiz": "Novo questionário",
@@ -901,6 +903,8 @@ export const messages: Record<string, string> = {
     "O ficheiro é maior do que o que o resit transfere.",
   "The file is no longer in the workspace. Copy your text before closing this tab.":
     "O ficheiro já não está no espaço de trabalho. Copie o seu texto antes de fechar este separador.",
+  "The file was not added to the project":
+    "O ficheiro não foi adicionado ao projeto",
   "The file was not moved": "O ficheiro não foi movido",
   "The file was not moved to the trash":
     "O ficheiro não foi movido para o lixo",

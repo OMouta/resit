@@ -76,6 +76,9 @@ export interface PaneProps {
     edit: (projectId: string) => void;
     remove: (projectId: string) => void;
     revealSubject: (subjectId: string) => void;
+    /** Files made here go into the subject and join the project. */
+    newNote: (projectId: string, subjectId: string) => void;
+    importFiles: (projectId: string, subjectId: string) => void;
   };
 }
 
@@ -276,6 +279,12 @@ export function WorkspacePane({
           onOpenResource={openResource}
           onRevealSubject={projectActions.revealSubject}
           onAsk={() => projectActions.ask(projectId)}
+          onNewNote={(subjectId) =>
+            projectActions.newNote(projectId, subjectId)
+          }
+          onImport={(subjectId) =>
+            projectActions.importFiles(projectId, subjectId)
+          }
           onEdit={() => projectActions.edit(projectId)}
           onDelete={() => projectActions.remove(projectId)}
         />
