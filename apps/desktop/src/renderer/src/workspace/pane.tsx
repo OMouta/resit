@@ -301,6 +301,7 @@ export function WorkspacePane({
         <CourseView
           subject={subjects.get(course)}
           onOpenActivity={openActivity}
+          onOpenResource={openResource}
           onOpenMoodle={onOpenMoodle}
         />
       );

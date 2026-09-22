@@ -46,6 +46,7 @@ export const messages: Record<string, string> = {
     "{count} ligações apontam para apontamentos que não foram exportados, por isso mantêm o endereço resit://.",
   "{count} minutes before": "{count} minutos antes",
   "{count} new a day": "{count} novos por dia",
+  "{count} new files": "{count} ficheiros novos",
   "{count} page has no text, so search cannot find what it says.":
     "{count} página não tem texto, por isso a pesquisa não encontra o que diz.",
   "{count} pages have no text, so search cannot find what they say.":
@@ -118,6 +119,7 @@ export const messages: Record<string, string> = {
     "{which} precisa da resposta com que comparar.",
   "1 activity": "1 atividade",
   "1 card": "1 cartão",
+  "1 new file": "1 ficheiro novo",
   "1 question": "1 pergunta",
   "A card needs an answer on its back.":
     "Um cartão precisa de uma resposta no verso.",
@@ -213,6 +215,7 @@ export const messages: Record<string, string> = {
   "card\u0004Due": "Para rever",
   "card\u0004Due {time}": "Para rever {time}",
   "card\u0004Suggested": "Sugerido",
+  "Changed in Moodle": "Alterado no Moodle",
   "Check again": "Verificar de novo",
   "Check Moodle again": "Verificar o Moodle de novo",
   "Check spelling": "Verificar a ortografia",
@@ -322,6 +325,8 @@ export const messages: Record<string, string> = {
   "Documents, notes, and images": "Documentos, apontamentos e imagens",
   Download: "Transferir",
   "Download {count}": "Transferir {count}",
+  "Download {count} new files": "Transferir {count} ficheiros novos",
+  "Download 1 new file": "Transferir 1 ficheiro novo",
   "Download progress": "Progresso da transferência",
   "Downloading from Moodle": "A transferir do Moodle",
   "Downloading text recognition data":
@@ -573,6 +578,7 @@ export const messages: Record<string, string> = {
   "None yet": "Nenhuma ainda",
   Normal: "Normal",
   "Not checked yet": "Ainda não verificado",
+  "Not downloaded": "Não transferido",
   "Not linked": "Sem ligação",
   "Not submitted": "Não entregue",
   "Not taken yet": "Ainda não feito",

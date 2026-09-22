@@ -8,6 +8,7 @@ import { abortAllTurns } from "./agent/turns";
 import { setLiveContext } from "./context";
 import { stopTextRecognition } from "./text-recognition";
 import { moodleConnection } from "./moodle/credentials";
+import { watchMoodle } from "./moodle/watch";
 import { refreshReminders } from "./planning/reminders";
 import {
   forgetLastWorkspace,
@@ -153,6 +154,7 @@ async function activateWorkspace(workspace: OpenWorkspace): Promise<void> {
   }
   startWatching(workspace);
   void refreshReminders();
+  watchMoodle(workspace, () => emit({ type: "moodle-activities-changed" }));
   void indexInBackground(workspace);
 }
 
@@ -209,6 +211,7 @@ export async function closeCurrentWorkspace(): Promise<void> {
   }
   current = null;
   void refreshReminders();
+  watchMoodle(null, () => undefined);
   await forgetLastWorkspace();
 }
 

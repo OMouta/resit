@@ -68,6 +68,7 @@ import {
   openInBrowser,
   submissionLabel,
   useMoodleActivities,
+  waitingFiles,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
 import { addDays, today, usePlan, weekOf } from "../lib/plan";
@@ -1040,6 +1041,7 @@ function MoodleSections({
               const count = record.activities.filter(
                 (activity) => !isLabel(activity),
               ).length;
+              const waiting = waitingFiles(record).length;
               return (
                 <li key={subject.id}>
                   <button
@@ -1051,6 +1053,13 @@ function MoodleSections({
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {subject.name}
                     </span>
+                    {waiting > 0 ? (
+                      <span className="shrink-0 text-xs font-medium text-primary tabular-nums">
+                        {waiting === 1
+                          ? t("1 new file")
+                          : t("{count} new files", { count: number(waiting) })}
+                      </span>
+                    ) : null}
                     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {count === 1
                         ? t("1 activity")

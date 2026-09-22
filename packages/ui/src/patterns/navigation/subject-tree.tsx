@@ -52,6 +52,8 @@ export interface TreeSubject {
   archived?: boolean;
   /** Shows the subject follows a course somewhere else, such as Moodle. */
   linked?: string;
+  /** Something waiting for the student, such as "3 new", shown on the row. */
+  badge?: string;
   /** Folders to show, including empty ones. Folders holding resources are
    * listed whether or not they appear here. */
   folders?: TreeFolder[];
@@ -571,6 +573,7 @@ export function SubjectTree({
                 subject.name,
                 subject.archived ? t("archived") : null,
                 subject.linked ?? null,
+                subject.badge ?? null,
                 count === 1 ? t("1 item") : t("{count} items", { count }),
               ]
                 .filter(Boolean)
@@ -596,6 +599,11 @@ export function SubjectTree({
                 />
               ) : null}
               <span className="flex-1" />
+              {subject.badge ? (
+                <span className="shrink-0 rounded-full bg-selection px-1.5 text-2xs font-medium text-primary">
+                  {subject.badge}
+                </span>
+              ) : null}
               {subject.archived ? (
                 <span className="shrink-0 text-2xs font-normal text-subtle-foreground">
                   {t("Archived")}

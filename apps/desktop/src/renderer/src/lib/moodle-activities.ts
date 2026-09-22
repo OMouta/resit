@@ -97,6 +97,13 @@ export function activityType(modname: string): string {
 
 type Activity = SubjectActivities["activities"][number];
 
+/** Files the course offers that are new, or changed since the download. */
+export function waitingFiles(
+  record: SubjectActivities | undefined,
+): NonNullable<SubjectActivities["files"]> {
+  return (record?.files ?? []).filter((file) => file.state !== "current");
+}
+
 /** Labels are text on the course page, not activities a student opens. */
 export function isLabel(activity: Activity): boolean {
   return activity.modname === "label";

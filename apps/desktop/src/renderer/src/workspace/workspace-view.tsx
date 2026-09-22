@@ -33,6 +33,7 @@ import { insertIntoNote } from "../lib/citations";
 import { useLiveContext } from "../lib/live-context";
 import { useNotices } from "../lib/notices";
 import { startPageRenderer } from "../lib/pdf-render";
+import { useMoodleActivities, waitingFiles } from "../lib/moodle-activities";
 import { dueCount, usePractice } from "../lib/practice";
 import { CardDialog, type CardRequest } from "../practice/card-dialog";
 import { QuizEditor, type QuizEditorRequest } from "../practice/quiz-editor";
@@ -159,6 +160,17 @@ export function WorkspaceView({
     [snapshot.subjects],
   );
   const { practice } = usePractice(subjectIds);
+  const moodleRecords = useMoodleActivities();
+  const newFiles = useMemo(
+    () =>
+      new Map(
+        (moodleRecords ?? []).map((record) => [
+          record.subjectId,
+          waitingFiles(record).length,
+        ]),
+      ),
+    [moodleRecords],
+  );
   const practiceDue = practice ? dueCount(practice) : 0;
   const waitingSuggestions = useWaitingSuggestions();
   const liveSubjects = useMemo(
@@ -941,6 +953,7 @@ export function WorkspaceView({
             activeProjectId={focusedProjectId}
             practiceDue={practiceDue}
             waitingSuggestions={waitingSuggestions}
+            newFiles={newFiles}
             actions={actions}
           />
         }

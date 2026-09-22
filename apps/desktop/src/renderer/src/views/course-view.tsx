@@ -1,5 +1,7 @@
 import {
+  DownloadIcon,
   ExternalLinkIcon,
+  FileTextIcon,
   GraduationCapIcon,
   RefreshCwIcon,
 } from "lucide-react";
@@ -10,6 +12,7 @@ import { EmptyState } from "@resit/ui/components/empty-state";
 import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { Skeleton } from "@resit/ui/components/skeleton";
 import { useLocale } from "@resit/ui/hooks/use-locale";
+import { formatBytes } from "@resit/ui/lib/format-bytes";
 import { cn } from "@resit/ui/lib/utils";
 import { DocumentHeader } from "@resit/ui/patterns/document/document-header";
 import { ToolbarButton } from "@resit/ui/patterns/document/toolbar-button";
@@ -33,10 +36,12 @@ import {
   openInBrowser,
   submissionLabel,
   useMoodleActivities,
+  waitingFiles,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
 
 type Activity = SubjectActivities["activities"][number];
+type CourseFile = NonNullable<SubjectActivities["files"]>[number];
 
 /** Sections for a record saved before resit kept them: runs of one name. */
 function sectionsOf(record: SubjectActivities): MoodleCourseSection[] {
@@ -62,17 +67,23 @@ function sectionsOf(record: SubjectActivities): MoodleCourseSection[] {
 export function CourseView({
   subject,
   onOpenActivity,
+  onOpenResource,
   onOpenMoodle,
 }: {
   subject: SubjectInfo | undefined;
   onOpenActivity: (subjectId: string, activity: Activity) => void;
+  onOpenResource: (resourceId: string) => void;
   /** The dialog that downloads the course's files. */
   onOpenMoodle: (subjectId: string) => void;
 }) {
-  const { t, relative } = useLocale();
+  const { t, relative, number } = useLocale();
   const notices = useNotices();
   const records = useMoodleActivities();
   const [checking, setChecking] = useState(false);
+  /** Keys being downloaded now. */
+  const [downloading, setDownloading] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   const record = records?.find((entry) => entry.subjectId === subject?.id);
 
@@ -101,6 +112,37 @@ export function CourseView({
   const byId = new Map(
     record.activities.map((activity) => [activity.moduleId, activity]),
   );
+  const filesByModule = new Map<number, CourseFile[]>();
+  for (const file of record.files ?? [])
+    // An assignment's files are on its own page.
+    if (!byId.has(file.moduleId))
+      filesByModule.set(file.moduleId, [
+        ...(filesByModule.get(file.moduleId) ?? []),
+        file,
+      ]);
+  const waiting = waitingFiles(record);
+
+  const download = async (keys: string[]) => {
+    setDownloading(new Set(keys));
+    try {
+      const result = await api.downloadMoodleItems({
+        subjectId: subject.id,
+        keys,
+      });
+      const failure = result.failures[0];
+      if (failure)
+        notices.notify({
+          tone: "error",
+          title: t("{file} was not downloaded", { file: failure.filename }),
+          detail: failure.message,
+        });
+    } catch (error) {
+      notices.fail(t("The download stopped"), error);
+    } finally {
+      setDownloading(new Set());
+    }
+  };
+
   const check = async () => {
     setChecking(true);
     try {
@@ -128,37 +170,55 @@ export function CourseView({
           path="Moodle/"
         />
         <div className="flex flex-col gap-10 px-8">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button
-              variant="secondary"
-              onClick={() =>
-                void api.openExternal(courseUrl(link)).catch(() => undefined)
-              }
-            >
-              <ExternalLinkIcon /> {t("Open in Moodle")}
-            </Button>
-            <Button variant="subtle" onClick={() => onOpenMoodle(subject.id)}>
-              {t("Course files…")}
-            </Button>
-            {record.grade ? (
-              <p className="text-sm tabular-nums">
-                {t("Course grade {grade}", {
-                  grade: gradeLabel(record.grade),
-                })}
+          <div className="flex flex-col gap-3">
+            <div className="flex min-h-control items-center gap-3 text-sm">
+              {record.grade ? (
+                <p className="tabular-nums">
+                  {t("Course grade {grade}", {
+                    grade: gradeLabel(record.grade),
+                  })}
+                </p>
+              ) : null}
+              <p className="text-xs text-subtle-foreground" aria-live="polite">
+                {checking
+                  ? t("Checking Moodle…")
+                  : checkedLabel(record.checkedAt, { t, relative })}
               </p>
-            ) : null}
-            <p className="text-xs text-subtle-foreground" aria-live="polite">
-              {checking
-                ? t("Checking Moodle…")
-                : checkedLabel(record.checkedAt, { t, relative })}
-            </p>
-            <ToolbarButton
-              label={t("Check Moodle again")}
-              disabled={checking}
-              onClick={() => void check()}
-            >
-              <RefreshCwIcon className={cn(checking && "animate-spin")} />
-            </ToolbarButton>
+              <ToolbarButton
+                label={t("Check Moodle again")}
+                disabled={checking}
+                onClick={() => void check()}
+              >
+                <RefreshCwIcon className={cn(checking && "animate-spin")} />
+              </ToolbarButton>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  void api.openExternal(courseUrl(link)).catch(() => undefined)
+                }
+              >
+                <ExternalLinkIcon /> {t("Open in Moodle")}
+              </Button>
+              {waiting.length > 0 ? (
+                <Button
+                  loading={downloading.size > 1}
+                  disabled={downloading.size > 0}
+                  onClick={() => void download(waiting.map((file) => file.key))}
+                >
+                  <DownloadIcon />{" "}
+                  {waiting.length === 1
+                    ? t("Download 1 new file")
+                    : t("Download {count} new files", {
+                        count: number(waiting.length),
+                      })}
+                </Button>
+              ) : null}
+              <Button variant="subtle" onClick={() => onOpenMoodle(subject.id)}>
+                {t("Course files…")}
+              </Button>
+            </div>
           </div>
 
           {record.announcements?.length ? (
@@ -166,10 +226,13 @@ export function CourseView({
           ) : null}
 
           {sectionsOf(record).map((section, index) => {
-            const items = section.moduleIds.flatMap((id) => {
-              const activity = byId.get(id);
-              return activity ? [activity] : [];
-            });
+            const items = section.moduleIds.flatMap<Activity | CourseFile>(
+              (id) => {
+                const activity = byId.get(id);
+                if (activity) return [activity];
+                return filesByModule.get(id) ?? [];
+              },
+            );
             if (!section.summary && items.length === 0) return null;
             return (
               <section
@@ -184,7 +247,16 @@ export function CourseView({
                 {items.length > 0 ? (
                   <div className="flex flex-col gap-1">
                     {items.map((activity) =>
-                      isLabel(activity) ? (
+                      "key" in activity ? (
+                        <FileRow
+                          key={activity.key}
+                          file={activity}
+                          downloading={downloading.has(activity.key)}
+                          disabled={downloading.size > 0}
+                          onOpen={onOpenResource}
+                          onDownload={() => void download([activity.key])}
+                        />
+                      ) : isLabel(activity) ? (
                         <Text
                           key={activity.moduleId}
                           markdown={activity.brief}
@@ -271,6 +343,67 @@ function Text({
   return (
     <div className={cn("document", className)}>
       <ChatMarkdown text={markdown} />
+    </div>
+  );
+}
+
+/** A course file: opens once it is here, downloads while it is not. */
+function FileRow({
+  file,
+  downloading,
+  disabled,
+  onOpen,
+  onDownload,
+}: {
+  file: CourseFile;
+  downloading: boolean;
+  disabled: boolean;
+  onOpen: (resourceId: string) => void;
+  onDownload: () => void;
+}) {
+  const { t, number } = useLocale();
+  const { resourceId } = file;
+  return (
+    <div className="-mx-2 flex items-center gap-2 rounded-md pr-1 hover:bg-accent">
+      <button
+        type="button"
+        disabled={!resourceId}
+        onClick={() => resourceId && onOpen(resourceId)}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-md py-2 pl-2 text-left focus-visible:shadow-focus focus-visible:outline-none disabled:cursor-default"
+      >
+        <FileTextIcon
+          aria-hidden
+          className="size-4 shrink-0 text-subtle-foreground"
+        />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-medium" title={file.filename}>
+            {file.name}
+          </span>
+          <span className="truncate text-xs text-muted-foreground">
+            {[
+              file.filename,
+              formatBytes(file.filesize, number),
+              file.state === "new"
+                ? t("Not downloaded")
+                : file.state === "updated"
+                  ? t("Changed in Moodle")
+                  : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </span>
+      </button>
+      {file.state === "current" ? null : (
+        <Button
+          variant="subtle"
+          loading={downloading}
+          disabled={disabled}
+          onClick={onDownload}
+        >
+          {file.state === "updated" ? t("Update") : t("Download")}
+        </Button>
+      )}
     </div>
   );
 }

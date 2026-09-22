@@ -169,6 +169,17 @@ const moodleAnnouncementSchema = z.object({
 });
 export type MoodleAnnouncement = z.infer<typeof moodleAnnouncementSchema>;
 
+/** A file the course offers for download, as the course page lists it. */
+const moodleCourseFileSchema = z.object({
+  key: z.string(),
+  moduleId: z.number().int().nonnegative(),
+  name: z.string(),
+  filename: z.string(),
+  filesize: z.number().int().nonnegative(),
+  timemodified: z.number().int().nonnegative(),
+});
+export type MoodleCourseFile = z.infer<typeof moodleCourseFileSchema>;
+
 /** One section of the course page, with the modules it shows, in order. */
 const moodleCourseSectionSchema = z.object({
   name: z.string(),
@@ -193,6 +204,8 @@ export const activitiesFileSchema = z.object({
   sections: z.array(moodleCourseSectionSchema).optional(),
   /** The course total in the student's gradebook. */
   grade: moodleGradeSchema.optional(),
+  /** Every file the course offers, whether or not it is downloaded. */
+  files: z.array(moodleCourseFileSchema).optional(),
   /** Newest first. Absent when the site does not let resit read forums. */
   announcements: z.array(moodleAnnouncementSchema).optional(),
 });
@@ -210,6 +223,11 @@ export interface SubjectActivities {
   sections?: MoodleCourseSection[];
   announcements?: MoodleAnnouncement[];
   grade?: MoodleGrade;
+  files?: (MoodleCourseFile & {
+    /** Compared with what the subject holds now. */
+    state: MoodleItem["state"];
+    resourceId?: string;
+  })[];
   activities: (Omit<MoodleActivity, "attachments"> & {
     attachments?: {
       key: string;

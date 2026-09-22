@@ -489,6 +489,19 @@ async function saveActivities(
         })),
       )
     : undefined;
+  const offered = planCourse(
+    course.sections,
+    link,
+    new Map(),
+    course.assignments,
+  ).items.map((item) => ({
+    key: item.key,
+    moduleId: item.moduleId,
+    name: item.name,
+    filename: item.filename,
+    filesize: item.filesize,
+    timemodified: item.timemodified,
+  }));
   const file: ActivitiesFile = {
     format: "resit-moodle-activities",
     formatVersion: 1,
@@ -497,6 +510,7 @@ async function saveActivities(
     checkedAt: new Date().toISOString(),
     activities,
     sections,
+    files: offered,
     ...(announcements ? { announcements } : {}),
     ...(total ? { grade: total } : {}),
   };
@@ -586,15 +600,34 @@ export async function listActivities(
     if (!link) continue;
     const file = await readSaved(workspace, info.id, link);
     if (!file) continue;
-    const owned = file.activities.some((activity) => activity.attachments)
-      ? await downloaded(workspace, info.id, link)
-      : new Map<string, { resourceId: string }>();
+    const owned =
+      file.files?.length ||
+      file.activities.some((activity) => activity.attachments)
+        ? await downloaded(workspace, info.id, link)
+        : new Map<string, { resourceId: string; ref: MoodleFileRef }>();
     found.push({
       subjectId: info.id,
       checkedAt: file.checkedAt,
       ...(file.sections ? { sections: file.sections } : {}),
       ...(file.announcements ? { announcements: file.announcements } : {}),
       ...(file.grade ? { grade: file.grade } : {}),
+      ...(file.files
+        ? {
+            files: file.files.map((offered) => {
+              const known = owned.get(offered.key);
+              return {
+                ...offered,
+                state: !known
+                  ? "new"
+                  : known.ref.filesize === offered.filesize &&
+                      known.ref.timemodified === offered.timemodified
+                    ? "current"
+                    : "updated",
+                ...(known ? { resourceId: known.resourceId } : {}),
+              } as const;
+            }),
+          }
+        : {}),
       activities: file.activities.map(({ attachments, ...activity }) => ({
         ...activity,
         ...(attachments

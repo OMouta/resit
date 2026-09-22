@@ -32,9 +32,11 @@ import type { ExampleContext, ExamplePage } from "../../viewer/types";
 function TreeExample({
   ctx,
   archived,
+  badge,
 }: {
   ctx: ExampleContext;
   archived?: boolean;
+  badge?: boolean;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(
     () =>
@@ -51,7 +53,10 @@ function TreeExample({
   );
   return (
     <SubjectTree
-      subjects={toTreeSubjects({ includeArchived: archived ?? false })}
+      subjects={toTreeSubjects({ includeArchived: archived ?? false }).map(
+        (subject) =>
+          badge && subject.linked ? { ...subject, badge: "3 new" } : subject,
+      )}
       expandedIds={expanded}
       onExpandedChange={(id, open) => {
         setExpanded((previous) => {
@@ -182,9 +187,13 @@ export const page: ExamplePage = {
       width: 260,
       height: 460,
       surface: "sidebar",
-      states: ["default", "archived", "drag"],
+      states: ["default", "archived", "drag", "badge"],
       render: (ctx) => (
-        <TreeExample ctx={ctx} archived={ctx.state === "archived"} />
+        <TreeExample
+          ctx={ctx}
+          archived={ctx.state === "archived"}
+          badge={ctx.state === "badge"}
+        />
       ),
     },
     {

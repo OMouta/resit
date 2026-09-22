@@ -128,6 +128,7 @@ export function Sidebar({
   activeProjectId,
   practiceDue,
   waitingSuggestions,
+  newFiles,
   actions,
 }: {
   snapshot: WorkspaceSnapshot;
@@ -139,9 +140,11 @@ export function Sidebar({
   practiceDue: number;
   /** The assistant's profile suggestions, shown beside Learner profile. */
   waitingSuggestions: number;
+  /** By subject, Moodle files not downloaded yet or changed since. */
+  newFiles: ReadonlyMap<string, number>;
   actions: SidebarActions;
 }) {
-  const { t } = useLocale();
+  const { t, tc, number } = useLocale();
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [subjectsOpen, setSubjectsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
@@ -155,6 +158,16 @@ export function Sidebar({
       archived: subject.archived,
       ...(subject.moodle
         ? { linked: `following ${subject.moodle.shortname} in Moodle` }
+        : {}),
+      ...(newFiles.get(subject.id)
+        ? {
+            badge:
+              newFiles.get(subject.id) === 1
+                ? tc("file", "1 new")
+                : tc("file", "{count} new", {
+                    count: number(newFiles.get(subject.id) ?? 0),
+                  }),
+          }
         : {}),
       folders: snapshot.folders
         .filter((folder) => folder.subjectId === subject.id)
@@ -171,7 +184,7 @@ export function Sidebar({
           ...(resource.folder ? { folder: resource.folder } : {}),
         })),
     }));
-  }, [snapshot]);
+  }, [snapshot, newFiles, tc, number]);
   const projects = useMemo<SidebarProject[]>(() => {
     const colours = new Map(
       snapshot.subjects.map((subject) => [subject.id, subject]),

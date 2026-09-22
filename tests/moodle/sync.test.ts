@@ -566,6 +566,27 @@ describe("activities", () => {
     ]);
   });
 
+  it("lists the course's files and which are downloaded", async () => {
+    await listItems(workspace, session, subjectId);
+    const states = async () =>
+      (await listActivities(workspace))[0]?.files?.map((file) => [
+        file.key,
+        file.state,
+      ]);
+    expect(await states()).toEqual([
+      ["200:/outline.pdf", "new"],
+      ["203:/brief.pdf", "new"],
+    ]);
+    await downloadItems(workspace, session, {
+      subjectId,
+      keys: ["200:/outline.pdf"],
+    });
+    expect(await states()).toEqual([
+      ["200:/outline.pdf", "current"],
+      ["203:/brief.pdf", "new"],
+    ]);
+  });
+
   it("keeps its record out of the subject's files", async () => {
     await listItems(workspace, session, subjectId);
     await scanWorkspace(workspace);
