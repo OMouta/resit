@@ -460,6 +460,60 @@ export function studyTools(
     ...(info.folder ? { folder: info.folder } : {}),
   });
   const changed = (change: StudyChange) => grant.onChange?.(change);
+  /** Moodle text of the subjects in scope that holds every word of the query. */
+  const searchMoodle = async (query: string, limit: number) => {
+    const terms = foldText(query).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return [];
+    const found: {
+      subject: string | null;
+      kind: string;
+      title: string;
+      activityId?: string;
+      snippet: string;
+    }[] = [];
+    for (const entry of await listActivities(workspace)) {
+      if (!scope.subjectIds.includes(entry.subjectId)) continue;
+      const texts = [
+        ...entry.activities.flatMap((activity) =>
+          activity.brief
+            ? [
+                {
+                  kind: activity.modname === "label" ? "label" : "activity",
+                  title: activity.name,
+                  activityId: String(activity.moduleId),
+                  text: activity.brief,
+                },
+              ]
+            : [],
+        ),
+        ...(entry.sections ?? []).flatMap((section) =>
+          section.summary
+            ? [{ kind: "section", title: section.name, text: section.summary }]
+            : [],
+        ),
+        ...(entry.announcements ?? []).map((post) => ({
+          kind: "announcement",
+          title: post.subject,
+          text: `${post.subject}\n${post.message}`,
+        })),
+      ];
+      for (const { text, ...about } of texts) {
+        const folded = foldText(text);
+        if (!terms.every((term) => folded.includes(term))) continue;
+        const at = folded.indexOf(terms[0] ?? "");
+        found.push({
+          subject: subjectNames.get(entry.subjectId) ?? null,
+          ...about,
+          snippet: text
+            .slice(Math.max(0, at - 80), at + 200)
+            .replace(/\s+/g, " ")
+            .trim(),
+        });
+        if (found.length >= limit) return found;
+      }
+    }
+    return found;
+  };
   /**
    * Subjects a new note may go into: those in scope, and in a project's
    * conversation the subjects its files come from, since the note joins
@@ -891,7 +945,7 @@ export function studyTools(
     ),
     define(
       "study_search",
-      "Search the text of notes, PDFs, text files, and Word, PowerPoint, and Excel files in scope. Matching ignores case and accents.",
+      "Search the text of notes, PDFs, text files, and Word, PowerPoint, and Excel files in scope, and what their Moodle courses say: activity briefs, labels, section summaries, and announcements. Matching ignores case and accents.",
       {
         query: z.string().min(1).max(200),
         limit: z.number().int().min(1).max(30).optional(),
@@ -901,6 +955,7 @@ export function studyTools(
           allow: inScope,
           limit: limit ?? 10,
         });
+        const moodle = await searchMoodle(query, limit ?? 10);
         return ok({
           results: hits.map((hit) => ({
             id: hit.resourceId,
@@ -910,6 +965,7 @@ export function studyTools(
             ...(hit.page ? { page: hit.page } : {}),
             snippet: hit.snippet,
           })),
+          ...(moodle.length > 0 ? { moodle } : {}),
         });
       },
     ),

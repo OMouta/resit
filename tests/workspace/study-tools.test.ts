@@ -24,6 +24,7 @@ import {
 import { useNetworkFetch } from "../../apps/desktop/src/main/moodle/client";
 import { listItems } from "../../apps/desktop/src/main/moodle/sync";
 import { listNoteRevisions } from "../../apps/desktop/src/main/workspace/history";
+import { closeSearchIndex } from "../../apps/desktop/src/main/workspace/search";
 import {
   createProject,
   resolveScope,
@@ -91,6 +92,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // study_search opens the index, which Windows will not delete while open.
+  closeSearchIndex(workspace);
   await rm(directory, { recursive: true, force: true });
 });
 
@@ -574,6 +577,17 @@ describe("study read tools", () => {
         announcements: [
           { subject: "Room change 7", message: "The test moves to B2.04." },
         ],
+      },
+    ]);
+
+    // Only the subject in scope is searched.
+    const searched = await run("study_search", { query: "moves to b2.04" });
+    expect(searched.data.moodle).toEqual([
+      {
+        subject: "Mathematics",
+        kind: "announcement",
+        title: "Room change 7",
+        snippet: "Room change 7 The test moves to B2.04.",
       },
     ]);
   });
