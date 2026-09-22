@@ -21,6 +21,8 @@ import {
   startAttempt,
   submitAttempt,
 } from "../../apps/desktop/src/main/practice/store";
+import { useNetworkFetch } from "../../apps/desktop/src/main/moodle/client";
+import { listItems } from "../../apps/desktop/src/main/moodle/sync";
 import { listNoteRevisions } from "../../apps/desktop/src/main/workspace/history";
 import {
   createProject,
@@ -518,6 +520,84 @@ describe("study read tools", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("Moodle downloads", () => {
+  it("downloads a course file the conversation can then read", async () => {
+    const siteUrl = "https://moodle.example.edu";
+    const session = { siteUrl, token: "secret" };
+    await linkSubject(workspace, {
+      subjectId: mathematicsId,
+      link: { siteUrl, courseId: 7, shortname: "C", fullname: "Course" },
+    });
+    useNetworkFetch((url) => {
+      if (new URL(url).pathname.endsWith("/server.php"))
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              {
+                id: 1,
+                name: "Week 1",
+                section: 1,
+                modules: [
+                  {
+                    id: 50,
+                    name: "Notes on limits",
+                    modname: "resource",
+                    url: `${siteUrl}/mod/resource/view.php?id=50`,
+                    contents: [
+                      {
+                        type: "file",
+                        filename: "limits.txt",
+                        filepath: "/",
+                        filesize: 12,
+                        fileurl: `${siteUrl}/webservice/pluginfile.php/1/mod_resource/content/0/limits.txt`,
+                        timemodified: 1700000000,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ]),
+            { headers: { "content-type": "application/json" } },
+          ),
+        );
+      return Promise.resolve(new Response("Limits: 0/0."));
+    });
+    try {
+      await listItems(workspace, session, mathematicsId);
+      const listed = await run("study_list_activities", {});
+      const [subject] = listed.data.subjects as {
+        filesNotDownloaded: { key: string }[];
+      }[];
+      expect(subject?.filesNotDownloaded).toEqual([
+        {
+          key: "50:/limits.txt",
+          name: "Notes on limits",
+          filename: "limits.txt",
+        },
+      ]);
+
+      const downloaded = await run(
+        "study_download_moodle_files",
+        { subjectId: mathematicsId, keys: ["50:/limits.txt"] },
+        { moodle: () => Promise.resolve(session) },
+      );
+      expect(downloaded.failed).toBe(false);
+      const [file] = downloaded.data.files as { id: string }[];
+      const read = await run("study_read_file", { resourceId: file?.id });
+      expect(read.data.text).toBe("Limits: 0/0.");
+
+      const refused = await run(
+        "study_download_moodle_files",
+        { subjectId: physicsId, keys: ["50:/limits.txt"] },
+        { moodle: () => Promise.resolve(session) },
+      );
+      expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
+    } finally {
+      useNetworkFetch(fetch);
+    }
   });
 });
 

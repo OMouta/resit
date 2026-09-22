@@ -24,6 +24,7 @@ import {
   readConversation,
 } from "../conversations/store";
 import { liveContext } from "../context";
+import { moodleSession } from "../moodle/credentials";
 import { learnerContext } from "../learner/store";
 import { claudeStatus } from "../providers/claude";
 import { codexStatus } from "../providers/codex";
@@ -199,6 +200,7 @@ function turnGrant(
     context: input.context,
     images: input.images,
     liveContext,
+    moodle: moodleSession,
     renderPage: ({ resourceId, page }) =>
       renderPdfPage(emit, {
         resourceId,
@@ -213,7 +215,10 @@ function turnGrant(
         emit({ type: "practice-changed", subjectId: change.subjectId });
       else if (change.kind === "plan") emit({ type: "plan-changed" });
       else if (change.kind === "learner") emit({ type: "learner-changed" });
-      else emit({ type: "workspace-changed", snapshot: snapshot(workspace) });
+      else if (change.kind === "moodle") {
+        emit({ type: "workspace-changed", snapshot: snapshot(workspace) });
+        emit({ type: "moodle-activities-changed" });
+      } else emit({ type: "workspace-changed", snapshot: snapshot(workspace) });
     },
   };
 }

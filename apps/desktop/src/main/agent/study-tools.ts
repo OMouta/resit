@@ -32,7 +32,8 @@ import {
   type ResourceInfo,
 } from "../../shared/workspace";
 import { proposeTopic, readLearner, topicEvidence } from "../learner/store";
-import { listActivities } from "../moodle/sync";
+import type { MoodleSession } from "../moodle/client";
+import { downloadItems, listActivities } from "../moodle/sync";
 import { proposeChanges, readPlan, saveAssessment } from "../planning/store";
 import {
   cardReviews,
@@ -146,6 +147,7 @@ export interface StudyTool {
 export type StudyChange =
   | { kind: "note"; resourceId: string }
   | { kind: "files" }
+  | { kind: "moodle" }
   | { kind: "annotations"; documentId: string }
   | { kind: "practice"; subjectId: string }
   | { kind: "plan" }
@@ -166,6 +168,8 @@ export interface TurnGrant {
   liveContext?: (() => LiveContext | null) | undefined;
   /** Called after a tool changes something on disk. */
   onChange?: ((change: StudyChange) => void) | undefined;
+  /** The student's Moodle connection, for downloading course files. */
+  moodle?: (() => Promise<MoodleSession>) | undefined;
 }
 
 function ok(value: unknown, extra: ToolContent[] = []): ToolResult {
@@ -220,6 +224,10 @@ export function describeToolCall(
       return "Read a Moodle activity";
     case "study_read_announcements":
       return "Read the Moodle announcements";
+    case "study_download_moodle_files": {
+      const count = Array.isArray(input.keys) ? input.keys.length : 0;
+      return `Downloaded ${count} ${count === 1 ? "file" : "files"} from Moodle`;
+    }
     case "study_create_note":
       return `Created the note “${String(input.title ?? "")}”`;
     case "study_edit_note":
@@ -874,6 +882,16 @@ export function studyTools(
               ...(activity.grade ? { grade: activity.grade } : {}),
               hasBrief: Boolean(activity.brief),
             })),
+            // Downloaded files are notes and files like any other.
+            filesNotDownloaded: (entry.files ?? [])
+              .filter((file) => file.state !== "current")
+              .slice(0, 100)
+              .map((file) => ({
+                key: file.key,
+                name: file.name,
+                filename: file.filename,
+                ...(file.state === "updated" ? { changed: true } : {}),
+              })),
           })),
         });
       },
@@ -946,6 +964,70 @@ export function studyTools(
               ({ url: _url, ...post }) => post,
             ),
           })),
+        });
+      },
+    ),
+    define(
+      "study_download_moodle_files",
+      "Download files from a subject's Moodle course into the workspace: the filesNotDownloaded from study_list_activities, or an assignment's attachments from study_read_activity. A changed file replaces the old copy, which its history keeps. Returns the files' IDs.",
+      {
+        subjectId: z.string().describe("The subject that follows the course"),
+        keys: z
+          .array(z.string().max(500))
+          .min(1)
+          .max(30)
+          .describe("The files' keys"),
+      },
+      async ({ subjectId, keys }) => {
+        const found = subjectFor(subjectId);
+        if (found) return found;
+        if (!workspace.subjects.get(subjectId)?.info.moodle)
+          return failure(
+            "NOT_LINKED",
+            "That subject does not follow a Moodle course.",
+          );
+        if (!grant.moodle)
+          return failure("UNAVAILABLE", "resit cannot reach Moodle here.");
+        let result;
+        try {
+          result = await downloadItems(workspace, await grant.moodle(), {
+            subjectId,
+            keys,
+          });
+        } catch (error) {
+          return failure(
+            "DOWNLOAD_FAILED",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+        // The keys, now pointing at files in the workspace.
+        const record = (await listActivities(workspace)).find(
+          (entry) => entry.subjectId === subjectId,
+        );
+        const byKey = new Map<string, string>();
+        for (const file of record?.files ?? [])
+          if (file.resourceId) byKey.set(file.key, file.resourceId);
+        for (const activity of record?.activities ?? [])
+          for (const attachment of activity.attachments ?? [])
+            if (attachment.resourceId)
+              byKey.set(attachment.key, attachment.resourceId);
+        const files = keys.flatMap((key) => {
+          const id = byKey.get(key);
+          const info = id ? workspace.resources.get(id)?.info : undefined;
+          return info ? [{ key, ...describe(info) }] : [];
+        });
+        if (scope.projectId)
+          await joinProject(
+            workspace,
+            scope.projectId,
+            files.map((file) => file.id),
+          );
+        changed({ kind: "moodle" });
+        return ok({
+          added: result.added,
+          replaced: result.replaced,
+          files,
+          ...(result.failures.length > 0 ? { failures: result.failures } : {}),
         });
       },
     ),
@@ -1969,6 +2051,7 @@ export const STUDY_TOOLS = [
   "study_list_activities",
   "study_read_activity",
   "study_read_announcements",
+  "study_download_moodle_files",
   "study_create_note",
   "study_create_folder",
   "study_move_file",
