@@ -3,10 +3,14 @@ import { CalendarIcon, ClockAlertIcon, LayersIcon } from "lucide-react";
 import { useState } from "react";
 
 import { AgendaItem } from "@resit/ui/patterns/study/agenda-item";
+import { subjectColorClasses } from "@resit/ui/lib/subject-color";
+import { cn } from "@resit/ui/lib/utils";
 import {
   AssessmentCard,
   CalendarActivityCard,
-  WeekGrid,
+  TimeGrid,
+  TimeGridCard,
+  type TimeRange,
 } from "@resit/ui/patterns/study/calendar";
 import {
   EvidenceList,
@@ -46,6 +50,7 @@ import {
   profileProposals,
   quiz,
   reviewIntervals,
+  weekBlocks,
   weekPlan,
 } from "../../fixtures/study";
 import { FIXTURE_NOW } from "../../fixtures/workspace";
@@ -199,10 +204,109 @@ function FlashcardExample({ ctx }: { ctx: ExampleContext }) {
   );
 }
 
-const cardsByDay = new Map<string, typeof agenda>();
-for (const item of agenda) {
-  const day = item.start.slice(0, 10);
-  cardsByDay.set(day, [...(cardsByDay.get(day) ?? []), item]);
+/**
+ * Sessions that move where they are dragged. In "study times", drawing adds
+ * a weekly time.
+ */
+function TimeGridExample({ ctx }: { ctx: ExampleContext }) {
+  const [sessions, setSessions] = useState(weekBlocks);
+  const [times, setTimes] = useState(
+    weekPlan.availability.map((slot, index) => ({
+      id: `time:${index}`,
+      day: slot.day,
+      start: slot.from,
+      end: slot.to,
+    })),
+  );
+  const editing = ctx.state === "study times";
+  const moveSession = (id: string, range: TimeRange) =>
+    setSessions((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, day: range.day, from: range.start, to: range.end }
+          : item,
+      ),
+    );
+  return (
+    <TimeGrid
+      days={weekPlan.days}
+      today="2026-09-17"
+      fromHour={8}
+      toHour={22}
+      bands={editing ? [] : times}
+      allDay={(day) =>
+        weekPlan.assessments
+          .filter((assessment) => assessment.date === day)
+          .map((assessment) => (
+            <span
+              key={assessment.id}
+              className="rounded-md bg-danger-soft px-2 py-1 text-xs font-medium text-destructive"
+            >
+              {assessment.title}
+            </span>
+          ))
+      }
+      createLabel={editing ? "Study time" : "New session"}
+      blocks={
+        editing
+          ? times.map((slot) => ({
+              ...slot,
+              label: `Study time, ${slot.start} to ${slot.end}`,
+              editable: true,
+              onOpen: () => ctx.log("onOpen", slot.id),
+              className:
+                "border border-success/50 bg-success-soft text-success",
+              children: (
+                <span className="px-2 py-1 text-2xs font-medium tabular-nums">
+                  {slot.start}–{slot.end}
+                </span>
+              ),
+            }))
+          : sessions.map((item) => ({
+              id: item.id,
+              day: item.day,
+              start: item.from,
+              end: item.to,
+              label: `${item.title}, ${item.subjectName}`,
+              editable: item.status === "scheduled",
+              onOpen: () => ctx.log("onOpen", item.id),
+              className: cn(
+                "border-l-[3px] bg-control shadow-control hover:bg-control-hover",
+                subjectColorClasses[item.subjectColor].border,
+                item.status === "completed" && "opacity-60",
+                item.status === "overdue" && "bg-warning-soft",
+              ),
+              children: (
+                <TimeGridCard
+                  kind={item.kind}
+                  start={`${item.day}T${item.from}:00`}
+                  end={`${item.day}T${item.to}:00`}
+                  title={item.title}
+                  struck={item.status === "completed"}
+                />
+              ),
+            }))
+      }
+      onCreate={(range) => {
+        ctx.log("onCreate", range);
+        if (editing)
+          setTimes((current) => [
+            ...current,
+            { id: `time:${current.length}:${range.start}`, ...range },
+          ]);
+      }}
+      onChange={(id, range) => {
+        ctx.log("onChange", { id, ...range });
+        if (editing)
+          setTimes((current) =>
+            current.map((slot) =>
+              slot.id === id ? { ...slot, ...range } : slot,
+            ),
+          );
+        else moveSession(id, range);
+      }}
+    />
+  );
 }
 
 export const page: ExamplePage = {
@@ -394,7 +498,10 @@ export const page: ExamplePage = {
     {
       id: "week",
       title: "Week plan",
+      description:
+        "Draw on empty time to create, drag a session to move it, drag its lower edge to change its end. Escape cancels a drag. Every change also has a dialog, reached by opening the block.",
       width: "full",
+      states: ["sessions", "study times"],
       render: (ctx) => (
         <div className="flex flex-col gap-4">
           <div className="grid gap-2 sm:grid-cols-2">
@@ -407,21 +514,16 @@ export const page: ExamplePage = {
               />
             ))}
           </div>
-          <WeekGrid
-            days={weekPlan.days}
-            today="2026-09-17"
-            availability={weekPlan.availability}
-          >
-            {(day) =>
-              (cardsByDay.get(day) ?? []).map((item) => (
-                <CalendarActivityCard
-                  key={item.id}
-                  {...item}
-                  onOpen={() => ctx.log("onOpen", item.id)}
-                />
-              ))
-            }
-          </WeekGrid>
+          <TimeGridExample key={ctx.state} ctx={ctx} />
+          <div className="grid max-w-xs gap-1">
+            {weekBlocks.slice(0, 2).map((item) => (
+              <CalendarActivityCard
+                key={item.id}
+                {...item}
+                onOpen={() => ctx.log("onOpen", item.id)}
+              />
+            ))}
+          </div>
         </div>
       ),
     },

@@ -504,6 +504,36 @@ describe("desktop workspace", () => {
     ]);
   });
 
+  it("moves a session by dragging it on the week", async () => {
+    // With the AI panel open the pane is too narrow for the grid.
+    await page.keyboard.press("Control+j");
+    await page.locator("[data-slot=time-grid]").waitFor();
+    const block = page
+      .locator("main")
+      .getByRole("button", { name: /Limits worksheet/ });
+    // Centred, so the drag stays inside the window.
+    await block.evaluate((element) =>
+      element.scrollIntoView({ block: "center" }),
+    );
+    const box = await block.boundingBox();
+    if (!box) throw new Error("The session is not on the week");
+    // An hour is 44 pixels on the grid.
+    await page.mouse.move(box.x + 20, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 20, box.y + 10 + 44, { steps: 6 });
+    await page.mouse.up();
+    await expect
+      .poll(async () => {
+        const plan = JSON.parse(
+          await readFile(join(folder, "plan.json"), "utf8"),
+        );
+        const [session] = plan.sessions as { start: string; end: string }[];
+        return `${session?.start}-${session?.end}`;
+      })
+      .toBe("19:00-20:30");
+    await page.keyboard.press("Control+j");
+  });
+
   it("sends the student to settings before following a Moodle course", async () => {
     await page.getByRole("treeitem", { name: /Análise Matemática/ }).hover();
     await page.getByRole("button", { name: "Subject actions" }).first().click();

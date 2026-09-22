@@ -40,7 +40,10 @@ import type { AgendaStatus } from "@resit/ui/patterns/study/agenda-item";
 import {
   AssessmentCard,
   CalendarActivityCard,
-  WeekGrid,
+  TimeGrid,
+  TimeGridCard,
+  type TimeGridBlock,
+  type TimeRange,
 } from "@resit/ui/patterns/study/calendar";
 
 import type {
@@ -50,7 +53,10 @@ import type {
 } from "../../../shared/moodle";
 import {
   isOverdue,
+  isoWeekday,
   localInstant,
+  minutesOf,
+  type Availability,
   type PlanFile,
   type StudySession,
   type TimeSlot,
@@ -137,7 +143,12 @@ export function ScheduleView(props: ScheduleViewProps) {
   const { snapshot } = props;
   const notices = useNotices();
   const { t, tx, date: formatDate, weekday } = useLocale();
-  const { plan, error } = usePlan();
+  const { plan: saved, error } = usePlan();
+  /** What a drag changed, shown until the saved plan catches up. */
+  const [override, setOverride] = useState<PlanFile | null>(null);
+  useEffect(() => setOverride(null), [saved]);
+  const plan = override ?? saved;
+  const [editingTimes, setEditingTimes] = useState(false);
   const subjectIds = useMemo(
     () => snapshot.subjects.map((subject) => subject.id),
     [snapshot.subjects],
@@ -175,6 +186,58 @@ export function ScheduleView(props: ScheduleViewProps) {
     } else props.onReview(target.subjectId);
   };
 
+  const moveSession = async (session: StudySession, range: TimeRange) => {
+    if (!plan) return;
+    setOverride({
+      ...plan,
+      sessions: plan.sessions.map((entry) =>
+        entry.id === session.id
+          ? { ...entry, date: range.day, start: range.start, end: range.end }
+          : entry,
+      ),
+    });
+    try {
+      await api.saveSession({
+        id: session.id,
+        title: session.title,
+        subjectId: session.subjectId,
+        kind: session.kind,
+        date: range.day,
+        start: range.start,
+        end: range.end,
+        target: session.target,
+        notes: session.notes,
+      });
+    } catch (reason) {
+      setOverride(null);
+      notices.fail(t("The session was not moved"), reason);
+    }
+  };
+
+  const changeTimes = async (times: Availability[]) => {
+    if (!plan) return;
+    setOverride({ ...plan, availability: times });
+    try {
+      await api.setAvailability(times);
+    } catch (reason) {
+      setOverride(null);
+      notices.fail(t("The study times were not saved"), reason);
+    }
+  };
+
+  const resolve = async (ids: string[], accept: boolean) => {
+    try {
+      await api.resolveProposals({ ids, accept });
+    } catch (reason) {
+      notices.fail(
+        accept
+          ? t("The suggestion was not accepted")
+          : t("The suggestion was not declined"),
+        reason,
+      );
+    }
+  };
+
   const exportCalendar = async () => {
     try {
       const path = await api.exportCalendar();
@@ -190,6 +253,7 @@ export function ScheduleView(props: ScheduleViewProps) {
   };
 
   const days = weekOf(week);
+  const compact = width > 0 && width < GRID_WIDTH;
   const thisWeek = weekOf(today())[0] === days[0];
 
   return (
@@ -252,6 +316,7 @@ export function ScheduleView(props: ScheduleViewProps) {
                 plan={plan}
                 subjects={subjects}
                 onEdit={(session) => setSessionRequest({ session })}
+                onResolve={(ids, accept) => void resolve(ids, accept)}
               />
               <section aria-label={t("Week")} className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -268,6 +333,21 @@ export function ScheduleView(props: ScheduleViewProps) {
                         })}
                   </h2>
                   <div className="flex items-center gap-1">
+                    {editingTimes ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setEditingTimes(false)}
+                      >
+                        <CheckIcon /> {t("Done")}
+                      </Button>
+                    ) : compact ? null : (
+                      <Button
+                        variant="subtle"
+                        onClick={() => setEditingTimes(true)}
+                      >
+                        <ClockIcon /> {t("Study times")}
+                      </Button>
+                    )}
                     {thisWeek ? null : (
                       <Button variant="subtle" onClick={() => setWeek(today())}>
                         {t("Today")}
@@ -287,12 +367,35 @@ export function ScheduleView(props: ScheduleViewProps) {
                     </ToolbarButton>
                   </div>
                 </div>
+                {editingTimes ? (
+                  <p className="px-2 text-sm text-muted-foreground">
+                    {t(
+                      "Drag across a day to add a study time. It repeats every week.",
+                    )}
+                  </p>
+                ) : null}
                 <Week
                   days={days}
                   plan={plan}
                   subjects={subjects}
                   records={records}
-                  compact={width > 0 && width < GRID_WIDTH}
+                  compact={compact}
+                  editingTimes={editingTimes && !compact}
+                  onCreateSession={(range) =>
+                    setSessionRequest({
+                      initial: {
+                        date: range.day,
+                        start: range.start,
+                        end: range.end,
+                      },
+                    })
+                  }
+                  onMoveSession={(session, range) =>
+                    void moveSession(session, range)
+                  }
+                  onResolve={(ids, accept) => void resolve(ids, accept)}
+                  onChangeTimes={(times) => void changeTimes(times)}
+                  onEditTimes={() => setAvailabilityOpen(true)}
                   dayLabel={(day) =>
                     `${weekday(localInstant(day, "12:00"))}, ${formatDate(localInstant(day, "12:00"), { year: undefined })}`
                   }
@@ -306,7 +409,7 @@ export function ScheduleView(props: ScheduleViewProps) {
                       : openInBrowser(activity)
                   }
                 />
-                {plan.availability.length === 0 ? (
+                {plan.availability.length === 0 && !editingTimes ? (
                   <p className="px-2 text-sm text-muted-foreground">
                     {tx(
                       "{link} so the assistant plans sessions when you are free.",
@@ -315,7 +418,11 @@ export function ScheduleView(props: ScheduleViewProps) {
                           <button
                             type="button"
                             className="text-link hover:underline"
-                            onClick={() => setAvailabilityOpen(true)}
+                            onClick={() =>
+                              compact
+                                ? setAvailabilityOpen(true)
+                                : setEditingTimes(true)
+                            }
                           >
                             {t("Set your study times")}
                           </button>
@@ -382,10 +489,12 @@ function Decisions({
   plan,
   subjects,
   onEdit,
+  onResolve: resolve,
 }: {
   plan: PlanFile;
   subjects: ReadonlyMap<string, SubjectInfo>;
   onEdit: (session: StudySession) => void;
+  onResolve: (ids: string[], accept: boolean) => void;
 }) {
   const notices = useNotices();
   const { t, tc, date: formatDate } = useLocale();
@@ -404,18 +513,6 @@ function Decisions({
   const when = (slot: { date: string; start: string; end: string }) =>
     `${formatDate(localInstant(slot.date, "12:00"), { weekday: "short", year: undefined })}, ${slot.start}–${slot.end}`;
 
-  const resolve = async (ids: string[], accept: boolean) => {
-    try {
-      await api.resolveProposals({ ids, accept });
-    } catch (reason) {
-      notices.fail(
-        accept
-          ? t("The suggestion was not accepted")
-          : t("The suggestion was not declined"),
-        reason,
-      );
-    }
-  };
   const mark = async (id: string, status: "done" | "skipped") => {
     try {
       await api.setSessionStatus({ id, status });
@@ -435,7 +532,7 @@ function Decisions({
                   <Button
                     variant="subtle"
                     onClick={() =>
-                      void resolve(
+                      resolve(
                         suggested.map((session) => session.id),
                         false,
                       )
@@ -446,7 +543,7 @@ function Decisions({
                   <Button
                     variant="secondary"
                     onClick={() =>
-                      void resolve(
+                      resolve(
                         suggested.map((session) => session.id),
                         true,
                       )
@@ -493,13 +590,13 @@ function Decisions({
                   </span>
                   <Button
                     variant="subtle"
-                    onClick={() => void resolve([session.id], false)}
+                    onClick={() => resolve([session.id], false)}
                   >
                     <XIcon /> {t("Decline")}
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => void resolve([session.id], true)}
+                    onClick={() => resolve([session.id], true)}
                   >
                     <CheckIcon /> {t("Accept")}
                   </Button>
@@ -569,20 +666,34 @@ function Week({
   subjects,
   records,
   compact,
+  editingTimes,
   dayLabel,
   onOpenSession,
   onOpenAssessment,
   onOpenDeadline,
+  onCreateSession,
+  onMoveSession,
+  onResolve,
+  onChangeTimes,
+  onEditTimes,
 }: {
   days: string[];
   plan: PlanFile;
   subjects: ReadonlyMap<string, SubjectInfo>;
   records: SubjectActivities[] | null;
   compact: boolean;
+  /** Drawing on the grid edits the weekly study times instead of sessions. */
+  editingTimes: boolean;
   dayLabel: (day: string) => string;
   onOpenSession: (session: StudySession) => void;
   onOpenAssessment: (assessment: PlanFile["assessments"][number]) => void;
   onOpenDeadline: (subjectId: string, activity: Activity) => void;
+  onCreateSession: (range: TimeRange) => void;
+  onMoveSession: (session: StudySession, range: TimeRange) => void;
+  onResolve: (ids: string[], accept: boolean) => void;
+  onChangeTimes: (times: Availability[]) => void;
+  /** The list of study times, which also works from the keyboard. */
+  onEditTimes: () => void;
 }) {
   const { t, time } = useLocale();
   const byDay = useMemo(() => {
@@ -603,30 +714,13 @@ function Week({
     return deadlines;
   }, [records, subjects]);
 
-  const content = (day: string) => {
-    // A session with a suggested new time shows at both, the new one dashed.
-    const sessions: {
-      session: StudySession;
-      slot: TimeSlot;
-      pending: boolean;
-    }[] = [
-      ...plan.sessions
-        .filter((session) => session.date === day)
-        .map((session) => ({
-          session,
-          slot: session as TimeSlot,
-          pending: Boolean(session.proposal),
-        })),
-      ...plan.sessions.flatMap((session) =>
-        session.move?.date === day
-          ? [{ session, slot: session.move, pending: true }]
-          : [],
-      ),
-    ].sort((a, b) => a.slot.start.localeCompare(b.slot.start));
+  /** Assessments and Moodle deadlines: dated, but not blocks of time. */
+  const dated = (day: string) => {
     const assessments = plan.assessments.filter(
       (assessment) => assessment.date === day,
     );
     const deadlines = byDay.get(day) ?? [];
+    if (assessments.length === 0 && deadlines.length === 0) return null;
     return (
       <>
         {assessments.map((assessment) => {
@@ -652,30 +746,6 @@ function Week({
                 ) : null}
               </span>
             </button>
-          );
-        })}
-        {sessions.map(({ session, slot, pending }) => {
-          const subject = session.subjectId
-            ? subjects.get(session.subjectId)
-            : undefined;
-          return (
-            <CalendarActivityCard
-              key={`${session.id}-${slot === session ? "at" : "to"}`}
-              title={
-                pending
-                  ? t("{title} (suggested)", { title: session.title })
-                  : session.title
-              }
-              subjectName={subject?.name ?? t("No subject")}
-              subjectColor={subject?.color ?? "gray"}
-              kind={session.kind}
-              start={localInstant(slot.date, slot.start)}
-              end={localInstant(slot.date, slot.end)}
-              // A suggested new time is not missed, whatever the old one was.
-              status={slot === session ? sessionStatus(session) : "scheduled"}
-              onOpen={() => onOpenSession(session)}
-              className={cn(pending && "border-dashed opacity-75")}
-            />
           );
         })}
         {deadlines.map(({ subjectId, activity, date }) => {
@@ -711,33 +781,266 @@ function Week({
   if (compact)
     return (
       <div className="flex flex-col divide-y rounded-lg border">
-        {days.map((day) => (
-          <div key={day} className="flex flex-col gap-1.5 px-3 py-2.5">
-            <span
-              className={cn(
-                "text-xs font-medium text-muted-foreground",
-                day === today() && "text-primary",
-              )}
-            >
-              {dayLabel(day)}
-            </span>
-            <div className="flex flex-col gap-1">{content(day)}</div>
-          </div>
-        ))}
+        {days.map((day) => {
+          // A session with a suggested new time shows at both, the new one dashed.
+          const sessions = [
+            ...plan.sessions
+              .filter((session) => session.date === day)
+              .map((session) => ({
+                session,
+                slot: session as TimeSlot,
+                pending: Boolean(session.proposal),
+              })),
+            ...plan.sessions.flatMap((session) =>
+              session.move?.date === day
+                ? [{ session, slot: session.move, pending: true }]
+                : [],
+            ),
+          ].sort((a, b) => a.slot.start.localeCompare(b.slot.start));
+          return (
+            <div key={day} className="flex flex-col gap-1.5 px-3 py-2.5">
+              <span
+                className={cn(
+                  "text-xs font-medium text-muted-foreground",
+                  day === today() && "text-primary",
+                )}
+              >
+                {dayLabel(day)}
+              </span>
+              <div className="flex flex-col gap-1">
+                {dated(day)}
+                {sessions.map(({ session, slot, pending }) => {
+                  const subject = session.subjectId
+                    ? subjects.get(session.subjectId)
+                    : undefined;
+                  return (
+                    <CalendarActivityCard
+                      key={`${session.id}-${slot === session ? "at" : "to"}`}
+                      title={
+                        pending
+                          ? t("{title} (suggested)", { title: session.title })
+                          : session.title
+                      }
+                      subjectName={subject?.name ?? t("No subject")}
+                      subjectColor={subject?.color ?? "gray"}
+                      kind={session.kind}
+                      start={localInstant(slot.date, slot.start)}
+                      end={localInstant(slot.date, slot.end)}
+                      // A suggested new time is not missed, whatever the old one was.
+                      status={
+                        slot === session ? sessionStatus(session) : "scheduled"
+                      }
+                      onOpen={() => onOpenSession(session)}
+                      className={cn(pending && "border-dashed opacity-75")}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
 
+  const inWeek = (day: string) => days.includes(day);
+  const timeBlocks: TimeGridBlock[] = editingTimes
+    ? plan.availability.flatMap((slot, index) => {
+        const day = days[slot.weekday - 1];
+        if (!day) return [];
+        const remove = () =>
+          onChangeTimes(plan.availability.filter((_, at) => at !== index));
+        return [
+          {
+            id: `time:${index}`,
+            day,
+            start: slot.start,
+            end: slot.end,
+            label: t("Study time, {start} to {end}", {
+              start: slot.start,
+              end: slot.end,
+            }),
+            editable: true,
+            onOpen: onEditTimes,
+            className:
+              "border border-success/50 bg-success-soft text-success hover:brightness-95",
+            children: (
+              <div className="flex items-start justify-between gap-1 px-2 py-1">
+                <span className="text-2xs font-medium tabular-nums">
+                  {slot.start}–{slot.end}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t("Remove this study time")}
+                  onClick={remove}
+                  className="-mr-1 rounded-sm p-0.5 hover:bg-success/15 focus-visible:shadow-focus focus-visible:outline-none"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </div>
+            ),
+          },
+        ];
+      })
+    : [];
+
+  const sessionBlocks: TimeGridBlock[] = editingTimes
+    ? []
+    : plan.sessions.flatMap((session) => {
+        const subject = session.subjectId
+          ? subjects.get(session.subjectId)
+          : undefined;
+        const border = subjectColorClasses[subject?.color ?? "gray"].border;
+        const body = (
+          slot: TimeSlot,
+          title: string,
+          actions: ReactNode = null,
+        ) => (
+          <TimeGridCard
+            kind={session.kind}
+            start={localInstant(slot.date, slot.start)}
+            end={localInstant(slot.date, slot.end)}
+            title={title}
+            struck={session.status === "done" || session.status === "skipped"}
+            actions={actions}
+          />
+        );
+        const decide = (
+          <>
+            <button
+              type="button"
+              aria-label={t("Accept")}
+              onClick={() => onResolve([session.id], true)}
+              className="rounded-sm bg-primary p-0.5 text-primary-foreground hover:brightness-110 focus-visible:shadow-focus focus-visible:outline-none"
+            >
+              <CheckIcon className="size-3" />
+            </button>
+            <button
+              type="button"
+              aria-label={t("Decline")}
+              onClick={() => onResolve([session.id], false)}
+              className="rounded-sm p-0.5 hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
+            >
+              <XIcon className="size-3" />
+            </button>
+          </>
+        );
+        const blocks: TimeGridBlock[] = [];
+        const status = sessionStatus(session);
+        if (inWeek(session.date))
+          blocks.push({
+            id: session.id,
+            day: session.date,
+            start: session.start,
+            end: session.end,
+            label: t("{title}, {subject}, {start} to {end}", {
+              title: session.title,
+              subject: subject?.name ?? t("No subject"),
+              start: session.start,
+              end: session.end,
+            }),
+            editable: !session.proposal && session.status === "planned",
+            onOpen: () => onOpenSession(session),
+            className: cn(
+              "border-l-[3px] shadow-control",
+              border,
+              session.proposal
+                ? "border border-dashed bg-background/90"
+                : "bg-control hover:bg-control-hover",
+              status === "completed" && "opacity-60",
+              status === "overdue" && "bg-warning-soft",
+              status === "skipped" && "border-dashed opacity-70",
+            ),
+            children: body(
+              session,
+              session.proposal
+                ? t("{title} (suggested)", { title: session.title })
+                : session.title,
+              session.proposal ? decide : null,
+            ),
+          });
+        if (session.move && inWeek(session.move.date))
+          blocks.push({
+            id: `${session.id}:move`,
+            day: session.move.date,
+            start: session.move.start,
+            end: session.move.end,
+            label: t("New time suggested for {title}", {
+              title: session.title,
+            }),
+            onOpen: () => onOpenSession(session),
+            className: cn(
+              "border border-l-[3px] border-dashed bg-background/90 shadow-control",
+              border,
+            ),
+            children: body(
+              session.move,
+              t("{title} (suggested)", { title: session.title }),
+              decide,
+            ),
+          });
+        return blocks;
+      });
+
+  const blocks = [...timeBlocks, ...sessionBlocks];
+  const bands = editingTimes
+    ? []
+    : plan.availability.flatMap((slot) => {
+        const day = days[slot.weekday - 1];
+        return day ? [{ day, start: slot.start, end: slot.end }] : [];
+      });
+  // Early and late sessions widen the hours shown.
+  const hours = [...blocks, ...bands].flatMap((range) => [
+    minutesOf(range.start) / 60,
+    minutesOf(range.end) / 60,
+  ]);
+  const fromHour = Math.floor(Math.min(8, ...hours));
+  const toHour = Math.ceil(Math.max(22, ...hours));
+  const hasDated = days.some((day) => dated(day) !== null);
+
   return (
-    <WeekGrid
+    <TimeGrid
       days={days}
       today={today()}
-      availability={plan.availability.flatMap((slot) => {
-        const day = days[slot.weekday - 1];
-        return day ? [{ day, from: slot.start, to: slot.end }] : [];
-      })}
-    >
-      {content}
-    </WeekGrid>
+      fromHour={fromHour}
+      toHour={toHour}
+      bands={bands}
+      blocks={blocks}
+      allDay={hasDated ? dated : undefined}
+      createLabel={editingTimes ? t("Study time") : t("New session")}
+      onCreate={(range) => {
+        if (!editingTimes) {
+          onCreateSession(range);
+          return;
+        }
+        onChangeTimes([
+          ...plan.availability,
+          {
+            weekday: isoWeekday(range.day),
+            start: range.start,
+            end: range.end,
+          },
+        ]);
+      }}
+      onChange={(id, range) => {
+        if (id.startsWith("time:")) {
+          const index = Number(id.slice("time:".length));
+          onChangeTimes(
+            plan.availability.map((slot, at) =>
+              at === index
+                ? {
+                    weekday: isoWeekday(range.day),
+                    start: range.start,
+                    end: range.end,
+                  }
+                : slot,
+            ),
+          );
+          return;
+        }
+        const session = plan.sessions.find((entry) => entry.id === id);
+        if (session) onMoveSession(session, range);
+      }}
+    />
   );
 }
 

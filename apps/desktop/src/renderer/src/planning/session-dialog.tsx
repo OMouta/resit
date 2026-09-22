@@ -47,7 +47,7 @@ import { nextHour } from "../lib/plan";
 export interface SessionRequest {
   /** The session to change. Without one, the dialog adds a session. */
   session?: StudySession;
-  initial?: { date?: string; subjectId?: string };
+  initial?: { date?: string; start?: string; end?: string; subjectId?: string };
 }
 
 const NO_SUBJECT = "none";
@@ -114,8 +114,8 @@ export function SessionDialog({
     );
     setKind(session?.kind ?? "reading");
     setDate(session?.date ?? request.initial?.date ?? slot.date);
-    setStart(session?.start ?? slot.start);
-    setEnd(session?.end ?? slot.end);
+    setStart(session?.start ?? request.initial?.start ?? slot.start);
+    setEnd(session?.end ?? request.initial?.end ?? slot.end);
     setTarget(targetValue(session?.target));
     setNotes(session?.notes ?? "");
     // Only when the dialog opens: the subject list changing keeps the form.

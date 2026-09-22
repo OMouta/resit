@@ -453,6 +453,21 @@ export const agenda: AgendaItemFixture[] = [
   },
 ];
 
+/** The agenda as blocks on the week's time grid, sessions only. */
+export const weekBlocks = agenda
+  .filter(
+    (item) =>
+      item.kind !== "assessment" &&
+      item.start >= "2026-09-14" &&
+      item.start < "2026-09-21",
+  )
+  .map((item) => ({
+    ...item,
+    day: item.start.slice(0, 10),
+    from: item.start.slice(11, 16),
+    to: item.end.slice(11, 16),
+  }));
+
 export const weekPlan = {
   weekStart: "2026-09-14T00:00:00Z",
   days: [

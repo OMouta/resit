@@ -3,22 +3,18 @@ import { ScrollArea } from "@resit/ui/components/scroll-area";
 import { ChevronLeftIcon, ChevronRightIcon, SparklesIcon } from "lucide-react";
 
 import { AgendaItem } from "@resit/ui/patterns/study/agenda-item";
+import { subjectColorClasses } from "@resit/ui/lib/subject-color";
+import { cn } from "@resit/ui/lib/utils";
 import {
   AssessmentCard,
-  CalendarActivityCard,
-  WeekGrid,
+  TimeGrid,
+  TimeGridCard,
 } from "@resit/ui/patterns/study/calendar";
 
-import { agenda, weekPlan } from "../../fixtures/study";
+import { agenda, weekBlocks, weekPlan } from "../../fixtures/study";
 import { FIXTURE_NOW } from "../../fixtures/workspace";
 import type { ExampleContext, ExamplePage } from "../../viewer/types";
 import { ScreenFrame, screenExample } from "./shared";
-
-const byDay = new Map<string, typeof agenda>();
-for (const item of agenda) {
-  const day = item.start.slice(0, 10);
-  byDay.set(day, [...(byDay.get(day) ?? []), item]);
-}
 
 function Screen({ ctx }: { ctx: ExampleContext }) {
   const today = agenda.filter((item) => item.start.startsWith("2026-09-17"));
@@ -37,9 +33,8 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
                 This week
               </h1>
               <p className="text-sm text-muted-foreground">
-                14–20 September · availability in green, sessions as cards.
-                Missed sessions stay where they were until you accept a new
-                time.
+                14–20 September · study times in green. Draw on the week to add
+                a session, drag one to move it.
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -78,21 +73,43 @@ function Screen({ ctx }: { ctx: ExampleContext }) {
               />
             ))}
           </div>
-          <WeekGrid
+          <TimeGrid
             days={weekPlan.days}
             today="2026-09-17"
-            availability={weekPlan.availability}
-          >
-            {(day) =>
-              (byDay.get(day) ?? []).map((item) => (
-                <CalendarActivityCard
-                  key={item.id}
-                  {...item}
-                  onOpen={() => ctx.log("open", item.id)}
+            fromHour={8}
+            toHour={22}
+            bands={weekPlan.availability.map((slot) => ({
+              day: slot.day,
+              start: slot.from,
+              end: slot.to,
+            }))}
+            createLabel="New session"
+            onCreate={(range) => ctx.log("create", range)}
+            onChange={(id, range) => ctx.log("move", { id, ...range })}
+            blocks={weekBlocks.map((item) => ({
+              id: item.id,
+              day: item.day,
+              start: item.from,
+              end: item.to,
+              label: `${item.title}, ${item.subjectName}`,
+              editable: item.status === "scheduled",
+              onOpen: () => ctx.log("open", item.id),
+              className: cn(
+                "border-l-[3px] bg-control shadow-control hover:bg-control-hover",
+                subjectColorClasses[item.subjectColor].border,
+                item.status === "completed" && "opacity-60",
+              ),
+              children: (
+                <TimeGridCard
+                  kind={item.kind}
+                  start={`${item.day}T${item.from}:00`}
+                  end={`${item.day}T${item.to}:00`}
+                  title={item.title}
+                  struck={item.status === "completed"}
                 />
-              ))
-            }
-          </WeekGrid>
+              ),
+            }))}
+          />
           <div className="grid gap-6 @3xl:grid-cols-2">
             <section className="flex flex-col gap-2">
               <h2 className="text-xs font-semibold tracking-[0.08em] text-subtle-foreground uppercase">
