@@ -396,6 +396,29 @@ describe("study read tools", () => {
     expect(errorCode(refused.data)).toBe("OUT_OF_SCOPE");
   });
 
+  it("reads several notes in one call, saying which it could not", async () => {
+    const second = (
+      await createNote(workspace, {
+        subjectId: mathematicsId,
+        title: "Continuity",
+        body: "No jumps.\n",
+      })
+    ).id;
+    const read = await run("study_read_note", {
+      noteIds: [noteId, second, physicsNoteId],
+    });
+    const notes = read.data.notes as {
+      id: string;
+      markdown?: string;
+      error?: { code: string };
+    }[];
+    expect(notes.map((note) => note.markdown ?? note.error?.code)).toEqual([
+      "## Squeeze theorem\n\nBound the function above and below.\n",
+      "No jumps.\n",
+      "OUT_OF_SCOPE",
+    ]);
+  });
+
   it("draws a page only for an assistant that can be given images", async () => {
     const textOnly = await run("study_read_pdf_page", {
       documentId: pdfId,

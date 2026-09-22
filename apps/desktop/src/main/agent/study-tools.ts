@@ -81,6 +81,8 @@ const WEEKDAYS = [
 ];
 
 const MAX_NOTE_CHARS = 60_000;
+/** What several notes read at once may add up to. */
+const MAX_NOTES_CHARS = 120_000;
 const MAX_PAGE_CHARS = 20_000;
 /** A run of pages read at once, by count and by characters. */
 const MAX_RANGE_PAGES = 20;
@@ -213,6 +215,14 @@ function failure(code: string, message: string): ToolResult {
   };
 }
 
+/** The code and message a failure carries, to report it inside a result. */
+function errorOf(result: ToolResult): unknown {
+  const first = result.content[0];
+  return first?.type === "text"
+    ? (JSON.parse(first.text) as { error: unknown }).error
+    : null;
+}
+
 /** Readable name for tool activity in the transcript. */
 export function describeToolCall(
   name: string,
@@ -229,7 +239,9 @@ export function describeToolCall(
     case "study_list_resources":
       return "Listed the study files in scope";
     case "study_read_note":
-      return `Read ${title("noteId")}`;
+      return Array.isArray(input.noteIds) && input.noteIds.length > 1
+        ? `Read ${input.noteIds.length} notes`
+        : `Read ${title("noteId")}`;
     case "study_read_pdf_page":
       return typeof input.lastPage === "number" && input.lastPage > Number(page)
         ? `Read ${title("documentId")}, pages ${page}–${String(input.lastPage)}`
@@ -679,24 +691,52 @@ export function studyTools(
     ),
     define(
       "study_read_note",
-      "Read a note's Markdown by its ID. Keep the revision it returns for study_edit_note.",
-      { noteId: z.string().describe("The note's ID") },
-      async ({ noteId }) => {
-        const info = resource(noteId);
-        if ("content" in info) return info;
-        if (info.kind !== "note")
-          return failure(
-            "UNSUPPORTED",
-            "That file is not a note. Use study_read_pdf_page for PDFs.",
-          );
-        const note = await readNote(workspace, noteId);
-        const truncated = note.body.length > MAX_NOTE_CHARS;
-        return ok({
-          ...describe(info),
-          revision: note.revision,
-          markdown: truncated ? note.body.slice(0, MAX_NOTE_CHARS) : note.body,
-          ...(truncated ? { truncated: true } : {}),
-        });
+      "Read a note's Markdown by its ID, or several notes at once with noteIds. Keep the revision each returns for study_edit_note.",
+      {
+        noteId: z.string().optional().describe("The note's ID"),
+        noteIds: z
+          .array(z.string())
+          .max(10)
+          .optional()
+          .describe("Several notes' IDs, read in one call"),
+      },
+      async ({ noteId, noteIds }) => {
+        const ids = [...new Set([noteId, ...(noteIds ?? [])])].filter(
+          (id): id is string => Boolean(id),
+        );
+        if (ids.length === 0)
+          return failure("INVALID_INPUT", "Give a noteId or noteIds.");
+        let budget = MAX_NOTES_CHARS;
+        const read = async (id: string) => {
+          const info = resource(id);
+          if ("content" in info) return info;
+          if (info.kind !== "note")
+            return failure(
+              "UNSUPPORTED",
+              "That file is not a note. Use study_read_pdf_page for PDFs.",
+            );
+          const note = await readNote(workspace, id);
+          const room = Math.min(MAX_NOTE_CHARS, budget);
+          budget -= Math.min(note.body.length, room);
+          const truncated = note.body.length > room;
+          return {
+            ...describe(info),
+            revision: note.revision,
+            markdown: truncated ? note.body.slice(0, room) : note.body,
+            ...(truncated ? { truncated: true } : {}),
+          };
+        };
+        if (ids.length === 1) {
+          const note = await read(ids[0] ?? "");
+          return "content" in note ? note : ok(note);
+        }
+        const notes = [];
+        for (const id of ids) {
+          const note = await read(id);
+          // A note that could not be read says why in its place.
+          notes.push("content" in note ? { id, error: errorOf(note) } : note);
+        }
+        return ok({ notes });
       },
     ),
     define(
