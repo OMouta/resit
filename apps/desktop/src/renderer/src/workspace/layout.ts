@@ -69,6 +69,15 @@ export function parseActivityTabId(
     : null;
 }
 
+/** A subject's Moodle course page, as resit last read it. */
+export function courseTabId(subjectId: string): string {
+  return `resit:course:${subjectId}`;
+}
+
+export function parseCourseTabId(tabResourceId: string): string | null {
+  return /^resit:course:([^:]+)$/.exec(tabResourceId)?.[1] ?? null;
+}
+
 const newId = () => crypto.randomUUID();
 
 export function emptyLayout(expanded: string[] = []): Layout {

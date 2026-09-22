@@ -53,6 +53,7 @@ import {
 } from "./dialogs";
 import {
   activeTab,
+  courseTabId,
   GRAPH_TAB_ID,
   layoutReducer,
   parseProjectTabId,
@@ -672,6 +673,14 @@ export function WorkspaceView({
     importFiles: (subjectId: string, folder?: string) =>
       void importFiles(subjectId, folder),
     openMoodle: (subjectId: string) => setMoodleSubjectId(subjectId),
+    openCourse: (subjectId: string) =>
+      dispatch({
+        type: "open",
+        resourceId: courseTabId(subjectId),
+        title:
+          snapshot.subjects.find((subject) => subject.id === subjectId)?.moodle
+            ?.fullname ?? t("Course"),
+      }),
     deleteFolder: (subjectId: string, path: string) => {
       const folder = snapshot.folders.find(
         (entry) => entry.subjectId === subjectId && entry.path === path,
@@ -880,6 +889,7 @@ export function WorkspaceView({
       onOpenLink={openLink}
       onCite={cite}
       onOpenSettings={() => onOpenSettings("moodle")}
+      onOpenMoodle={setMoodleSubjectId}
       onOpenResource={openResource}
       onEditCard={setCardRequest}
       onEditQuiz={setQuizRequest}

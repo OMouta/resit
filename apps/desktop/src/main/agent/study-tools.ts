@@ -776,7 +776,7 @@ export function studyTools(
     ),
     define(
       "study_list_activities",
-      "List the Moodle activities of the subjects in scope, such as assignments, quizzes, and forums, with their dates. Dates are what Moodle said at checkedAt.",
+      'List the Moodle activities of the subjects in scope, such as assignments, quizzes, and forums, with their dates, and the text on each course page: section summaries, and labels (type "label"), which teachers use for instructions between activities. Dates are what Moodle said at checkedAt.',
       {
         subjectId: z
           .string()
@@ -794,6 +794,11 @@ export function studyTools(
             subjectId: entry.subjectId,
             subject: subjectNames.get(entry.subjectId) ?? null,
             checkedAt: entry.checkedAt,
+            sectionSummaries: (entry.sections ?? []).flatMap((section) =>
+              section.summary
+                ? [{ section: section.name, summary: section.summary }]
+                : [],
+            ),
             activities: entry.activities.map((activity) => ({
               activityId: String(activity.moduleId),
               name: activity.name,

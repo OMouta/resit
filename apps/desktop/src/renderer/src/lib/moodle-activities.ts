@@ -94,6 +94,18 @@ export function activityType(modname: string): string {
   return TYPE_NAMES[modname] ?? modname;
 }
 
+type Activity = SubjectActivities["activities"][number];
+
+/** Labels are text on the course page, not activities a student opens. */
+export function isLabel(activity: Activity): boolean {
+  return activity.modname === "label";
+}
+
+/** resit has something to show for it beyond a link to Moodle. */
+export function hasPage(activity: Activity): boolean {
+  return Boolean(activity.brief || activity.attachments?.length);
+}
+
 /** "Checked 3 hours ago", without the "Checked now" Intl would give. */
 export function checkedLabel(
   at: string | number,

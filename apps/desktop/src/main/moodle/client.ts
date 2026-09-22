@@ -310,6 +310,9 @@ export const moodleModuleSchema = z.looseObject({
 export const moodleSectionSchema = z.looseObject({
   name: z.string().catch(""),
   section: z.number().catch(0),
+  /** HTML shown at the top of the section. */
+  summary: z.string().optional().catch(undefined),
+  uservisible: z.boolean().optional(),
   modules: z.array(moodleModuleSchema).catch([]),
 });
 

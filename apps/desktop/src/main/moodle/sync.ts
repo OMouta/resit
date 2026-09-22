@@ -1,9 +1,11 @@
 import {
   activitiesFileSchema,
+  courseUrl,
   itemKey,
   type ActivitiesFile,
   type MoodleActivity,
   type MoodleCourseContents,
+  type MoodleCourseSection,
   type MoodleDownloadResult,
   type MoodleFileRef,
   type MoodleItem,
@@ -46,8 +48,8 @@ const CONCURRENCY = 3;
  */
 const FILE_MODULES = new Set(["resource", "folder", "assign"]);
 
-/** Modules that are not activities a student opens: files and labels. */
-const NOT_ACTIVITIES = new Set(["resource", "folder", "label", "subsection"]);
+/** Modules that are not activities a student opens. */
+const NOT_ACTIVITIES = new Set(["resource", "folder", "subsection"]);
 
 /** A course as Moodle describes it, with its assignments keyed by module. */
 interface CourseRead {
@@ -159,20 +161,47 @@ export function planCourse(
   return { course: link, items, skipped: [...skipped.values()] };
 }
 
-/** Everything in a course that is more than a file, with its dates. */
+/**
+ * Everything in a course that is more than a file, with its dates, and the
+ * course page's sections. Labels, the text between activities, have no page
+ * of their own, so they point at their section.
+ */
 function planActivities(
   sections: MoodleSection[],
+  link: MoodleLink,
   assignments: ReadonlyMap<number, MoodleAssignment>,
-): MoodleActivity[] {
+): { activities: MoodleActivity[]; sections: MoodleCourseSection[] } {
   const activities: MoodleActivity[] = [];
+  const page: MoodleCourseSection[] = [];
   for (const section of sections) {
+    if (section.uservisible === false) continue;
+    const summary = section.summary ? briefMarkdown(section.summary) : "";
+    const moduleIds: number[] = [];
+    page.push({
+      name: section.name.trim(),
+      ...(summary ? { summary } : {}),
+      moduleIds,
+    });
     for (const module of section.modules) {
-      if (
-        module.uservisible === false ||
-        !module.url ||
-        NOT_ACTIVITIES.has(module.modname)
-      )
+      if (module.uservisible === false) continue;
+      if (module.modname !== "subsection") moduleIds.push(module.id);
+      if (module.modname === "label") {
+        const text = module.description
+          ? briefMarkdown(module.description)
+          : "";
+        if (text)
+          activities.push({
+            moduleId: module.id,
+            name: module.name,
+            modname: "label",
+            sectionName: section.name.trim(),
+            url: `${courseUrl(link)}#section-${section.section}`,
+            dates: [],
+            brief: text,
+          });
         continue;
+      }
+      if (!module.url || NOT_ACTIVITIES.has(module.modname)) continue;
       const assignment = assignments.get(module.id);
       const brief = [
         assignment?.intro ?? module.description,
@@ -212,7 +241,7 @@ function planActivities(
       });
     }
   }
-  return activities;
+  return { activities, sections: page };
 }
 
 async function saveActivities(
@@ -227,7 +256,7 @@ async function saveActivities(
     siteUrl: link.siteUrl,
     courseId: link.courseId,
     checkedAt: new Date().toISOString(),
-    activities: planActivities(course.sections, course.assignments),
+    ...planActivities(course.sections, link, course.assignments),
   };
   await writeJson(activitiesPath(workspace, subjectId), file);
 }
@@ -330,6 +359,7 @@ export async function listActivities(
     found.push({
       subjectId: info.id,
       checkedAt: file.checkedAt,
+      ...(file.sections ? { sections: file.sections } : {}),
       activities: file.activities.map(({ attachments, ...activity }) => ({
         ...activity,
         ...(attachments

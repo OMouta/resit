@@ -23,6 +23,7 @@ import { NoteView } from "../editor/note-view";
 import type { CardRequest } from "../practice/card-dialog";
 import type { QuizEditorRequest } from "../practice/quiz-editor";
 import { ActivityView } from "../views/activity-view";
+import { CourseView } from "../views/course-view";
 import { AttachmentView, ImageView } from "../views/file-views";
 import { GraphView } from "../views/graph-view";
 import { PdfView } from "../views/pdf-view";
@@ -34,8 +35,10 @@ import { ScheduleView } from "../views/schedule-view";
 import { requestReview, type DocumentTarget } from "../views/view-registry";
 import {
   activityTabId,
+  courseTabId,
   GRAPH_TAB_ID,
   parseActivityTabId,
+  parseCourseTabId,
   parseQuizTabId,
   PRACTICE_TAB_ID,
   parseProjectTabId,
@@ -61,6 +64,8 @@ export interface PaneProps {
   onOpenLink: (resourceId: string, target: DocumentTarget) => void;
   onCite: (markdown: string) => void;
   onOpenSettings: () => void;
+  /** The dialog that follows a Moodle course and downloads its files. */
+  onOpenMoodle: (subjectId: string) => void;
   /** Opens a file, at a PDF page when one is given. */
   onOpenResource: (resourceId: string, page?: number) => void;
   onEditCard: (request: CardRequest) => void;
@@ -123,6 +128,7 @@ export function WorkspacePane({
   onOpenLink,
   onCite,
   onOpenSettings,
+  onOpenMoodle,
   onOpenResource,
   onEditCard,
   onEditQuiz,
@@ -133,6 +139,15 @@ export function WorkspacePane({
     const target = resources.get(resourceId);
     if (target) dispatch({ type: "open", resourceId, title: target.title });
   };
+  const openActivity = (
+    subjectId: string,
+    activity: { moduleId: number; name: string },
+  ) =>
+    dispatch({
+      type: "open",
+      resourceId: activityTabId(subjectId, activity.moduleId),
+      title: activity.name,
+    });
 
   const items: DocumentTabItem[] = pane.tabs.map((tab) => {
     if (tab.resourceId === GRAPH_TAB_ID)
@@ -164,9 +179,10 @@ export function WorkspacePane({
           : {}),
       };
     }
+    const course = parseCourseTabId(tab.resourceId);
     const activity = parseActivityTabId(tab.resourceId);
-    if (activity) {
-      const subject = subjects.get(activity.subjectId);
+    if (course ?? activity) {
+      const subject = subjects.get(course ?? activity?.subjectId ?? "");
       return {
         id: tab.id,
         title: tab.title,
@@ -203,11 +219,12 @@ export function WorkspacePane({
           snapshot={snapshot}
           moodle={moodle}
           active={active}
-          onOpenActivity={(subjectId, activity) =>
+          onOpenActivity={openActivity}
+          onOpenCourse={(subjectId) =>
             dispatch({
               type: "open",
-              resourceId: activityTabId(subjectId, activity.moduleId),
-              title: activity.name,
+              resourceId: courseTabId(subjectId),
+              title: subjects.get(subjectId)?.moodle?.fullname ?? t("Course"),
             })
           }
           onOpenSettings={onOpenSettings}
@@ -276,6 +293,15 @@ export function WorkspacePane({
           onDeleted={() =>
             dispatch({ type: "close-resource", resourceId: tab.resourceId })
           }
+        />
+      );
+    const course = parseCourseTabId(tab.resourceId);
+    if (course)
+      return (
+        <CourseView
+          subject={subjects.get(course)}
+          onOpenActivity={openActivity}
+          onOpenMoodle={onOpenMoodle}
         />
       );
     const activity = parseActivityTabId(tab.resourceId);

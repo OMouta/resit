@@ -61,7 +61,9 @@ import {
   activityType,
   checkedLabel,
   dateLabel,
+  hasPage,
   isDeadline,
+  isLabel,
   useMoodleActivities,
 } from "../lib/moodle-activities";
 import { useNotices } from "../lib/notices";
@@ -90,6 +92,8 @@ export interface ScheduleViewProps {
   /** The tab is on top, so a stale schedule is worth checking. */
   active: boolean;
   onOpenActivity: (subjectId: string, activity: Activity) => void;
+  /** The course page resit saved for a subject that follows Moodle. */
+  onOpenCourse: (subjectId: string) => void;
   onOpenSettings: () => void;
   onOpenResource: (resourceId: string) => void;
   onOpenQuiz: (subjectId: string, quiz: { id: string; title: string }) => void;
@@ -99,11 +103,6 @@ export interface ScheduleViewProps {
 
 function dayKey(value: Date): string {
   return `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
-}
-
-/** An activity is worth a page when there is something to read in it. */
-function hasPage(activity: Activity): boolean {
-  return Boolean(activity.brief || activity.attachments?.length);
 }
 
 function SectionTitle({
@@ -801,6 +800,7 @@ function MoodleSections({
   moodle,
   active,
   onOpenActivity,
+  onOpenCourse,
   onOpenSettings,
   records,
 }: ScheduleViewProps & { records: SubjectActivities[] | null }) {
@@ -809,7 +809,6 @@ function MoodleSections({
   const [failures, setFailures] = useState<
     { subjectId: string; message: string }[]
   >([]);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const lastCheck = useRef(0);
 
   const connected = moodle.status === "connected";
@@ -984,66 +983,40 @@ function MoodleSections({
       )}
 
       {records && records.length > 0 ? (
-        <section aria-label={t("Activities")} className="flex flex-col gap-1">
-          <SectionTitle>{t("Activities")}</SectionTitle>
-          {followed.map((subject) => {
-            const record = bySubject.get(subject.id);
-            if (!record) return null;
-            const open = expanded.has(subject.id);
-            return (
-              <div key={subject.id} className="flex flex-col">
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  onClick={() =>
-                    setExpanded((current) => {
-                      const next = new Set(current);
-                      if (open) next.delete(subject.id);
-                      else next.add(subject.id);
-                      return next;
-                    })
-                  }
-                  className="flex h-control items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
-                >
-                  <ChevronRightIcon
-                    aria-hidden
-                    className={cn(
-                      "size-4 shrink-0 text-subtle-foreground transition-transform duration-(--duration-fast)",
-                      open && "rotate-90",
-                    )}
-                  />
-                  <SubjectDot subject={subject} />
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {subject.name}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {number(record.activities.length)}
-                  </span>
-                </button>
-                {open ? (
-                  <ul className="flex flex-col pl-6">
-                    {record.activities.length === 0 ? (
-                      <li className="flex h-control items-center px-2 text-sm text-muted-foreground">
-                        {t("The course has no activities.")}
-                      </li>
-                    ) : null}
-                    {record.activities.map((activity) => (
-                      <ActivityRow
-                        key={activity.moduleId}
-                        activity={activity}
-                        onOpen={
-                          hasPage(activity)
-                            ? () => onOpenActivity(subject.id, activity)
-                            : undefined
-                        }
-                        onOpenInMoodle={() => openInMoodle(activity)}
-                      />
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            );
-          })}
+        <section aria-label={t("Courses")} className="flex flex-col gap-1">
+          <SectionTitle>{t("Courses")}</SectionTitle>
+          <ul className="flex flex-col">
+            {followed.map((subject) => {
+              const record = bySubject.get(subject.id);
+              if (!record) return null;
+              const count = record.activities.filter(
+                (activity) => !isLabel(activity),
+              ).length;
+              return (
+                <li key={subject.id}>
+                  <button
+                    type="button"
+                    onClick={() => onOpenCourse(subject.id)}
+                    className="flex h-control w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent focus-visible:shadow-focus focus-visible:outline-none"
+                  >
+                    <SubjectDot subject={subject} />
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {subject.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {count === 1
+                        ? t("1 activity")
+                        : t("{count} activities", { count: number(count) })}
+                    </span>
+                    <ChevronRightIcon
+                      aria-hidden
+                      className="size-4 shrink-0 text-subtle-foreground"
+                    />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       ) : null}
     </section>
@@ -1115,44 +1088,6 @@ function UpcomingRow({
           )}
         >
           {t(dateLabel(date))}
-        </span>
-      </RowBody>
-      <ToolbarButton label={t("Open in Moodle")} onClick={onOpenInMoodle}>
-        <ExternalLinkIcon />
-      </ToolbarButton>
-    </li>
-  );
-}
-
-function ActivityRow({
-  activity,
-  onOpen,
-  onOpenInMoodle,
-}: {
-  activity: Activity;
-  onOpen: (() => void) | undefined;
-  onOpenInMoodle: () => void;
-}) {
-  const { t, dateTime } = useLocale();
-  const next = activity.dates.find(
-    (entry) => Date.parse(entry.at) >= Date.now(),
-  );
-  return (
-    <li className="flex items-center gap-1">
-      <RowBody onOpen={onOpen}>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm" title={activity.name}>
-            {activity.name}
-          </span>
-          <span className="truncate text-xs text-muted-foreground">
-            {[
-              t(activityType(activity.modname)),
-              activity.sectionName,
-              next ? `${t(dateLabel(next))} ${dateTime(next.at)}` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
         </span>
       </RowBody>
       <ToolbarButton label={t("Open in Moodle")} onClick={onOpenInMoodle}>

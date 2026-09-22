@@ -355,7 +355,14 @@ function activityCourse() {
       id: 2,
       name: "Week 2",
       section: 1,
+      summary: "<p>Read <em>chapter 2</em> first.</p>",
       modules: [
+        {
+          id: 206,
+          name: "Bring a calculator",
+          modname: "label",
+          description: "<p>Bring a <b>calculator</b> to class.</p>",
+        },
         {
           id: 203,
           name: "Project 1",
@@ -463,7 +470,9 @@ describe("activities", () => {
     await listItems(workspace, session, subjectId);
     const [record] = await listActivities(workspace);
     expect(record?.subjectId).toBe(subjectId);
-    expect(record?.activities).toEqual([
+    expect(
+      record?.activities.filter((entry) => entry.modname !== "label"),
+    ).toEqual([
       {
         moduleId: 202,
         name: "Announcements",
@@ -509,6 +518,32 @@ describe("activities", () => {
         brief: "Covers **limits**.",
       },
     ]);
+  });
+
+  it("keeps the course page's section text and labels in order", async () => {
+    await listItems(workspace, session, subjectId);
+    const [record] = await listActivities(workspace);
+    expect(record?.sections).toEqual([
+      { name: "General", moduleIds: [200, 201, 202] },
+      {
+        name: "Week 2",
+        summary: "Read *chapter 2* first.",
+        moduleIds: [206, 203, 204],
+      },
+    ]);
+    expect(record?.activities.find((entry) => entry.moduleId === 206)).toEqual({
+      moduleId: 206,
+      name: "Bring a calculator",
+      modname: "label",
+      sectionName: "Week 2",
+      url: `${SITE}/course/view.php?id=7#section-1`,
+      dates: [],
+      brief: "Bring a **calculator** to class.",
+    });
+    // The empty "Welcome" label has nothing to show.
+    expect(record?.activities.some((entry) => entry.moduleId === 201)).toBe(
+      false,
+    );
   });
 
   it("says which attachment is already in the subject", async () => {

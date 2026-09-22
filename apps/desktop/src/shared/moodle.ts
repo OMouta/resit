@@ -135,6 +135,15 @@ const moodleActivitySchema = z.object({
 });
 export type MoodleActivity = z.infer<typeof moodleActivitySchema>;
 
+/** One section of the course page, with the modules it shows, in order. */
+const moodleCourseSectionSchema = z.object({
+  name: z.string(),
+  /** The text Moodle shows at the top of the section, as Markdown. */
+  summary: z.string().optional(),
+  moduleIds: z.array(z.number().int().nonnegative()),
+});
+export type MoodleCourseSection = z.infer<typeof moodleCourseSectionSchema>;
+
 /**
  * `subjects/<folder>/activities.json`. resit rewrites it whenever it reads
  * the course, so it is never edited by hand.
@@ -145,14 +154,22 @@ export const activitiesFileSchema = z.object({
   siteUrl: z.string(),
   courseId: z.number().int().positive(),
   checkedAt: z.iso.datetime({ offset: true }),
+  /** Labels are here as activities of type `label`, with their text as the brief. */
   activities: z.array(moodleActivitySchema),
+  sections: z.array(moodleCourseSectionSchema).optional(),
 });
 export type ActivitiesFile = z.infer<typeof activitiesFileSchema>;
+
+/** The course's own page in Moodle. */
+export function courseUrl(link: { siteUrl: string; courseId: number }): string {
+  return `${link.siteUrl}/course/view.php?id=${link.courseId}`;
+}
 
 /** A subject's activities as resit last saw them in Moodle. */
 export interface SubjectActivities {
   subjectId: string;
   checkedAt: string;
+  sections?: MoodleCourseSection[];
   activities: (Omit<MoodleActivity, "attachments"> & {
     attachments?: {
       key: string;

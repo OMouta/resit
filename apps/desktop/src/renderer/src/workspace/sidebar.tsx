@@ -4,6 +4,7 @@ import {
   FolderPlusIcon,
   GraduationCapIcon,
   HistoryIcon,
+  LayoutListIcon,
   MoreHorizontalIcon,
   PencilIcon,
   SettingsIcon,
@@ -43,6 +44,8 @@ export interface SidebarActions {
   newNote: (subjectId: string, folder?: string) => void;
   importFiles: (subjectId: string, folder?: string) => void;
   openMoodle: (subjectId: string) => void;
+  /** The course page of a subject that follows Moodle. */
+  openCourse: (subjectId: string) => void;
   newFolder: (subjectId: string, parent?: string) => void;
   renameFolder: (subjectId: string, folder: string) => void;
   /** Without a parent the folder goes to the top of its subject. */
@@ -188,6 +191,15 @@ export function Sidebar({
     }));
   }, [snapshot]);
   const expandedIds = useMemo(() => new Set(expanded), [expanded]);
+  const following = useMemo(
+    () =>
+      new Set(
+        snapshot.subjects
+          .filter((subject) => subject.moodle)
+          .map((subject) => subject.id),
+      ),
+    [snapshot.subjects],
+  );
   const resources = useMemo(
     () =>
       new Map(snapshot.resources.map((resource) => [resource.id, resource])),
@@ -276,6 +288,13 @@ export function Sidebar({
                   >
                     <UploadIcon /> {t("Import files…")}
                   </DropdownMenuItem>
+                  {following.has(row.id) ? (
+                    <DropdownMenuItem
+                      onSelect={() => actions.openCourse(row.id)}
+                    >
+                      <LayoutListIcon /> {t("Course page")}
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onSelect={() => actions.openMoodle(row.id)}>
                     <GraduationCapIcon /> {t("Moodle…")}
                   </DropdownMenuItem>

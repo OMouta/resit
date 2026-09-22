@@ -5,6 +5,7 @@
 export const messages: Record<string, string> = {
   "“{name}” is already in your profile.": "“{name}” já está no seu perfil.",
   "{address} is not a valid address.": "{address} não é um endereço válido.",
+  "{count} activities": "{count} atividades",
   "{count} activities resit does not download ({detail})":
     "{count} atividades que o resit não transfere ({detail})",
   "{count} activity resit does not download ({detail})":
@@ -115,6 +116,7 @@ export const messages: Record<string, string> = {
     "{which} precisa de uma das opções marcada como certa.",
   "{which} needs the answer to compare against.":
     "{which} precisa da resposta com que comparar.",
+  "1 activity": "1 atividade",
   "1 card": "1 cartão",
   "1 question": "1 pergunta",
   "A card needs an answer on its back.":
@@ -144,7 +146,6 @@ export const messages: Record<string, string> = {
   "Accept all": "Aceitar todas",
   "Accept the suggested session first.": "Aceite primeiro a sessão sugerida.",
   Account: "Conta",
-  Activities: "Atividades",
   Add: "Adicionar",
   "Add a comment": "Adicionar um comentário",
   "Add a subject or file so {provider} can read it.":
@@ -285,8 +286,12 @@ export const messages: Record<string, string> = {
   "Conversations could not be loaded": "Não foi possível carregar as conversas",
   "Copy failed": "Não foi possível copiar",
   "Copying files": "A copiar ficheiros",
+  Course: "Unidade curricular",
   "Course {id}": "Unidade curricular {id}",
   "Course files": "Ficheiros da unidade curricular",
+  "Course files…": "Ficheiros da unidade curricular…",
+  "Course page": "Página da unidade curricular",
+  Courses: "Unidades curriculares",
   "Create folder": "Criar pasta",
   "Create note": "Criar apontamento",
   "Create project": "Criar projeto",
@@ -547,6 +552,7 @@ export const messages: Record<string, string> = {
     "Ainda não há cartões. Adicione o primeiro.",
   "No contents": "Sem índice",
   "No course matches that.": "Nenhuma unidade curricular corresponde.",
+  "No course page saved": "Nenhuma página da unidade curricular guardada",
   "No detail was given.": "Não foram dados detalhes.",
   "No exams or tests coming up.": "Não há exames nem testes à vista.",
   "No file exists at the Claude Code path set in Settings.":
@@ -614,6 +620,7 @@ export const messages: Record<string, string> = {
   "Opening a note": "Ao abrir um apontamento",
   "Opening a PDF": "Ao abrir um PDF",
   Opens: "Abre",
+  "Opens in Moodle": "Abre no Moodle",
   "Options. Pick the right one.": "Opções. Escolha a certa.",
   "Otherwise resit starts on the workspace screen.":
     "Caso contrário, o resit abre no ecrã dos espaços de trabalho.",
@@ -672,6 +679,8 @@ export const messages: Record<string, string> = {
     "O resit não encontrou o executável do Codex.",
   "resit could not reach {site}.": "O resit não conseguiu chegar a {site}.",
   "resit could not start": "O resit não conseguiu arrancar",
+  "resit has not read this course from Moodle yet.":
+    "O resit ainda não leu esta unidade curricular do Moodle.",
   "resit is already reading the text of another PDF. Wait for it to finish, or stop it.":
     "O resit já está a ler o texto de outro PDF. Espere que acabe, ou pare-o.",
   "resit is still checking {provider}. Try again in a moment.":
@@ -857,7 +866,6 @@ export const messages: Record<string, string> = {
   "The conversation was not deleted": "A conversa não foi eliminada",
   "The copy it replaced was kept, so you can undo this too.":
     "A cópia que substituiu foi guardada, por isso também pode desfazer isto.",
-  "The course has no activities.": "A unidade curricular não tem atividades.",
   "The course was not linked": "A unidade curricular não foi ligada",
   "The derivative of $\\sin x$ is {{c1::$\\cos x$}}.":
     "A derivada de $\\sin x$ é {{c1::$\\cos x$}}.",
@@ -1047,6 +1055,8 @@ export const messages: Record<string, string> = {
     "O manifesto deste ficheiro do resit não é válido.",
   "This resit file's manifest is too large.":
     "O manifesto deste ficheiro do resit é demasiado grande.",
+  "This subject does not follow a Moodle course.":
+    "Esta disciplina não segue uma unidade curricular do Moodle.",
   "This week": "Esta semana",
   "This workspace is already open": "Este espaço de trabalho já está aberto",
   "This workspace needs {needed} MB, and the chosen drive has {free} MB free.":
