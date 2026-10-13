@@ -1,4 +1,8 @@
-import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import {
+  query,
+  type ModelInfo,
+  type SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { execFile } from "node:child_process";
 import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
@@ -141,36 +145,44 @@ async function listModels(): Promise<ModelOption[]> {
     },
   });
   try {
-    const list = await run.supportedModels();
-    const fallback = list.find((model) => model.value === "default");
-    // Claude Code describes each model as "Sonnet 5 · Efficient for …".
-    // The "default" entry repeats one of the others, so it is dropped and
-    // that model is marked as the default instead.
-    return list
-      .filter(
-        (model) =>
-          model !== fallback ||
-          !list.some(
-            (other) =>
-              other !== model && other.resolvedModel === model.resolvedModel,
-          ),
-      )
-      .map((model) => {
-        const [name, ...rest] = model.description.split(" · ");
-        return {
-          id: model.value,
-          name: name || model.displayName,
-          description: rest.join(" · "),
-          isDefault:
-            model === fallback ||
-            (fallback?.resolvedModel !== undefined &&
-              model.resolvedModel === fallback.resolvedModel),
-        };
-      });
+    return modelOptions(await run.supportedModels());
   } finally {
     clearTimeout(timer);
     controller.abort();
   }
+}
+
+/**
+ * The "default" entry repeats one of the others, so it is dropped and that
+ * model is marked as the default instead.
+ */
+export function modelOptions(list: ModelInfo[]): ModelOption[] {
+  const fallback = list.find((model) => model.value === "default");
+  return list
+    .filter(
+      (model) =>
+        model !== fallback ||
+        !list.some(
+          (other) =>
+            other !== model && other.resolvedModel === model.resolvedModel,
+        ),
+    )
+    .map((model) => {
+      // Some entries name the model in the description, as in
+      // "Sonnet 5 · Efficient for …", and only give the family as the
+      // display name. Others put the full name in the display name.
+      const [name, ...rest] = model.description.split(" · ");
+      const named = rest.length > 0 && name;
+      return {
+        id: model.value,
+        name: named || model.displayName,
+        description: named ? rest.join(" · ") : model.description,
+        isDefault:
+          model === fallback ||
+          (fallback?.resolvedModel !== undefined &&
+            model.resolvedModel === fallback.resolvedModel),
+      };
+    });
 }
 
 async function probe(): Promise<ProviderState> {
