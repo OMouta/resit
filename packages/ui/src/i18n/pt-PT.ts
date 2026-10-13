@@ -304,6 +304,7 @@ export const messages: Record<string, string> = {
     "Nada foi adicionado ao espaço de trabalho.",
   "Numbered list": "Lista numerada",
   Observed: "Observado",
+  "One page at a time": "Uma página de cada vez",
   Open: "Abrir",
   "Open .resit archive": "Abrir arquivo .resit",
   "Open {title}": "Abrir {title}",
@@ -474,6 +475,7 @@ export const messages: Record<string, string> = {
   "Try again": "Tentar de novo",
   "Try another spelling, or search inside PDFs by enabling PDFs.":
     "Experimente outra grafia, ou pesquise dentro dos PDFs ativando os PDFs.",
+  "Two pages side by side": "Duas páginas lado a lado",
   Type: "Tipo",
   "Type to search": "Escreva para pesquisar",
   unanswered: "por responder",

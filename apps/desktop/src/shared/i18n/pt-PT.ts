@@ -625,7 +625,6 @@ export const messages: Record<string, string> = {
   "On the highlight on page {page}.": "No realce da página {page}.",
   "Once, for each language. The PDF stays on this computer.":
     "Uma vez, para cada língua. O PDF fica neste computador.",
-  "One page at a time": "Uma página de cada vez",
   "Only PDFs can hold highlights.": "Só os PDFs podem ter realces.",
   "Open “{workspace}”": "Abrir “{workspace}”",
   "Open a .resit archive": "Abrir um arquivo .resit",
@@ -1126,7 +1125,6 @@ export const messages: Record<string, string> = {
   Topic: "Tema",
   Topics: "Temas",
   Tuesday: "Terça-feira",
-  "Two pages side by side": "Duas páginas lado a lado",
   "Two questions share an ID.": "Duas perguntas têm o mesmo ID.",
   Typeface: "Tipo de letra",
   "Undo the last rating": "Anular a última avaliação",

@@ -1,4 +1,5 @@
 import {
+  ColumnsIcon,
   HighlighterIcon,
   MessageSquarePlusIcon,
   MoreHorizontalIcon,
@@ -15,6 +16,7 @@ import type { ReactNode } from "react";
 
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -124,6 +126,9 @@ export interface PdfToolbarProps {
   zoom: PdfZoom;
   onZoomChange: (zoom: PdfZoom) => void;
   onRotate?: () => void;
+  /** Two pages side by side. */
+  spread?: boolean;
+  onSpreadChange?: (spread: boolean) => void;
   searchOpen?: boolean;
   onToggleSearch?: () => void;
   sidebarOpen?: boolean;
@@ -133,7 +138,10 @@ export interface PdfToolbarProps {
   onToolChange?: (tool: AnnotationTool) => void;
   color?: AnnotationColor;
   onColorChange?: (color: AnnotationColor) => void;
-  /** Collapses zoom, rotate, and colour into an overflow menu. */
+  /**
+   * Collapses zoom, rotate, two pages, and colour into an overflow menu, and
+   * leaves out the first and last page buttons.
+   */
   compact?: boolean;
   disabled?: boolean;
   end?: ReactNode;
@@ -156,6 +164,8 @@ export function PdfToolbar({
   zoom,
   onZoomChange,
   onRotate,
+  spread = false,
+  onSpreadChange,
   searchOpen,
   onToggleSearch,
   sidebarOpen,
@@ -200,6 +210,7 @@ export function PdfToolbar({
         pageCount={pageCount}
         onPageChange={onPageChange}
         disabled={disabled}
+        compact={compact}
       />
       <ToolbarSeparator />
       {!compact ? (
@@ -366,7 +377,7 @@ export function PdfToolbar({
               <MoreHorizontalIcon className="size-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>{t("Zoom")}</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={zoomToValue(zoom)}
@@ -383,6 +394,14 @@ export function PdfToolbar({
               <DropdownMenuItem onSelect={onRotate}>
                 <RotateCwIcon /> {t("Rotate")}
               </DropdownMenuItem>
+            ) : null}
+            {onSpreadChange ? (
+              <DropdownMenuCheckboxItem
+                checked={spread}
+                onCheckedChange={onSpreadChange}
+              >
+                <ColumnsIcon /> {t("Two pages side by side")}
+              </DropdownMenuCheckboxItem>
             ) : null}
             {annotation ? (
               <>
@@ -413,6 +432,16 @@ export function PdfToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {!compact && onSpreadChange ? (
+        <ToolbarButton
+          label={spread ? t("One page at a time") : t("Two pages side by side")}
+          active={spread}
+          disabled={disabled}
+          onClick={() => onSpreadChange(!spread)}
+        >
+          <ColumnsIcon />
+        </ToolbarButton>
+      ) : null}
       {end}
     </div>
   );

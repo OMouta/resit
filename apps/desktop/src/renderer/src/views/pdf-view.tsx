@@ -3,7 +3,6 @@ import "pdfjs-dist/web/pdf_viewer.css";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  ColumnsIcon,
   ExternalLinkIcon,
   SearchIcon,
   XIcon,
@@ -573,6 +572,13 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
           if (viewer?.pdfDocument)
             viewer.pagesRotation = (viewer.pagesRotation + 90) % 360;
         }}
+        spread={spread}
+        onSpreadChange={(next) => {
+          const viewer = viewerRef.current;
+          setSpread(next);
+          if (viewer?.pdfDocument)
+            viewer.spreadMode = next ? SpreadMode.ODD : SpreadMode.NONE;
+        }}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
         sidebarOpen={panel !== "none"}
@@ -588,30 +594,12 @@ export function PdfView({ resource, active, onCite }: PdfViewProps) {
         disabled={status !== "ready"}
         compact={compact}
         end={
-          <>
-            <ToolbarButton
-              label={
-                spread ? t("One page at a time") : t("Two pages side by side")
-              }
-              active={spread}
-              disabled={status !== "ready"}
-              onClick={() => {
-                const viewer = viewerRef.current;
-                const next = !spread;
-                setSpread(next);
-                if (viewer?.pdfDocument)
-                  viewer.spreadMode = next ? SpreadMode.ODD : SpreadMode.NONE;
-              }}
-            >
-              <ColumnsIcon />
-            </ToolbarButton>
-            <ToolbarButton
-              label={t("Open in default app")}
-              onClick={() => void api.openResourceExternally(resource.id)}
-            >
-              <ExternalLinkIcon />
-            </ToolbarButton>
-          </>
+          <ToolbarButton
+            label={t("Open in default app")}
+            onClick={() => void api.openResourceExternally(resource.id)}
+          >
+            <ExternalLinkIcon />
+          </ToolbarButton>
         }
       />
       {searchOpen ? (

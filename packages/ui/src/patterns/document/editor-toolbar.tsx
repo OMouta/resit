@@ -169,7 +169,7 @@ export interface EditorToolbarProps {
   disabled?: boolean;
   /** Narrow layout: secondary tools move into the "More" menu. */
   compact?: boolean;
-  /** Narrowest layout: every text mark moves into the "More" menu too. */
+  /** Narrowest layout: every text mark, undo, and redo move into the "More" menu too. */
   minimal?: boolean;
   /** Right slot, for example a save status. */
   end?: ReactNode;
@@ -312,6 +312,25 @@ export function EditorToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
+            {minimal ? (
+              <>
+                <DropdownMenuItem disabled={!canUndo} onSelect={onUndo}>
+                  <Undo2Icon />
+                  {t("Undo")}
+                  <DropdownMenuShortcut>
+                    {shortcutLabel("mod+z").join("")}
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!canRedo} onSelect={onRedo}>
+                  <Redo2Icon />
+                  {t("Redo")}
+                  <DropdownMenuShortcut>
+                    {shortcutLabel("mod+shift+z").join("")}
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            ) : null}
             {overflowMarks.map((mark) => (
               <DropdownMenuCheckboxItem
                 key={mark.value}
@@ -342,27 +361,35 @@ export function EditorToolbar({
         </DropdownMenu>
       ) : null}
 
-      <ToolbarSeparator />
-
-      <ToolbarButton
-        label={t("Undo")}
-        shortcut="mod+z"
-        disabled={disabled || !canUndo}
-        onClick={onUndo}
-      >
-        <Undo2Icon />
-      </ToolbarButton>
-      <ToolbarButton
-        label={t("Redo")}
-        shortcut="mod+shift+z"
-        disabled={disabled || !canRedo}
-        onClick={onRedo}
-      >
-        <Redo2Icon />
-      </ToolbarButton>
+      {!minimal ? (
+        <>
+          <ToolbarSeparator />
+          <ToolbarButton
+            label={t("Undo")}
+            shortcut="mod+z"
+            disabled={disabled || !canUndo}
+            onClick={onUndo}
+          >
+            <Undo2Icon />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t("Redo")}
+            shortcut="mod+shift+z"
+            disabled={disabled || !canRedo}
+            onClick={onRedo}
+          >
+            <Redo2Icon />
+          </ToolbarButton>
+        </>
+      ) : null}
 
       {end !== undefined ? (
-        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 pl-2 text-xs text-muted-foreground">
+        <div
+          className={cn(
+            "ml-auto flex min-w-0 shrink-0 items-center pl-2 text-xs text-muted-foreground",
+            minimal ? "gap-1" : "gap-2",
+          )}
+        >
           {end}
         </div>
       ) : null}

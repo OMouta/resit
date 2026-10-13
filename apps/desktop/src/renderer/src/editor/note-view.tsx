@@ -207,8 +207,9 @@ function NoteEditor({
   const [find, setFind] = useState<{ replacing: boolean } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useWidth(rootRef);
-  const narrow = width > 0 && width < 560;
-  const showOutline = outlineOpen && width > 0 && width >= 720;
+  const narrow = width > 0 && width < 700;
+  const outlineFits = width >= 720;
+  const showOutline = outlineOpen && outlineFits;
 
   const revision = useRef(initial.revision);
   const edits = useRef(0);
@@ -632,7 +633,7 @@ function NoteEditor({
         onUndo={() => editor.chain().focus().undo().run()}
         onRedo={() => editor.chain().focus().redo().run()}
         disabled={mode === "source"}
-        compact={width > 0 && width < 860}
+        compact={width > 0 && width < 1020}
         minimal={narrow}
         end={
           <>
@@ -652,13 +653,15 @@ function NoteEditor({
             >
               <SearchIcon />
             </ToolbarButton>
-            <ToolbarButton
-              label={t("Outline")}
-              active={outlineOpen}
-              onClick={() => setOutlineOpen((open) => !open)}
-            >
-              <ListTreeIcon />
-            </ToolbarButton>
+            {outlineFits ? (
+              <ToolbarButton
+                label={t("Outline")}
+                active={outlineOpen}
+                onClick={() => setOutlineOpen((open) => !open)}
+              >
+                <ListTreeIcon />
+              </ToolbarButton>
+            ) : null}
             <ToolbarButton
               label={t("Version history")}
               onClick={() => {

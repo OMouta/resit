@@ -17,6 +17,8 @@ export interface PageControlsProps {
   pageCount: number;
   onPageChange: (page: number) => void;
   disabled?: boolean;
+  /** Leaves out the first and last page buttons. */
+  compact?: boolean;
   /** Initial text of the page field. Only for previews of the invalid state. */
   defaultDraft?: string;
   className?: string;
@@ -33,6 +35,7 @@ export function PageControls({
   pageCount,
   onPageChange,
   disabled = false,
+  compact = false,
   defaultDraft,
   className,
 }: PageControlsProps) {
@@ -55,14 +58,16 @@ export function PageControls({
       aria-label={t("Page")}
       className={cn("flex items-center gap-0.5", className)}
     >
-      <ToolbarButton
-        label={t("First page")}
-        shortcut="home"
-        disabled={disabled || page <= 1}
-        onClick={() => onPageChange(1)}
-      >
-        <ChevronsLeftIcon />
-      </ToolbarButton>
+      {!compact ? (
+        <ToolbarButton
+          label={t("First page")}
+          shortcut="home"
+          disabled={disabled || page <= 1}
+          onClick={() => onPageChange(1)}
+        >
+          <ChevronsLeftIcon />
+        </ToolbarButton>
+      ) : null}
       <ToolbarButton
         label={t("Previous page")}
         shortcut="arrowleft"
@@ -109,14 +114,16 @@ export function PageControls({
       >
         <ChevronRightIcon />
       </ToolbarButton>
-      <ToolbarButton
-        label={t("Last page")}
-        shortcut="end"
-        disabled={disabled || page >= pageCount}
-        onClick={() => onPageChange(pageCount)}
-      >
-        <ChevronsRightIcon />
-      </ToolbarButton>
+      {!compact ? (
+        <ToolbarButton
+          label={t("Last page")}
+          shortcut="end"
+          disabled={disabled || page >= pageCount}
+          onClick={() => onPageChange(pageCount)}
+        >
+          <ChevronsRightIcon />
+        </ToolbarButton>
+      ) : null}
     </div>
   );
 }
