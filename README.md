@@ -7,6 +7,7 @@
 <p align="center">Your notes, PDFs, and study conversations in one desktop app.</p>
 
 <p align="center">
+  <a href="#install">Install</a> ·
   <a href="#start-a-workspace">Get started</a> ·
   <a href="#ask-about-your-material">Ask about your material</a> ·
   <a href="#shortcuts">Shortcuts</a>
@@ -15,6 +16,12 @@
 Organise your materials by subject, take notes beside a textbook, and ask about what you're reading. Notes save as Markdown in a folder you choose, alongside your imported files and conversations.
 
 Notes, PDFs, and search work without AI.
+
+## Install
+
+resit runs on Windows 10 and 11. Download `resit-<version>-setup.exe` from the [latest release](https://github.com/OMouta/resit.study/releases/latest) and run it.
+
+The installer is not signed, so Windows may say it protected your PC. Choose **More info**, then **Run anyway**.
 
 ## Start a workspace
 
