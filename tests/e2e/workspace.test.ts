@@ -316,7 +316,7 @@ describe("desktop workspace", () => {
     await page.getByRole("button", { name: "Restore it" }).click();
     await expect.poll(noteFile).toContain("is 9. Mine. Unsaved.");
     expect(await noteFile()).not.toContain("From disk.");
-    expect(await readdir(drafts)).toEqual([]);
+    await expect.poll(() => readdir(drafts)).toEqual([]);
   });
 
   it("reopens the workspace with its tabs after a restart", async () => {
